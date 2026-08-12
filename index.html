@@ -17,6 +17,9 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     
+    <!-- Proj4 JS (Required for GeoTIFF reprojection, UTM, SIRGAS 2000) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.2/proj4.js"></script>
+
     <!-- GeoRaster & GeoRaster Layer for Leaflet (GeoTIFF rendering) -->
     <script src="https://unpkg.com/georaster"></script>
     <script src="https://unpkg.com/georaster-layer-for-leaflet"></script>
@@ -167,7 +170,11 @@
                             <option value="macapa">Capitania dos Portos do Amapá (Macapá)</option>
                             <option value="santarem">Capitania Fluvial de Santarém</option>
                             <option value="salinopolis">Ponto Focal Salinópolis (Atalaia)</option>
+                            <option value="custom">📍 Ponto de Partida Personalizado (Definido no Mapa)</option>
                         </select>
+                        <button class="btn btn-outline btn-sm w-full mt-1" id="btnPickBasePointOnMap" title="Clique no mapa para definir a posição exata da Partida">
+                            <i class="fa-solid fa-crosshairs"></i> Capturar Partida no Mapa
+                        </button>
                     </div>
 
                     <!-- Ship Speed Input -->
@@ -186,7 +193,17 @@
                         <button class="btn btn-primary" id="btnToggleDrawDerrota">
                             <i class="fa-solid fa-pen-nib"></i> <span id="btnDrawDerrotaText">Desenhar no Mapa</span>
                         </button>
-                        <button class="btn btn-danger-outline" id="btnClearRoute">
+                        <button class="btn btn-outline" id="btnToggleRouteVisibility" title="Exibir ou desativar/ocultar o traçado no mapa">
+                            <i class="fa-solid fa-eye-slash"></i> <span id="btnRouteVisText">Ocultar Derrota</span>
+                        </button>
+                    </div>
+
+                    <!-- Terrestrial Viatura & Clear Buttons -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" class="mb-3">
+                        <button class="btn btn-success btn-sm" id="btnOpenGoogleMapsRoute" title="Abrir rota no Google Maps para navegação terrestre por viatura">
+                            <i class="fa-solid fa-car"></i> Rota Viatura (Google Maps)
+                        </button>
+                        <button class="btn btn-danger-outline btn-sm" id="btnClearRoute" title="Limpar todos os pontos da derrota">
                             <i class="fa-solid fa-trash-can"></i> Limpar Derrota
                         </button>
                     </div>

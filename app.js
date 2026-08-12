@@ -118,7 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
         belem: { name: "Base Naval de Val-de-Cães (Belém / CHN-4)", lat: -1.41111, lng: -48.48722 },
         macapa: { name: "Capitania dos Portos do Amapá (Macapá)", lat: 0.04000, lng: -51.05000 },
         santarem: { name: "Capitania Fluvial de Santarém", lat: -2.42167, lng: -54.71000 },
-        salinopolis: { name: "Ponto Focal Salinópolis (Atalaia)", lat: -0.60000, lng: -47.36000 }
+        salinopolis: { name: "Ponto Focal Salinópolis (Atalaia)", lat: -0.60000, lng: -47.36000 },
+        custom: { name: "Ponto de Partida Personalizado", lat: -1.41111, lng: -48.48722 }
     };
 
     // State Variables
@@ -130,11 +131,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSearch = '';
     let currentTypeFilter = 'ALL'; // Category filter: ALL | FAROL | FAROLETE | BOIA | BALIZA
     let isPickingPosition = false; // map-click-to-pick mode for new signal form
+    let isPickingBasePosition = false; // map-click-to-pick mode for custom departure point
     
     // Waypoints for Navigation Route (Derrota Náutica)
     let routeWaypoints = []; 
     let waypointMarkers = [];
     let isDrawDerrotaMode = false;
+    let isRouteVisible = false; // Control visibility of route markers and polyline on map
 
     // Map & Layers State
     let mapMarkers = {}; 
@@ -145,6 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // GeoTIFF Overlays State
     let geotiffLayers = []; // Array of { id, name, layer, opacity }
+    const dhnGeoTiffGroup = L.layerGroup(); // Dedicated Layer Group for DHN GeoTIFF charts
 
     // =========================================================================
     // 2. INICIALIZAÇÃO DO MAPA LEAFLET E CAMADAS
@@ -169,12 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
         maxZoom: 19
     });
 
-    // Layer 3: Nautical Base Charts (Local GeoTIFF tiles fallback to OpenSeaMap & Esri Ocean)
-    const localNauticalChartLayer = L.tileLayer('./cartas_geotiff/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        errorTileUrl: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png'
-    });
-
+    // Layer 3: Nautical Base Charts (OpenSeaMap & Esri Ocean)
     const esriOceanLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Esri Ocean Basemap',
         maxZoom: 13
@@ -185,17 +184,63 @@ document.addEventListener('DOMContentLoaded', () => {
         maxZoom: 18
     });
 
-    const nauticalGroup = L.layerGroup([esriOceanLayer, openSeaMapLayer, localNauticalChartLayer]);
-
+    const nauticalGroup = L.layerGroup([esriOceanLayer, openSeaMapLayer]);
     nauticalGroup.addTo(map);
+    dhnGeoTiffGroup.addTo(map);
 
     const baseLayers = {
-        "Carta Náutica (GeoTIFF/Ocean)": nauticalGroup,
+        "Carta Náutica Base (Ocean/OpenSeaMap)": nauticalGroup,
         "Satélite Esri Imagery": satLayer,
         "Satélite Google": googleSatLayer
     };
 
-    L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
+    const overlays = {
+        "🗺️ Cartas Náuticas DHN (GeoTIFF .tif)": dhnGeoTiffGroup
+    };
+
+    L.control.layers(baseLayers, overlays, { position: 'topright' }).addTo(map);
+
+    map.on('baselayerchange', (e) => {
+        const nameSpan = document.getElementById('activeLayerName');
+        if (nameSpan) nameSpan.textContent = e.name;
+    });
+
+    // Auto-load local DHN GeoTIFF charts (e.g. 320geotiff.tif and 10geotiff.tif)
+    async function autoLoadLocalDHNCharts() {
+        const filesToTry = ['./cartas_geotiff/320geotiff.tif', './cartas_geotiff/10geotiff.tif'];
+        for (const filePath of filesToTry) {
+            try {
+                const resp = await fetch(filePath);
+                if (!resp.ok) continue;
+                const arrayBuffer = await resp.arrayBuffer();
+
+                if (typeof parseGeoRaster !== 'undefined') {
+                    const georaster = await parseGeoRaster(arrayBuffer);
+                    const layer = new GeoRasterLayer({
+                        georaster: georaster,
+                        opacity: 0.85,
+                        resolution: 256
+                    });
+
+                    layer.addTo(dhnGeoTiffGroup);
+
+                    const fname = filePath.split('/').pop();
+                    const layerId = `dhn-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+                    geotiffLayers.push({
+                        id: layerId,
+                        name: `Carta DHN (${fname})`,
+                        layer: layer,
+                        opacity: 0.85
+                    });
+                    renderGeoTIFFLayersList();
+                }
+            } catch (err) {
+                console.warn(`Tentativa de autocarregar ${filePath}:`, err);
+            }
+        }
+    }
+
+    autoLoadLocalDHNCharts();
 
     map.on('baselayerchange', (e) => {
         const nameSpan = document.getElementById('activeLayerName');
@@ -402,47 +447,78 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnLoadGeotiffHeader').addEventListener('click', () => inputGeotiffFile.click());
     document.getElementById('btnUploadTifTab').addEventListener('click', () => inputGeotiffFile.click());
 
+    // Helper to parse and render a GeoTIFF (.tif/.tiff) file
+    async function loadGeoTIFFFile(file) {
+        try {
+            showToast(`Processando carta GeoTIFF: ${file.name}...`, 'info');
+            const arrayBuffer = await file.arrayBuffer();
+
+            if (typeof parseGeoRaster !== 'undefined') {
+                const georaster = await parseGeoRaster(arrayBuffer);
+                
+                const layer = new GeoRasterLayer({
+                    georaster: georaster,
+                    opacity: 0.85,
+                    resolution: 256
+                });
+
+                layer.addTo(map);
+                map.fitBounds(layer.getBounds());
+
+                const layerId = `tif-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+                geotiffLayers.push({
+                    id: layerId,
+                    name: file.name,
+                    layer: layer,
+                    opacity: 0.85
+                });
+
+                renderGeoTIFFLayersList();
+                showToast(`Carta GeoTIFF ${file.name} sobreposta no mapa com sucesso!`, 'success');
+            } else {
+                showToast(`Biblioteca GeoRaster indisponível no momento.`, 'danger');
+            }
+        } catch (err) {
+            console.error("GeoTIFF parse error:", err);
+            showToast(`Aviso: O arquivo ${file.name} não possui metadados GeoTIFF georreferenciados válidos ou a projeção necessita de conversão.`, 'warning');
+        }
+    }
+
     inputGeotiffFile.addEventListener('change', async (e) => {
         const files = e.target.files;
         if (!files || files.length === 0) return;
-
         for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            try {
-                showToast(`Processando carta GeoTIFF: ${file.name}...`, 'info');
-                const arrayBuffer = await file.arrayBuffer();
-
-                if (typeof parseGeoRaster !== 'undefined') {
-                    const georaster = await parseGeoRaster(arrayBuffer);
-                    
-                    const layer = new GeoRasterLayer({
-                        georaster: georaster,
-                        opacity: 0.8,
-                        resolution: 256
-                    });
-
-                    layer.addTo(map);
-                    map.fitBounds(layer.getBounds());
-
-                    const layerId = `tif-${Date.now()}-${i}`;
-                    geotiffLayers.push({
-                        id: layerId,
-                        name: file.name,
-                        layer: layer,
-                        opacity: 0.8
-                    });
-
-                    renderGeoTIFFLayersList();
-                    showToast(`Carta GeoTIFF ${file.name} carregada com sucesso!`, 'success');
-                } else {
-                    showToast(`Biblioteca GeoRaster indisponível no momento.`, 'danger');
-                }
-            } catch (err) {
-                console.error("GeoTIFF parse error:", err);
-                showToast(`Erro ao carregar arquivo GeoTIFF ${file.name}.`, 'danger');
-            }
+            await loadGeoTIFFFile(files[i]);
         }
     });
+
+    // Enable Drag & Drop of GeoTIFF (.tif/.tiff) and KML (.kml) files directly onto the Map
+    const mapContainer = document.getElementById('map');
+    if (mapContainer) {
+        mapContainer.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        mapContainer.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const files = e.dataTransfer.files;
+            if (!files || files.length === 0) return;
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const fname = file.name.toLowerCase();
+                if (fname.endsWith('.tif') || fname.endsWith('.tiff')) {
+                    await loadGeoTIFFFile(file);
+                } else if (fname.endsWith('.kml') || fname.endsWith('.kmz')) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => loadKML(event.target.result);
+                    reader.readAsText(file);
+                }
+            }
+        });
+    }
 
     function renderGeoTIFFLayersList() {
         const container = document.getElementById('geotiffLayersList');
@@ -1009,70 +1085,72 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         waypointMarkers.forEach(m => map.removeLayer(m));
         waypointMarkers = [];
 
-        const latLngs = fullSequence.map(wp => [wp.lat, wp.lng]);
-        routePolyline = L.polyline(latLngs, {
-            color: '#f59e0b',
-            weight: 4,
-            dashArray: '8, 8',
-            lineJoin: 'round'
-        }).addTo(map);
-
-        // Render draggable Waypoint Markers (Partida, Guinadas, Destino)
-        fullSequence.forEach((wp, index) => {
-            const isFirst = index === 0;
-            const isLast = index === fullSequence.length - 1 && fullSequence.length > 1;
-            
-            let iconHtml = '';
-            let iconAnchor = [13, 13];
-            let iconSize = [26, 26];
-
-            if (isFirst) {
-                iconHtml = `<div class="waypoint-marker-partida"><i class="fa-solid fa-anchor"></i> PARTIDA: ${wp.name.split('(')[0].trim()}</div>`;
-                iconAnchor = [40, 14];
-                iconSize = [160, 28];
-            } else if (isLast) {
-                iconHtml = `<div class="waypoint-marker-destino"><i class="fa-solid fa-flag-checkered"></i> DESTINO: ${wp.name.split('-')[0].trim()}</div>`;
-                iconAnchor = [40, 14];
-                iconSize = [160, 28];
-            } else {
-                iconHtml = `<div class="waypoint-marker">${index}</div>`;
-                iconAnchor = [13, 13];
-                iconSize = [26, 26];
-            }
-
-            const wpIcon = L.divIcon({
-                className: 'custom-wp-wrapper',
-                html: iconHtml,
-                iconSize: iconSize,
-                iconAnchor: iconAnchor
-            });
-
-            const marker = L.marker([wp.lat, wp.lng], {
-                icon: wpIcon,
-                draggable: true
+        if (isRouteVisible) {
+            const latLngs = fullSequence.map(wp => [wp.lat, wp.lng]);
+            routePolyline = L.polyline(latLngs, {
+                color: '#f59e0b',
+                weight: 4,
+                dashArray: '8, 8',
+                lineJoin: 'round'
             }).addTo(map);
 
-            // Dragging feedback
-            marker.on('drag', () => {
-                const currentPos = marker.getLatLng();
-                latLngs[index] = [currentPos.lat, currentPos.lng];
-                routePolyline.setLatLngs(latLngs);
-            });
+            // Render draggable Waypoint Markers (Partida, Guinadas, Destino)
+            fullSequence.forEach((wp, index) => {
+                const isFirst = index === 0;
+                const isLast = index === fullSequence.length - 1 && fullSequence.length > 1;
+                
+                let iconHtml = '';
+                let iconAnchor = [13, 13];
+                let iconSize = [26, 26];
 
-            marker.on('dragend', (e) => {
-                const newPos = e.target.getLatLng();
-                if (index === 0) {
-                    base.lat = newPos.lat;
-                    base.lng = newPos.lng;
+                if (isFirst) {
+                    iconHtml = `<div class="waypoint-marker-partida"><i class="fa-solid fa-anchor"></i> PARTIDA: ${wp.name.split('(')[0].trim()}</div>`;
+                    iconAnchor = [40, 14];
+                    iconSize = [160, 28];
+                } else if (isLast) {
+                    iconHtml = `<div class="waypoint-marker-destino"><i class="fa-solid fa-flag-checkered"></i> DESTINO: ${wp.name.split('-')[0].trim()}</div>`;
+                    iconAnchor = [40, 14];
+                    iconSize = [160, 28];
                 } else {
-                    routeWaypoints[index - 1].lat = newPos.lat;
-                    routeWaypoints[index - 1].lng = newPos.lng;
+                    iconHtml = `<div class="waypoint-marker">${index}</div>`;
+                    iconAnchor = [13, 13];
+                    iconSize = [26, 26];
                 }
-                updateRoute();
-            });
 
-            waypointMarkers.push(marker);
-        });
+                const wpIcon = L.divIcon({
+                    className: 'custom-wp-wrapper',
+                    html: iconHtml,
+                    iconSize: iconSize,
+                    iconAnchor: iconAnchor
+                });
+
+                const marker = L.marker([wp.lat, wp.lng], {
+                    icon: wpIcon,
+                    draggable: true
+                }).addTo(map);
+
+                // Dragging feedback
+                marker.on('drag', () => {
+                    const currentPos = marker.getLatLng();
+                    latLngs[index] = [currentPos.lat, currentPos.lng];
+                    routePolyline.setLatLngs(latLngs);
+                });
+
+                marker.on('dragend', (e) => {
+                    const newPos = e.target.getLatLng();
+                    if (index === 0) {
+                        base.lat = newPos.lat;
+                        base.lng = newPos.lng;
+                    } else {
+                        routeWaypoints[index - 1].lat = newPos.lat;
+                        routeWaypoints[index - 1].lng = newPos.lng;
+                    }
+                    updateRoute();
+                });
+
+                waypointMarkers.push(marker);
+            });
+        }
 
         // Compute Distances & Bearings
         let totalNM = 0;
@@ -1197,6 +1275,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             lng: signal.lng
         });
 
+        isRouteVisible = true;
         updateRoute();
         showToast(`${signal.code} adicionado à derrota!`, 'success');
         document.querySelector('[data-tab="tab-route"]').click();
@@ -1227,6 +1306,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             }
         });
 
+        isRouteVisible = true;
         updateRoute();
         showToast(`${damaged.length} sinais adicionados à derrota!`, 'success');
     });
@@ -1237,8 +1317,62 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         showToast('Derrota limpa.', 'info');
     });
 
+    // Toggle Route Visibility on Map
+    const btnToggleRouteVisibility = document.getElementById('btnToggleRouteVisibility');
+    const btnRouteVisText = document.getElementById('btnRouteVisText');
+    if (btnToggleRouteVisibility) {
+        btnToggleRouteVisibility.addEventListener('click', () => {
+            isRouteVisible = !isRouteVisible;
+            if (isRouteVisible) {
+                btnToggleRouteVisibility.className = 'btn btn-outline';
+                if (btnRouteVisText) btnRouteVisText.textContent = 'Ocultar Derrota';
+                showToast('Traçado da derrota exibido no mapa.', 'info');
+            } else {
+                btnToggleRouteVisibility.className = 'btn btn-primary';
+                if (btnRouteVisText) btnRouteVisText.textContent = 'Exibir Derrota';
+                showToast('Traçado da derrota ocultado no mapa.', 'info');
+            }
+            updateRoute();
+        });
+    }
+
+    // Pick Custom Departure Point (Partida) on Map
+    document.getElementById('btnPickBasePointOnMap')?.addEventListener('click', () => {
+        isPickingBasePosition = true;
+        map.getContainer().style.cursor = 'crosshair';
+        showToast('Clique no mapa para definir a posição exata do Ponto de Partida.', 'info');
+    });
+
+    // Open Google Maps Terrestrial Navigation for Viatura
+    document.getElementById('btnOpenGoogleMapsRoute')?.addEventListener('click', () => {
+        const baseKey = document.getElementById('routeBaseSelect').value;
+        const base = navalBases[baseKey] || navalBases.belem;
+        
+        const fullSequence = [
+            { lat: base.lat, lng: base.lng },
+            ...routeWaypoints
+        ];
+
+        if (fullSequence.length === 0) {
+            showToast('Nenhum ponto definido na derrota.', 'warning');
+            return;
+        }
+
+        const pathCoords = fullSequence.map(wp => `${wp.lat.toFixed(6)},${wp.lng.toFixed(6)}`).join('/');
+        const gmapsUrl = `https://www.google.com/maps/dir/${pathCoords}`;
+        window.open(gmapsUrl, '_blank');
+        showToast('Rota terrestre por viatura gerada e aberta no Google Maps em nova aba!', 'success');
+    });
+
     document.getElementById('shipSpeedInput').addEventListener('input', updateRoute);
-    document.getElementById('routeBaseSelect').addEventListener('change', updateRoute);
+    document.getElementById('routeBaseSelect').addEventListener('change', (e) => {
+        if (e.target.value === 'custom') {
+            isPickingBasePosition = true;
+            map.getContainer().style.cursor = 'crosshair';
+            showToast('Clique no mapa para posicionar a Partida Personalizada.', 'info');
+        }
+        updateRoute();
+    });
 
     document.getElementById('btnApplySimulationToRoute').addEventListener('click', () => {
         const checked = document.querySelectorAll('.sim-checkbox:checked');
@@ -1508,8 +1642,28 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             return;
         }
 
+        // Priority 1b: picking custom departure point for route
+        if (isPickingBasePosition) {
+            isPickingBasePosition = false;
+            map.getContainer().style.cursor = '';
+
+            navalBases.custom.lat = e.latlng.lat;
+            navalBases.custom.lng = e.latlng.lng;
+            navalBases.custom.name = `Partida Customizada (${toDMS(e.latlng.lat, true)}, ${toDMS(e.latlng.lng, false)})`;
+
+            const selectEl = document.getElementById('routeBaseSelect');
+            if (selectEl) selectEl.value = 'custom';
+
+            isRouteVisible = true;
+            updateRoute();
+
+            showToast(`Ponto de Partida gravado no mapa: ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`, 'success');
+            return;
+        }
+
         // Priority 2: derrota drawing mode
         if (isDrawDerrotaMode) {
+            isRouteVisible = true;
             routeWaypoints.push({
                 name: `Guinada Wpt ${routeWaypoints.length + 1}`,
                 lat: e.latlng.lat,
