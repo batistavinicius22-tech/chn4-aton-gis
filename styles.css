@@ -1066,7 +1066,18 @@ html, body {
 }
 
 /* Responsive adjustments for Mobile & Tablet */
+.map-drag-handle {
+    display: none;
+}
+
 @media (max-width: 900px) {
+    html, body {
+        overflow-x: hidden;
+        overflow-y: auto !important;
+        height: auto;
+        min-height: 100vh;
+    }
+
     .app-header {
         height: auto;
         padding: 10px 12px;
@@ -1098,17 +1109,19 @@ html, body {
         border-bottom: 1px solid var(--border-color);
         z-index: 600;
         flex-shrink: 0;
+        position: sticky;
+        top: 0;
     }
 
     .mobile-toggle-btn {
         flex: 1;
-        padding: 12px 8px;
+        padding: 10px 4px;
         background: transparent;
         border: none;
         color: var(--text-muted);
         font-family: var(--font-tech);
         font-weight: 700;
-        font-size: 0.85rem;
+        font-size: 0.78rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         cursor: pointer;
@@ -1116,7 +1129,7 @@ html, body {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 6px;
+        gap: 4px;
         transition: all 0.2s ease;
     }
 
@@ -1128,25 +1141,61 @@ html, body {
 
     .app-container {
         flex-direction: column;
-        height: calc(100vh - 120px);
+        height: auto;
+        min-height: 100vh;
+        overflow: visible;
         position: relative;
     }
 
     .app-sidebar {
         width: 100%;
         min-width: 100%;
-        flex: 1;
-        height: 100%;
+        flex: none;
+        height: auto;
+        overflow: visible;
     }
 
     .app-map-wrapper {
         width: 100%;
-        flex: 1;
-        height: 100%;
+        flex: none;
+        height: 52vh;
+        min-height: 380px;
+        position: relative;
     }
 
-    .mobile-hidden {
+    /* Single-view mode states on mobile */
+    .app-container.mode-map-only .app-sidebar {
         display: none !important;
+    }
+
+    .app-container.mode-map-only .app-map-wrapper {
+        display: block !important;
+        height: calc(100vh - 140px);
+    }
+
+    .app-container.mode-sidebar-only .app-map-wrapper {
+        display: none !important;
+    }
+
+    .app-container.mode-sidebar-only .app-sidebar {
+        display: flex !important;
+        height: calc(100vh - 140px);
+        overflow-y: auto;
+    }
+
+    .map-drag-handle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--navy-950);
+        color: var(--accent-gold);
+        padding: 6px 10px;
+        font-family: var(--font-tech);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid var(--border-color);
+        gap: 6px;
     }
 
     .modal-grid {

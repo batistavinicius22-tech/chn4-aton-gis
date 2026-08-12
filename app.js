@@ -1325,11 +1325,11 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             isRouteVisible = !isRouteVisible;
             if (isRouteVisible) {
                 btnToggleRouteVisibility.className = 'btn btn-outline';
-                if (btnRouteVisText) btnRouteVisText.textContent = 'Ocultar Derrota';
+                btnToggleRouteVisibility.innerHTML = '<i class="fa-solid fa-eye-slash"></i> <span id="btnRouteVisText">Ocultar Derrota</span>';
                 showToast('Traçado da derrota exibido no mapa.', 'info');
             } else {
                 btnToggleRouteVisibility.className = 'btn btn-primary';
-                if (btnRouteVisText) btnRouteVisText.textContent = 'Exibir Derrota';
+                btnToggleRouteVisibility.innerHTML = '<i class="fa-solid fa-eye"></i> <span id="btnRouteVisText">Exibir Derrota</span>';
                 showToast('Traçado da derrota ocultado no mapa.', 'info');
             }
             updateRoute();
@@ -1399,26 +1399,39 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
     // =========================================================================
     // 11. CONTROLES DE INTERFACE & EVENT LISTENERS
     // =========================================================================
-    // Mobile View Toggle Switcher (Painel vs Mapa)
-    const btnMobileShowSidebar = document.getElementById('btnMobileShowSidebar');
+    // Mobile View Toggle Switcher (Rolar Empilhado, Só Mapa, Só Painel)
+    const btnMobileShowBoth = document.getElementById('btnMobileShowBoth');
     const btnMobileShowMap = document.getElementById('btnMobileShowMap');
-    const appSidebar = document.getElementById('appSidebar');
-    const appMapWrapper = document.querySelector('.app-map-wrapper');
+    const btnMobileShowSidebar = document.getElementById('btnMobileShowSidebar');
+    const appContainer = document.querySelector('.app-container');
 
-    if (btnMobileShowSidebar && btnMobileShowMap && appSidebar && appMapWrapper) {
-        btnMobileShowSidebar.addEventListener('click', () => {
-            btnMobileShowSidebar.classList.add('active');
+    if (btnMobileShowBoth && btnMobileShowMap && btnMobileShowSidebar && appContainer) {
+        btnMobileShowBoth.addEventListener('click', () => {
+            btnMobileShowBoth.classList.add('active');
             btnMobileShowMap.classList.remove('active');
-            appSidebar.classList.remove('mobile-hidden');
-            appMapWrapper.classList.add('mobile-hidden');
+            btnMobileShowSidebar.classList.remove('active');
+
+            appContainer.classList.remove('mode-map-only', 'mode-sidebar-only');
+            setTimeout(() => map.invalidateSize(), 200);
         });
 
         btnMobileShowMap.addEventListener('click', () => {
             btnMobileShowMap.classList.add('active');
+            btnMobileShowBoth.classList.remove('active');
             btnMobileShowSidebar.classList.remove('active');
-            appMapWrapper.classList.remove('mobile-hidden');
-            appSidebar.classList.add('mobile-hidden');
+
+            appContainer.classList.add('mode-map-only');
+            appContainer.classList.remove('mode-sidebar-only');
             setTimeout(() => map.invalidateSize(), 200);
+        });
+
+        btnMobileShowSidebar.addEventListener('click', () => {
+            btnMobileShowSidebar.classList.add('active');
+            btnMobileShowBoth.classList.remove('active');
+            btnMobileShowMap.classList.remove('active');
+
+            appContainer.classList.add('mode-sidebar-only');
+            appContainer.classList.remove('mode-map-only');
         });
     }
 

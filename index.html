@@ -48,9 +48,9 @@
                 <div class="ie-pill-value" id="headerIeValue">--%</div>
             </div>
 
-            <!-- Button: Add Manual Signal -->
-            <button class="btn btn-primary" id="btnOpenAddSignalHeader" title="Cadastrar novo sinal náutico manualmente">
-                <i class="fa-solid fa-plus-circle"></i> + Novo Sinal
+            <!-- Button: Add/Edit Signal -->
+            <button class="btn btn-primary" id="btnOpenAddSignalHeader" title="Cadastrar novo sinal ou alterar dados dos existentes">
+                <i class="fa-solid fa-pen-to-square"></i> Alterar / Novo Sinal
             </button>
 
             <!-- Import KML Button -->
@@ -79,11 +79,14 @@
 
         <!-- Mobile View Switcher Bar (Visible on mobile & tablet) -->
         <div class="mobile-view-toggle">
-            <button class="mobile-toggle-btn active" id="btnMobileShowSidebar">
-                <i class="fa-solid fa-list-check"></i> Painel Operacional
+            <button class="mobile-toggle-btn active" id="btnMobileShowBoth">
+                <i class="fa-solid fa-up-down-left-right"></i> Mapa + Painel (Rolar)
             </button>
             <button class="mobile-toggle-btn" id="btnMobileShowMap">
-                <i class="fa-solid fa-map-location-dot"></i> Mapa GIS
+                <i class="fa-solid fa-map-location-dot"></i> Só Mapa
+            </button>
+            <button class="mobile-toggle-btn" id="btnMobileShowSidebar">
+                <i class="fa-solid fa-list-check"></i> Só Painel
             </button>
         </div>
 
@@ -193,8 +196,8 @@
                         <button class="btn btn-primary" id="btnToggleDrawDerrota">
                             <i class="fa-solid fa-pen-nib"></i> <span id="btnDrawDerrotaText">Desenhar no Mapa</span>
                         </button>
-                        <button class="btn btn-outline" id="btnToggleRouteVisibility" title="Exibir ou desativar/ocultar o traçado no mapa">
-                            <i class="fa-solid fa-eye-slash"></i> <span id="btnRouteVisText">Ocultar Derrota</span>
+                        <button class="btn btn-primary" id="btnToggleRouteVisibility" title="Exibir ou desativar/ocultar o traçado no mapa">
+                            <i class="fa-solid fa-eye"></i> <span id="btnRouteVisText">Exibir Derrota</span>
                         </button>
                     </div>
 
@@ -314,6 +317,9 @@
 
         <!-- Main Map Display -->
         <main class="app-map-wrapper">
+            <div class="map-drag-handle">
+                <i class="fa-solid fa-arrows-up-down"></i> Arraste p/ Rolar Página e Ver Painéis
+            </div>
             <div id="map" class="map-container"></div>
 
             <!-- Map Floating Controls Overlay -->
