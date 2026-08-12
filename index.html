@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHN-4 | Sistema de Gestão de Auxílios à Navegação (AtoN)</title>
+    <meta name="description" content="Painel de Controle Operacional e Visualizador GIS de Auxílios à Navegação do Centro de Hidrografia do Norte (CHN-4 / 4º Distrito Naval).">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome 6 Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <!-- GeoRaster & GeoRaster Layer for Leaflet (GeoTIFF rendering) -->
+    <script src="https://unpkg.com/georaster"></script>
+    <script src="https://unpkg.com/georaster-layer-for-leaflet"></script>
+
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="theme-navy">
+
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+        <div class="header-brand">
+            <div class="navy-badge">
+                <i class="fa-solid fa-anchor"></i>
+            </div>
+            <div class="brand-text">
+                <h1>CENTRO DE HIDROGRAFIA DO NORTE — CHN-4</h1>
+                <h2>4º DISTRITO NAVAL | MARINHA DO BRASIL — SISTEMA DE GESTÃO DE ATON</h2>
+            </div>
+        </div>
+
+        <!-- Real-time IE Widget in Header -->
+        <div class="header-telemetry">
+            <div class="ie-pill" id="headerIePill" title="Índice de Eficácia Operacional">
+                <div class="ie-pill-label">ÍNDICE DE EFICÁCIA (IE)</div>
+                <div class="ie-pill-value" id="headerIeValue">--%</div>
+            </div>
+
+            <!-- Button: Add Manual Signal -->
+            <button class="btn btn-primary" id="btnOpenAddSignalHeader" title="Cadastrar novo sinal náutico manualmente">
+                <i class="fa-solid fa-plus-circle"></i> + Novo Sinal
+            </button>
+
+            <!-- Import KML Button -->
+            <button class="btn btn-outline" id="btnImportKmlHeader" title="Importar sinais do Google Earth (KML)">
+                <i class="fa-solid fa-file-import"></i> Google Earth (KML)
+            </button>
+            <input type="file" id="inputKmlFile" accept=".kml,.kmz" style="display:none;">
+
+            <!-- Load GeoTIFF Button -->
+            <button class="btn btn-outline" id="btnLoadGeotiffHeader" title="Carregar Carta Náutica GeoTIFF (.tif)">
+                <i class="fa-solid fa-map-location-dot"></i> + Carta GeoTIFF (.tif)
+            </button>
+            <input type="file" id="inputGeotiffFile" accept=".tif,.tiff" style="display:none;" multiple>
+
+            <button class="btn btn-simulation" id="btnOpenSimulator">
+                <i class="fa-solid fa-calculator"></i> Simulador IE
+            </button>
+            <button class="btn btn-outline" id="btnToggleTheme" title="Alternar Tema">
+                <i class="fa-solid fa-moon"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Application Grid -->
+    <div class="app-container">
+
+        <!-- Mobile View Switcher Bar (Visible on mobile & tablet) -->
+        <div class="mobile-view-toggle">
+            <button class="mobile-toggle-btn active" id="btnMobileShowSidebar">
+                <i class="fa-solid fa-list-check"></i> Painel Operacional
+            </button>
+            <button class="mobile-toggle-btn" id="btnMobileShowMap">
+                <i class="fa-solid fa-map-location-dot"></i> Mapa GIS
+            </button>
+        </div>
+
+        <!-- Sidebar / Navigation Controls -->
+        <aside class="app-sidebar" id="appSidebar">
+            
+            <!-- Tab Navigation Header -->
+            <div class="sidebar-tabs">
+                <button class="tab-btn active" data-tab="tab-list">
+                    <i class="fa-solid fa-tower-observation"></i> Sinais (DH2)
+                </button>
+                <button class="tab-btn" data-tab="tab-route">
+                    <i class="fa-solid fa-route"></i> Desenhar Derrota
+                </button>
+                <button class="tab-btn" data-tab="tab-ie">
+                    <i class="fa-solid fa-chart-line"></i> IE & Stats
+                </button>
+                <button class="tab-btn" data-tab="tab-charts">
+                    <i class="fa-solid fa-layer-group"></i> Cartas GeoTIFF
+                </button>
+            </div>
+
+            <!-- TAB 1: SINAIS & PESQUISA -->
+            <div class="tab-content active" id="tab-list">
+                
+                <!-- Search & Filters -->
+                <div class="card search-card">
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="searchInput" placeholder="Buscar por Código DH2 ou Nome..." autocomplete="off">
+                        <button class="clear-search" id="btnClearSearch" title="Limpar busca">&times;</button>
+                    </div>
+
+                    <!-- Filter Row 1: Status -->
+                    <div class="filter-pills mb-2">
+                        <button class="pill-btn active" data-filter="all">Todos (<span id="countAll">0</span>)</button>
+                        <button class="pill-btn status-op" data-filter="op">🟢 Op (<span id="countOp">0</span>)</button>
+                        <button class="pill-btn status-av" data-filter="av">🔴 Avariados (<span id="countAv">0</span>)</button>
+                    </div>
+
+                    <!-- Filter Row 2: Type Category (Bóias, Balizas, Faróis, Faroletes) -->
+                    <div class="type-filter-group">
+                        <label for="typeFilterSelect" class="filter-label"><i class="fa-solid fa-filter"></i> Filtrar por Tipo de Sinal:</label>
+                        <select id="typeFilterSelect" class="form-control form-control-sm">
+                            <option value="ALL">Todos os Tipos (Bóias, Faróis, Balizas...)</option>
+                            <option value="FAROL">Faróis</option>
+                            <option value="FAROLETE">Faroletes</option>
+                            <option value="BOIA">Bóias (Luminosas BZ e Cegas BC)</option>
+                            <option value="BALIZA">Balizas</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Signal Cards List Container -->
+                <div class="signal-list-header">
+                    <span>SINAIS NÁUTICOS REGISTRADOS</span>
+                    <div class="list-actions">
+                        <button class="btn-text" id="btnCenterAll"><i class="fa-solid fa-expand"></i> Enquadrar Todos</button>
+                    </div>
+                </div>
+
+                <div class="signal-list" id="signalList">
+                    <!-- Dynamic Signal Cards rendered by JS -->
+                </div>
+            </div>
+
+            <!-- TAB 2: PLANEJADOR DE DERROTA NÁUTICA INTERATIVA -->
+            <div class="tab-content" id="tab-route">
+                <div class="card route-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-compass"></i> Traçado de Derrota Náutica</h3>
+                        <span class="badge badge-warning">Canal Navegável</span>
+                    </div>
+
+                    <p class="help-text text-secondary mb-2">
+                        <i class="fa-solid fa-circle-info"></i> Clique no mapa para adicionar **Pontos de Guinada (Waypoints)** contornando terras e bancos de areia pelo canal seguro.
+                    </p>
+
+                    <!-- Base Selection -->
+                    <div class="form-group">
+                        <label for="routeBaseSelect"><i class="fa-solid fa-anchor"></i> Origem / Ponto de Partida:</label>
+                        <select id="routeBaseSelect" class="form-control">
+                            <option value="belem">Base Naval de Val-de-Cães (Belém / CHN-4)</option>
+                            <option value="macapa">Capitania dos Portos do Amapá (Macapá)</option>
+                            <option value="santarem">Capitania Fluvial de Santarém</option>
+                            <option value="salinopolis">Ponto Focal Salinópolis (Atalaia)</option>
+                        </select>
+                    </div>
+
+                    <!-- Ship Speed Input -->
+                    <div class="form-group">
+                        <label for="shipSpeedInput">
+                            <i class="fa-solid fa-gauge-high"></i> Velocidade do Navio (Nós / kts):
+                        </label>
+                        <div class="input-with-unit">
+                            <input type="number" id="shipSpeedInput" min="1" max="40" value="10" step="0.5" class="form-control">
+                            <span class="unit">kts</span>
+                        </div>
+                    </div>
+
+                    <!-- Route Mode Action Buttons -->
+                    <div class="route-actions-grid">
+                        <button class="btn btn-primary" id="btnToggleDrawDerrota">
+                            <i class="fa-solid fa-pen-nib"></i> <span id="btnDrawDerrotaText">Desenhar no Mapa</span>
+                        </button>
+                        <button class="btn btn-danger-outline" id="btnClearRoute">
+                            <i class="fa-solid fa-trash-can"></i> Limpar Derrota
+                        </button>
+                    </div>
+
+                    <!-- Route Summary Telemetry -->
+                    <div class="telemetry-box" id="routeTelemetry">
+                        <div class="telemetry-item">
+                            <span class="telemetry-label">DISTÂNCIA TOTAL (NM)</span>
+                            <span class="telemetry-val" id="routeDistanceVal">0.0 <small>NM</small></span>
+                        </div>
+                        <div class="telemetry-item">
+                            <span class="telemetry-label">PONTOS DE GUINADA</span>
+                            <span class="telemetry-val" id="routeWaypointsCount">0 <small>pts</small></span>
+                        </div>
+                        <div class="telemetry-item highlight">
+                            <span class="telemetry-label">TEMPO ESTIMADO EM TRÂNSITO (ETA)</span>
+                            <span class="telemetry-val" id="routeEtaVal">0h 00m</span>
+                        </div>
+                    </div>
+
+                    <!-- Route Waypoints Reorderable List -->
+                    <div class="waypoints-container">
+                        <div class="waypoints-title">WAYPOINTS E RUMOS VERDADEIROS DO CANAL</div>
+                        <ul class="waypoints-list" id="waypointsList">
+                            <!-- Dynamic list items -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: ÍNDICE DE EFICÁCIA & ESTATÍSTICAS -->
+            <div class="tab-content" id="tab-ie">
+                <div class="card ie-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-chart-pie"></i> Índice de Eficácia (IE) CHN-4</h3>
+                    </div>
+
+                    <!-- Large IE Gauge -->
+                    <div class="gauge-container">
+                        <div class="gauge-circle" id="ieCircleGauge">
+                            <div class="gauge-inner">
+                                <span class="gauge-percent" id="iePercentDisplay">--%</span>
+                                <span class="gauge-subtitle">IE GLOBAL</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ie-formula-box">
+                        $$\text{IE (\%)} = \left( \frac{\text{Sinais Operacionais}}{\text{Total de Sinais}} \right) \times 100$$
+                        <div class="formula-values">
+                            <span id="formulaOpVal">0</span> / <span id="formulaTotalVal">0</span> Sinais Operacionais
+                        </div>
+                    </div>
+
+                    <div class="stat-breakdown">
+                        <div class="stat-row">
+                            <span><i class="fa-solid fa-circle-check text-success"></i> Sinais Operacionais:</span>
+                            <strong id="statOpCount">0</strong>
+                        </div>
+                        <div class="stat-row">
+                            <span><i class="fa-solid fa-circle-exclamation text-danger"></i> Sinais Avariados / Apagados:</span>
+                            <strong id="statAvCount">0</strong>
+                        </div>
+                        <div class="stat-row">
+                            <span><i class="fa-solid fa-anchor text-gold"></i> Bóias (BZ / BC):</span>
+                            <strong id="statBoiaCount">0</strong>
+                        </div>
+                        <div class="stat-row">
+                            <span><i class="fa-solid fa-tower-observation text-cyan"></i> Faróis & Faroletes:</span>
+                            <strong id="statFarolCount">0</strong>
+                        </div>
+                        <div class="stat-row">
+                            <span><i class="fa-solid fa-shield-halved"></i> Meta IALA (Recomendado):</span>
+                            <strong class="text-gold">≥ 95.0%</strong>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-simulation btn-block mt-3" id="btnOpenSimulator2">
+                        <i class="fa-solid fa-sliders"></i> Abrir Simulador de Manutenção
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 4: GERENCIADOR DE CARTAS GEOTIFF -->
+            <div class="tab-content" id="tab-charts">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-map"></i> Cartas Náuticas GeoTIFF</h3>
+                        <button class="btn btn-primary btn-sm" id="btnUploadTifTab">
+                            <i class="fa-solid fa-plus"></i> Add .TIF
+                        </button>
+                    </div>
+
+                    <p class="help-text mb-3">
+                        Carregue arquivos `.tif` / `.geotiff` para sobrepor a carta raster sobre a camada do mapa. Defina a transparência para visualização perfeita.
+                    </p>
+
+                    <div id="geotiffLayersList" class="geotiff-layers-list">
+                        <!-- Dynamic list of loaded GeoTIFF layers -->
+                        <div class="text-muted text-center p-3">
+                            Nenhum GeoTIFF sob demanda carregado. O sistema está exibindo a Carta Náutica Base (OpenSeaMap/Esri Ocean).
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- Main Map Display -->
+        <main class="app-map-wrapper">
+            <div id="map" class="map-container"></div>
+
+            <!-- Map Floating Controls Overlay -->
+            <div class="map-overlay-tools">
+                <div class="tool-group">
+                    <button class="tool-btn" id="btnMapReset" title="Centralizar Jurisdição CHN-4">
+                        <i class="fa-solid fa-crosshairs"></i>
+                    </button>
+                    <button class="tool-btn" id="btnToggleMeasure" title="Modo Medição de Distância">
+                        <i class="fa-solid fa-ruler-combined"></i>
+                    </button>
+                </div>
+
+                <!-- Custom Layer Indicator Badge -->
+                <div class="layer-badge" id="activeLayerBadge">
+                    <i class="fa-solid fa-layer-group"></i> <span id="activeLayerName">Carta Náutica (GeoTIFF/Tiles)</span>
+                </div>
+            </div>
+
+            <!-- Map Legend -->
+            <div class="map-legend">
+                <div class="legend-title"><i class="fa-solid fa-list-check"></i> LEGENDA ATON</div>
+                <div class="legend-item"><span class="legend-dot status-op"></span> Sinal Operacional</div>
+                <div class="legend-item"><span class="legend-dot status-av"></span> Sinal Avariado / Apagado</div>
+                <div class="legend-item"><span class="legend-line route-line"></span> Derrota Náutica (Canal Seguro)</div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL DE CADASTRO MANUAL DE NOVO SINAL -->
+    <div class="modal-backdrop" id="modalAddSignal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title-wrapper">
+                        <span class="badge badge-navy">NOVO REGISTRO ATON</span>
+                        <h2>Cadastrar Novo Sinal Náutico</h2>
+                    </div>
+                    <button class="modal-close" data-close="modalAddSignal">&times;</button>
+                </div>
+
+                <form id="formAddSignal">
+                    <div class="modal-body">
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label for="addCode">Código DH2 / Identificação:</label>
+                                <input type="text" id="addCode" class="form-control" placeholder="ex: PA-30 ou CHN-010" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="addName">Nome do Sinal Náutico:</label>
+                                <input type="text" id="addName" class="form-control" placeholder="ex: Farolete de Jurupari" required>
+                            </div>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label for="addType">Tipo de Sinal:</label>
+                                <select id="addType" class="form-control" required>
+                                    <option value="Farol">Farol</option>
+                                    <option value="Farolete">Farolete</option>
+                                    <option value="BZ (Bóia Luminosa)">Bóia Luminosa (BZ)</option>
+                                    <option value="BC (Bóia Cega)">Bóia Cega (BC)</option>
+                                    <option value="Baliza">Baliza</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="addStatus">Status Operacional Inicial:</label>
+                                <select id="addStatus" class="form-control" required>
+                                    <option value="OPERACIONAL">🟢 Operacional</option>
+                                    <option value="APAGADO">🔴 Avariado - Apagado</option>
+                                    <option value="A DERIVA">🔴 Avariado - À Deriva / Fora de Posição</option>
+                                    <option value="DESTRUÍDO">🔴 Avariado - Estrutura Danificada</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label for="addLat">Latitude Decimal:</label>
+                                <input type="number" id="addLat" class="form-control" step="0.000001" placeholder="-1.350000" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="addLng">Longitude Decimal:</label>
+                                <input type="number" id="addLng" class="form-control" step="0.000001" placeholder="-48.500000" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="button" class="btn btn-outline btn-sm btn-block" id="btnPickPointOnMap">
+                                <i class="fa-solid fa-crosshairs"></i> Ou Clique no Mapa p/ Capturar Posição
+                            </button>
+                        </div>
+
+                        <div class="form-grid-3">
+                            <div class="form-group">
+                                <label for="addCharacteristic">Característica:</label>
+                                <input type="text" id="addCharacteristic" class="form-control" placeholder="Lp. V. 4s 5m 6NM" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="addRange">Alcance (NM):</label>
+                                <input type="number" id="addRange" class="form-control" step="0.1" value="6" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="addAltitude">Altitude (m):</label>
+                                <input type="number" id="addAltitude" class="form-control" step="0.1" value="5" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="addJurisdiction">Jurisdição / Organização Responsável:</label>
+                            <input type="text" id="addJurisdiction" class="form-control" value="CHN-4 / 4º Distrito Naval" required>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary btn-block">
+                            <i class="fa-solid fa-floppy-disk"></i> Salvar Novo Sinal Náutico
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 1: DETALHES DO SINAL (DH2) + EDICAO & FOTO -->
+    <div class="modal-backdrop" id="modalSignalDetail">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title-wrapper">
+                        <span class="badge" id="modalSignalBadge">DH2: CHN-001</span>
+                        <h2 id="modalSignalName">Farol de Salinópolis</h2>
+                    </div>
+                    <div class="header-action-buttons">
+                        <button class="btn btn-outline btn-sm" id="btnToggleEditMode">
+                            <i class="fa-solid fa-pen"></i> <span id="textBtnEdit">Editar Ficha Técnica</span>
+                        </button>
+                        <button class="modal-close" data-close="modalSignalDetail">&times;</button>
+                    </div>
+                </div>
+
+                <div class="modal-body">
+                    <div class="modal-grid">
+                        
+                        <!-- Left Column: DH2 Technical Specifications & Photo Section -->
+                        <div class="spec-panel">
+                            <h4><i class="fa-solid fa-book-bookmark"></i> Ficha Técnica (Lista de Faróis - DH2)</h4>
+                            
+                            <!-- Display View Mode -->
+                            <div id="viewSpecMode">
+                                <table class="spec-table">
+                                    <tr>
+                                        <th>Código DH2:</th>
+                                        <td id="modalSpecCode">--</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Tipo de Sinal:</th>
+                                        <td id="modalSpecType">--</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Posição Decimal:</th>
+                                        <td id="modalSpecPosDec">--</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Posição GMS:</th>
+                                        <td id="modalSpecPosGms">--</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Característica Luminosa:</th>
+                                        <td id="modalSpecChar" class="text-highlight">--</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Alcance Luminoso:</th>
+                                        <td id="modalSpecRange">-- NM</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Altitude / Elevação:</th>
+                                        <td id="modalSpecAltitude">-- m</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Jurisdição Fluvial:</th>
+                                        <td id="modalSpecJurisdiction">--</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Estado Atual:</th>
+                                        <td id="modalSpecStatus">--</td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- Edit View Mode -->
+                            <form id="formEditSpec" style="display: none;">
+                                <div class="form-group">
+                                    <label>Código DH2:</label>
+                                    <input type="text" id="editCode" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Nome do Sinal:</label>
+                                    <input type="text" id="editName" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Tipo de Sinal:</label>
+                                    <input type="text" id="editType" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Característica Luminosa:</label>
+                                    <input type="text" id="editCharacteristic" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Alcance (NM):</label>
+                                    <input type="number" id="editRange" class="form-control" step="0.1" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Altitude (m):</label>
+                                    <input type="number" id="editAltitude" class="form-control" step="0.1" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Latitude Decimal:</label>
+                                    <input type="number" id="editLat" class="form-control" step="0.000001" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Longitude Decimal:</label>
+                                    <input type="number" id="editLng" class="form-control" step="0.000001" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Jurisdição:</label>
+                                    <input type="text" id="editJurisdiction" class="form-control" required>
+                                </div>
+                                <div class="form-actions-grid mt-3">
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fa-solid fa-floppy-disk"></i> Salvar Alterações
+                                    </button>
+                                    <button type="button" class="btn btn-danger-outline" id="btnDeleteSignal" title="Excluir/Cancelar este sinal permanentemente">
+                                        <i class="fa-solid fa-trash-can"></i> Excluir Sinal
+                                    </button>
+                                </div>
+                            </form>
+
+                            <!-- Photo Section -->
+                            <div class="photo-section mt-3">
+                                <h4><i class="fa-solid fa-camera"></i> Registro Fotográfico do Sinal</h4>
+                                <div class="photo-card" id="signalPhotoCard">
+                                    <div class="photo-placeholder" id="photoPlaceholder">
+                                        <i class="fa-solid fa-image"></i>
+                                        <span>Nenhuma foto anexada</span>
+                                    </div>
+                                    <img id="signalImgDisplay" src="" alt="Foto do Sinal" style="display:none;" class="signal-img-preview">
+                                    <div class="photo-info" id="photoInfoBox" style="display:none;">
+                                        <span class="photo-date" id="photoDateDisplay"><i class="fa-solid fa-calendar-day"></i> Data: --/--/----</span>
+                                    </div>
+                                </div>
+
+                                <div class="photo-actions mt-2">
+                                    <button class="btn btn-outline btn-sm btn-block" id="btnTriggerPhotoUpload">
+                                        <i class="fa-solid fa-upload"></i> Anexar / Alterar Foto
+                                    </button>
+                                    <input type="file" id="inputPhotoFile" accept="image/*" style="display:none;">
+                                </div>
+                            </div>
+
+                            <div class="spec-actions mt-3">
+                                <button class="btn btn-outline btn-block" id="btnModalAddToRoute">
+                                    <i class="fa-solid fa-plus-circle"></i> Adicionar à Derrota Náutica
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Status Update & History -->
+                        <div class="update-panel">
+                            <h4><i class="fa-solid fa-pen-to-square"></i> Registrar Ocorrência / Atualizar Status</h4>
+                            
+                            <form id="formUpdateStatus">
+                                <div class="form-group">
+                                    <label for="selectNewStatus">Novo Status Operacional:</label>
+                                    <select id="selectNewStatus" class="form-control">
+                                        <option value="OPERACIONAL">🟢 Operacional</option>
+                                        <option value="APAGADO">🔴 Avariado - Apagado</option>
+                                        <option value="A DERIVA">🔴 Avariado - À Deriva / Fora de Posição</option>
+                                        <option value="DESTRUÍDO">🔴 Avariado - Estrutura Danificada / Destruída</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="textOccurrenceReason">
+                                        <i class="fa-solid fa-triangle-exclamation"></i> Formalização da Ocorrência (Obrigatório):
+                                    </label>
+                                    <textarea id="textOccurrenceReason" class="form-control" rows="3" placeholder="Descreva os detalhes técnicos da avaria, defeito no relampejador, baterias, vandalismo ou reparo efetuado..." required></textarea>
+                                </div>
+
+                                <div class="form-buttons">
+                                    <button type="submit" class="btn btn-primary" id="btnSaveStatus">
+                                        <i class="fa-solid fa-floppy-disk"></i> Salvar Registro
+                                    </button>
+                                    <button type="button" class="btn btn-warning" id="btnGenerateAvradioModal" style="display: none;">
+                                        <i class="fa-solid fa-tower-cell"></i> Gerar Minuta AVRADIO
+                                    </button>
+                                </div>
+                            </form>
+
+                            <hr class="divider">
+
+                            <!-- Occurrence Timeline History -->
+                            <h4><i class="fa-solid fa-clock-rotate-left"></i> Histórico de Registros</h4>
+                            <div class="history-timeline" id="modalHistoryTimeline">
+                                <!-- Dynamic timeline entries -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: GERADOR DE MINUTA DE AVRADIO (NORMAM-601/DHN) -->
+    <div class="modal-backdrop" id="modalAvradio">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header header-warning">
+                    <div class="modal-title-wrapper">
+                        <span class="badge badge-warning">PADRÃO NORMAM-601/DHN</span>
+                        <h2>MINUTA DE AVISO RÁDIO NAVEGAÇÃO (AVRADIO)</h2>
+                    </div>
+                    <button class="modal-close" data-close="modalAvradio">&times;</button>
+                </div>
+
+                <div class="modal-body">
+                    <p class="modal-intro">
+                        Texto pré-formatado gerado automaticamente segundo os requisitos da NORMAM-601/DHN para transmissão de Segurança da Navegação.
+                    </p>
+
+                    <div class="avradio-container">
+                        <textarea id="avradioTextarea" class="avradio-textbox" spellcheck="false"></textarea>
+                    </div>
+
+                    <div class="modal-footer-actions">
+                        <button class="btn btn-success btn-lg" id="btnCopyAvradio">
+                            <i class="fa-solid fa-copy"></i> Copiar Texto do AVRADIO
+                        </button>
+                        <button class="btn btn-outline" id="btnDownloadAvradio">
+                            <i class="fa-solid fa-download"></i> Baixar .TXT
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: SIMULADOR DE EFICÁCIA (IE) -->
+    <div class="modal-backdrop" id="modalSimulator">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title-wrapper">
+                        <span class="badge badge-navy">SIMULADOR LOGÍSTICO</span>
+                        <h2>Simulador de Manutenção e Impacto no IE</h2>
+                    </div>
+                    <button class="modal-close" data-close="modalSimulator">&times;</button>
+                </div>
+
+                <div class="modal-body">
+                    <p class="sim-description">
+                        Selecione abaixo os sinais atualmente avariados que serão contemplados na próxima missão de manutenção. O sistema calcula em tempo real o novo Índice de Eficácia (IE) e o ganho percentual.
+                    </p>
+
+                    <!-- Comparative IE Telemetry -->
+                    <div class="sim-telemetry-grid">
+                        <div class="sim-card sim-current">
+                            <span class="sim-label">IE ATUAL</span>
+                            <div class="sim-val" id="simCurrentIe">--%</div>
+                            <span class="sim-sub" id="simCurrentRatio">0 / 0 operacionais</span>
+                        </div>
+                        <div class="sim-card sim-arrow">
+                            <i class="fa-solid fa-circle-arrow-right"></i>
+                        </div>
+                        <div class="sim-card sim-projected">
+                            <span class="sim-label">NOVO IE SIMULADO</span>
+                            <div class="sim-val" id="simProjectedIe">--%</div>
+                            <span class="sim-sub" id="simProjectedRatio">0 / 0 operacionais</span>
+                        </div>
+                        <div class="sim-card sim-delta">
+                            <span class="sim-label">GANHO NO IE</span>
+                            <div class="sim-val text-success" id="simDeltaIe">+0.0%</div>
+                            <span class="sim-sub"><span id="simCountRepaired">0</span> sinal(is) reparados</span>
+                        </div>
+                    </div>
+
+                    <!-- Checklist of damaged signals -->
+                    <div class="sim-list-section">
+                        <div class="sim-list-header">
+                            <span>SINAIS AVARIADOS DISPONÍVEIS PARA REPARO SIMULADO:</span>
+                            <div class="sim-check-tools">
+                                <button class="btn-text" id="btnSimSelectAll">Marcar Todos</button> | 
+                                <button class="btn-text" id="btnSimClearAll">Desmarcar Todos</button>
+                            </div>
+                        </div>
+
+                        <div class="sim-checklist" id="simChecklist">
+                            <!-- Dynamic checkboxes -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-primary" id="btnApplySimulationToRoute">
+                        <i class="fa-solid fa-route"></i> Criar Derrota para Sinais Selecionados
+                    </button>
+                    <button class="btn btn-outline" data-close="modalSimulator">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: CADASTRAR NOVO SINAL NÁUTICO MANUALMENTE -->
+    <div class="modal-backdrop" id="modalAddSignal">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title-wrapper">
+                        <span class="badge badge-navy">CADASTRO MANUAL</span>
+                        <h2><i class="fa-solid fa-plus-circle"></i> Registrar Novo Auxílio à Navegação</h2>
+                    </div>
+                    <button class="modal-close" data-close="modalAddSignal">&times;</button>
+                </div>
+
+                <div class="modal-body">
+                    <form id="formAddSignal" novalidate>
+                        <div class="form-grid-2col">
+                            <!-- Col 1: Identification -->
+                            <div class="form-section">
+                                <h4 class="form-section-title"><i class="fa-solid fa-id-card"></i> Identificação</h4>
+                                <div class="form-group">
+                                    <label for="addCode">Código DH2 / Identificador *</label>
+                                    <input type="text" id="addCode" class="form-control" placeholder="Ex: PA-55, CHN-012" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="addName">Nome do Sinal *</label>
+                                    <input type="text" id="addName" class="form-control" placeholder="Ex: Farolete de Monte Alegre" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="addType">Tipo de Auxílio *</label>
+                                    <select id="addType" class="form-control" required>
+                                        <option value="BZ (Bóia de Balizamento)">Bóia de Balizamento (BZ)</option>
+                                        <option value="BC (Bóia Cega)">Bóia Cega / Sem Luz (BC)</option>
+                                        <option value="Baliza">Baliza</option>
+                                        <option value="Farolete">Farolete</option>
+                                        <option value="Farol">Farol</option>
+                                        <option value="Racon">Racon / Radar Beacon</option>
+                                        <option value="Marca Cardinal">Marca Cardinal (AISM)</option>
+                                        <option value="Luz de Porto">Luz de Porto</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="addStatus">Status Operacional *</label>
+                                    <select id="addStatus" class="form-control" required>
+                                        <option value="OPERACIONAL">✅ OPERACIONAL</option>
+                                        <option value="APAGADO">🟡 APAGADO</option>
+                                        <option value="A DERIVA">🔴 A DERIVA</option>
+                                        <option value="DESAPARECIDO">🔴 DESAPARECIDO</option>
+                                        <option value="EM MANUTENÇÃO">🔧 EM MANUTENÇÃO</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Col 2: Location & Technical -->
+                            <div class="form-section">
+                                <h4 class="form-section-title"><i class="fa-solid fa-map-pin"></i> Posição & Dados Técnicos</h4>
+                                <div class="form-group">
+                                    <label>Coordenadas (Decimal) *</label>
+                                    <div class="coords-input-row">
+                                        <input type="number" id="addLat" class="form-control" placeholder="Latitude (ex: -1.3713)" step="any" required>
+                                        <input type="number" id="addLng" class="form-control" placeholder="Longitude (ex: -48.490)" step="any" required>
+                                    </div>
+                                    <button type="button" class="btn btn-outline btn-sm mt-1 w-full" id="btnPickPointOnMap">
+                                        <i class="fa-solid fa-crosshairs"></i> Ou Clique no Mapa p/ Capturar Posição
+                                    </button>
+                                </div>
+                                <div class="form-group">
+                                    <label for="addCharacteristic">Característica do Sinal</label>
+                                    <input type="text" id="addCharacteristic" class="form-control" placeholder="Ex: Lp. V. 4s 6m 8NM">
+                                </div>
+                                <div class="form-grid-2col-inner">
+                                    <div class="form-group">
+                                        <label for="addRange">Alcance (NM)</label>
+                                        <input type="number" id="addRange" class="form-control" value="0" min="0" max="50" step="0.5">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="addAltitude">Altitude (m)</label>
+                                        <input type="number" id="addAltitude" class="form-control" value="0" min="0" max="200">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="addJurisdiction">Jurisdição / Capitania</label>
+                                    <input type="text" id="addJurisdiction" class="form-control" placeholder="Ex: CHN-4 / Baía do Guajará">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fa-solid fa-floppy-disk"></i> Registrar Sinal no Sistema
+                            </button>
+                            <button type="button" class="btn btn-outline" data-close="modalAddSignal">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Google Earth KML Signals Data -->
+    <script src="kml_signals.js"></script>
+
+    <!-- Application Logic -->
+    <script src="app.js"></script>
+</body>
+</html>
