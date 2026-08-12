@@ -428,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // KML File Upload Listeners
     const inputKmlFile = document.getElementById('inputKmlFile');
-    document.getElementById('btnImportKmlHeader').addEventListener('click', () => inputKmlFile.click());
+    document.getElementById('btnImportKmlHeader')?.addEventListener('click', () => inputKmlFile.click());
 
     inputKmlFile.addEventListener('change', (e) => {
         const file = e.target.files[0];
@@ -444,8 +444,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. CARREGADOR E GERENCIADOR DE CARTAS GEOTIFF (.TIF)
     // =========================================================================
     const inputGeotiffFile = document.getElementById('inputGeotiffFile');
-    document.getElementById('btnLoadGeotiffHeader').addEventListener('click', () => inputGeotiffFile.click());
-    document.getElementById('btnUploadTifTab').addEventListener('click', () => inputGeotiffFile.click());
+    document.getElementById('btnLoadGeotiffHeader')?.addEventListener('click', () => inputGeotiffFile.click());
+    document.getElementById('btnUploadTifTab')?.addEventListener('click', () => inputGeotiffFile.click());
 
     // Helper to parse and render a GeoTIFF (.tif/.tiff) file
     async function loadGeoTIFFFile(file) {
