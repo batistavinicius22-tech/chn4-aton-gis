@@ -53,18 +53,6 @@
                 <i class="fa-solid fa-plus-minus"></i> CRIAR/EXCLUIR SINAL
             </button>
 
-            <!-- Import KML Button -->
-            <button class="btn btn-outline" id="btnImportKmlHeader" title="Importar sinais do Google Earth (KML)">
-                <i class="fa-solid fa-file-import"></i> Google Earth (KML)
-            </button>
-            <input type="file" id="inputKmlFile" accept=".kml,.kmz" style="display:none;">
-
-            <!-- Load GeoTIFF Button -->
-            <button class="btn btn-outline" id="btnLoadGeotiffHeader" title="Carregar Carta Náutica GeoTIFF (.tif)">
-                <i class="fa-solid fa-map-location-dot"></i> + Carta GeoTIFF (.tif)
-            </button>
-            <input type="file" id="inputGeotiffFile" accept=".tif,.tiff" style="display:none;" multiple>
-
             <button class="btn btn-simulation" id="btnOpenSimulator">
                 <i class="fa-solid fa-calculator"></i> Simulador IE
             </button>
@@ -137,6 +125,15 @@
                             <option value="BOIA">Bóias (Luminosas BZ e Cegas BC)</option>
                             <option value="BALIZA">Balizas</option>
                         </select>
+                    </div>
+
+                    <!-- Import KML Action Button -->
+                    <div class="mt-2 pt-2 border-top">
+                        <button class="btn btn-outline btn-sm w-full" id="btnImportKmlHeader" title="Importar sinais do Google Earth (KML)">
+                            <i class="fa-solid fa-file-import"></i> 📥 Importar Base KML (Google Earth)
+                        </button>
+                        <input type="file" id="inputKmlFile" accept=".kml,.kmz" style="display:none;">
+                        <input type="file" id="inputGeotiffFile" accept=".tif,.tiff" style="display:none;" multiple>
                     </div>
                 </div>
 
@@ -744,20 +741,20 @@
                     <button class="modal-close" data-close="modalAddSignal">&times;</button>
                 </div>
 
-                <!-- Horizontal Mode Switcher: OU CRIAR, OU EXCLUIR -->
-                <div class="manage-mode-switcher-container">
-                    <span class="mode-switcher-label"><i class="fa-solid fa-sliders"></i> TIPO DE OPERAÇÃO: SELECIONE UMA OPÇÃO</span>
-                    <div class="manage-mode-switcher">
-                        <button type="button" class="mode-tab-btn active" id="btnTabCreateMode">
-                            <i class="fa-solid fa-circle-plus"></i> 1. CRIAR NOVO SINAL
-                        </button>
-                        <button type="button" class="mode-tab-btn" id="btnTabDeleteMode">
-                            <i class="fa-solid fa-trash-can"></i> 2. EXCLUIR / CANCELAR SINAL
-                        </button>
-                    </div>
-                </div>
-
                 <div class="modal-body">
+                    
+                    <!-- Horizontal Mode Switcher: OU CRIAR, OU EXCLUIR -->
+                    <div class="manage-mode-switcher-container">
+                        <span class="mode-switcher-label"><i class="fa-solid fa-sliders"></i> OPERAÇÃO SOLICITADA:</span>
+                        <div class="manage-mode-switcher">
+                            <button type="button" class="mode-tab-btn active" id="btnTabCreateMode">
+                                <i class="fa-solid fa-circle-plus"></i> 1. CRIAR NOVO SINAL
+                            </button>
+                            <button type="button" class="mode-tab-btn" id="btnTabDeleteMode">
+                                <i class="fa-solid fa-trash-can"></i> 2. EXCLUIR / CANCELAR SINAL
+                            </button>
+                        </div>
+                    </div>
                     
                     <!-- MODE 1: CRIAR SINAL PANEL -->
                     <div id="panelCreateSignal">
