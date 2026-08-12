@@ -1565,14 +1565,18 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
     let pickingMarker = null;
 
     function switchManageMode(mode) {
+        const STYLE_ACTIVE_CREATE = 'flex: 1; padding: 13px 10px; border: 2px solid #34d399; border-radius: 6px; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: #fff; font-family: Rajdhani, monospace; font-weight: 700; font-size: 1rem; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px rgba(16,185,129,0.45); transition: all 0.2s;';
+        const STYLE_ACTIVE_DELETE = 'flex: 1; padding: 13px 10px; border: 2px solid #f87171; border-radius: 6px; background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: #fff; font-family: Rajdhani, monospace; font-weight: 700; font-size: 1rem; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px rgba(239,68,68,0.45); transition: all 0.2s;';
+        const STYLE_INACTIVE = 'flex: 1; padding: 13px 10px; border: 2px solid #4a5568; border-radius: 6px; background: #1a2035; color: #94a3b8; font-family: Rajdhani, monospace; font-weight: 700; font-size: 1rem; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;';
+
         if (mode === 'create') {
-            if (btnTabCreateMode) btnTabCreateMode.classList.add('active');
-            if (btnTabDeleteMode) btnTabDeleteMode.classList.remove('active');
+            if (btnTabCreateMode) btnTabCreateMode.setAttribute('style', STYLE_ACTIVE_CREATE);
+            if (btnTabDeleteMode) btnTabDeleteMode.setAttribute('style', STYLE_INACTIVE);
             if (panelCreateSignal) panelCreateSignal.style.display = 'block';
             if (panelDeleteSignal) panelDeleteSignal.style.display = 'none';
         } else {
-            if (btnTabDeleteMode) btnTabDeleteMode.classList.add('active');
-            if (btnTabCreateMode) btnTabCreateMode.classList.remove('active');
+            if (btnTabDeleteMode) btnTabDeleteMode.setAttribute('style', STYLE_ACTIVE_DELETE);
+            if (btnTabCreateMode) btnTabCreateMode.setAttribute('style', STYLE_INACTIVE);
             if (panelDeleteSignal) panelDeleteSignal.style.display = 'block';
             if (panelCreateSignal) panelCreateSignal.style.display = 'none';
             populateDeleteSignalSelectModal();

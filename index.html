@@ -744,14 +744,18 @@
                 <div class="modal-body">
                     
                     <!-- Horizontal Mode Switcher: OU CRIAR, OU EXCLUIR -->
-                    <div class="manage-mode-switcher-container">
-                        <span class="mode-switcher-label"><i class="fa-solid fa-sliders"></i> OPERAÇÃO SOLICITADA:</span>
-                        <div class="manage-mode-switcher">
-                            <button type="button" class="mode-tab-btn active" id="btnTabCreateMode">
-                                <i class="fa-solid fa-circle-plus"></i> 1. CRIAR NOVO SINAL
+                    <div style="background: #0a1628; border: 2px solid #d4a017; border-radius: 8px; padding: 14px 16px; margin-bottom: 18px; width: 100%; box-sizing: border-box;">
+                        <div style="font-family: 'Rajdhani', monospace; font-size: 0.8rem; font-weight: 700; color: #d4a017; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 7px;">
+                            <i class="fa-solid fa-sliders"></i> SELECIONE A OPERAÇÃO:
+                        </div>
+                        <div style="display: flex; gap: 10px; width: 100%;">
+                            <button type="button" id="btnTabCreateMode"
+                                style="flex: 1; padding: 13px 10px; border: 2px solid #34d399; border-radius: 6px; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: #fff; font-family: 'Rajdhani', monospace; font-weight: 700; font-size: 1rem; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px rgba(16,185,129,0.45); transition: all 0.2s;">
+                                <i class="fa-solid fa-circle-plus"></i> 1. CRIAR SINAL
                             </button>
-                            <button type="button" class="mode-tab-btn" id="btnTabDeleteMode">
-                                <i class="fa-solid fa-trash-can"></i> 2. EXCLUIR / CANCELAR SINAL
+                            <button type="button" id="btnTabDeleteMode"
+                                style="flex: 1; padding: 13px 10px; border: 2px solid #4a5568; border-radius: 6px; background: #1a2035; color: #94a3b8; font-family: 'Rajdhani', monospace; font-weight: 700; font-size: 1rem; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;">
+                                <i class="fa-solid fa-trash-can"></i> 2. EXCLUIR SINAL
                             </button>
                         </div>
                     </div>
