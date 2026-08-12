@@ -78,6 +78,39 @@
             </button>
         </div>
 
+        <!-- Main Map Display (Comes first in HTML so mobile shows map at top when scrolling) -->
+        <main class="app-map-wrapper">
+            <div class="map-drag-handle">
+                <i class="fa-solid fa-arrows-up-down"></i> Role para baixo para ver o Painel de Sinais
+            </div>
+            <div id="map" class="map-container"></div>
+
+            <!-- Map Floating Controls Overlay -->
+            <div class="map-overlay-tools">
+                <div class="tool-group">
+                    <button class="tool-btn" id="btnMapReset" title="Centralizar Jurisdição CHN-4">
+                        <i class="fa-solid fa-crosshairs"></i>
+                    </button>
+                    <button class="tool-btn" id="btnToggleMeasure" title="Modo Medição de Distância">
+                        <i class="fa-solid fa-ruler-combined"></i>
+                    </button>
+                </div>
+
+                <!-- Custom Layer Indicator Badge -->
+                <div class="layer-badge" id="activeLayerBadge">
+                    <i class="fa-solid fa-layer-group"></i> <span id="activeLayerName">Carta Náutica (GeoTIFF/Tiles)</span>
+                </div>
+            </div>
+
+            <!-- Map Legend -->
+            <div class="map-legend">
+                <div class="legend-title"><i class="fa-solid fa-list-check"></i> LEGENDA ATON</div>
+                <div class="legend-item"><span class="legend-dot status-op"></span> Sinal Operacional</div>
+                <div class="legend-item"><span class="legend-dot status-av"></span> Sinal Avariado / Apagado</div>
+                <div class="legend-item"><span class="legend-line route-line"></span> Derrota Náutica (Canal Seguro)</div>
+            </div>
+        </main>
+
         <!-- Sidebar / Navigation Controls -->
         <aside class="app-sidebar" id="appSidebar">
             
@@ -312,38 +345,6 @@
 
         </aside>
 
-        <!-- Main Map Display -->
-        <main class="app-map-wrapper">
-            <div class="map-drag-handle">
-                <i class="fa-solid fa-arrows-up-down"></i> Arraste p/ Rolar Página e Ver Painéis
-            </div>
-            <div id="map" class="map-container"></div>
-
-            <!-- Map Floating Controls Overlay -->
-            <div class="map-overlay-tools">
-                <div class="tool-group">
-                    <button class="tool-btn" id="btnMapReset" title="Centralizar Jurisdição CHN-4">
-                        <i class="fa-solid fa-crosshairs"></i>
-                    </button>
-                    <button class="tool-btn" id="btnToggleMeasure" title="Modo Medição de Distância">
-                        <i class="fa-solid fa-ruler-combined"></i>
-                    </button>
-                </div>
-
-                <!-- Custom Layer Indicator Badge -->
-                <div class="layer-badge" id="activeLayerBadge">
-                    <i class="fa-solid fa-layer-group"></i> <span id="activeLayerName">Carta Náutica (GeoTIFF/Tiles)</span>
-                </div>
-            </div>
-
-            <!-- Map Legend -->
-            <div class="map-legend">
-                <div class="legend-title"><i class="fa-solid fa-list-check"></i> LEGENDA ATON</div>
-                <div class="legend-item"><span class="legend-dot status-op"></span> Sinal Operacional</div>
-                <div class="legend-item"><span class="legend-dot status-av"></span> Sinal Avariado / Apagado</div>
-                <div class="legend-item"><span class="legend-line route-line"></span> Derrota Náutica (Canal Seguro)</div>
-            </div>
-        </main>
     </div>
 
     <!-- MODAL DE CADASTRO MANUAL DE NOVO SINAL -->

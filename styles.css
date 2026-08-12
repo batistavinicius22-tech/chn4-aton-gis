@@ -173,6 +173,7 @@ html, body {
 
 /* Sidebar Layout */
 .app-sidebar {
+    order: 2;
     width: 440px;
     min-width: 440px;
     background: var(--navy-900);
@@ -877,6 +878,7 @@ html, body {
 
 /* Map Area Layout */
 .app-map-wrapper {
+    order: 1;
     flex: 1;
     position: relative;
     height: 100%;
@@ -1158,9 +1160,10 @@ html, body {
         position: relative;
     }
 
-    /* Mobile MAPA + PAINEL (ROLAR): Map top (order 1), Sidebar bottom (order 2) */
+    /* Mobile MAPA + PAINEL (ROLAR): Map is first in HTML, naturally appears at top.
+       Sidebar follows below — user scrolls down to see the panel. */
     .app-map-wrapper {
-        order: 1;
+        order: unset;
         width: 100%;
         flex: none;
         height: 48vh;
@@ -1169,7 +1172,7 @@ html, body {
     }
 
     .app-sidebar {
-        order: 2;
+        order: unset;
         width: 100%;
         min-width: 100%;
         flex: none;
