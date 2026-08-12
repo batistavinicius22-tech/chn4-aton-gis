@@ -1555,14 +1555,104 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
 
 
     // =========================================================================
-    // 12. CADASTRO MANUAL DE NOVO SINAL NÁUTICO
+    // 12. GESTÃO DE SINAIS NÁUTICOS (CRIAR / EXCLUIR SINAL)
     // =========================================================================
     const modalAddSignal = document.getElementById('modalAddSignal');
+    const btnTabCreateMode = document.getElementById('btnTabCreateMode');
+    const btnTabDeleteMode = document.getElementById('btnTabDeleteMode');
+    const panelCreateSignal = document.getElementById('panelCreateSignal');
+    const panelDeleteSignal = document.getElementById('panelDeleteSignal');
     let pickingMarker = null;
+
+    function switchManageMode(mode) {
+        if (mode === 'create') {
+            if (btnTabCreateMode) btnTabCreateMode.classList.add('active');
+            if (btnTabDeleteMode) btnTabDeleteMode.classList.remove('active');
+            if (panelCreateSignal) panelCreateSignal.style.display = 'block';
+            if (panelDeleteSignal) panelDeleteSignal.style.display = 'none';
+        } else {
+            if (btnTabDeleteMode) btnTabDeleteMode.classList.add('active');
+            if (btnTabCreateMode) btnTabCreateMode.classList.remove('active');
+            if (panelDeleteSignal) panelDeleteSignal.style.display = 'block';
+            if (panelCreateSignal) panelCreateSignal.style.display = 'none';
+            populateDeleteSignalSelectModal();
+        }
+    }
+
+    if (btnTabCreateMode && btnTabDeleteMode) {
+        btnTabCreateMode.addEventListener('click', () => switchManageMode('create'));
+        btnTabDeleteMode.addEventListener('click', () => switchManageMode('delete'));
+    }
 
     document.getElementById('btnOpenAddSignalHeader').addEventListener('click', () => {
         document.getElementById('formAddSignal').reset();
+        switchManageMode('create');
         modalAddSignal.classList.add('active');
+    });
+
+    function populateDeleteSignalSelectModal() {
+        const select = document.getElementById('selectSignalToDeleteModal');
+        if (!select) return;
+
+        if (signalsData.length === 0) {
+            select.innerHTML = '<option value="">Nenhum sinal cadastrado</option>';
+            document.getElementById('deletePreviewCard').innerHTML = '<div class="text-muted">Nenhum sinal no sistema.</div>';
+            return;
+        }
+
+        select.innerHTML = signalsData.map(s => `
+            <option value="${s.code}">${s.code} - ${s.name} (${s.type})</option>
+        `).join('');
+
+        select.value = signalsData[0].code;
+        updateDeletePreviewCardModal(signalsData[0].code);
+    }
+
+    function updateDeletePreviewCardModal(code) {
+        const signal = signalsData.find(s => s.code === code);
+        if (!signal) return;
+
+        const isOp = isOperational(signal.status);
+        document.getElementById('delPreviewCode').textContent = signal.code;
+        document.getElementById('delPreviewStatus').textContent = signal.status;
+        document.getElementById('delPreviewStatus').className = `badge ${isOp ? 'badge-op' : 'badge-av'}`;
+        document.getElementById('delPreviewName').textContent = signal.name;
+        document.getElementById('delPreviewType').textContent = signal.type;
+        document.getElementById('delPreviewPos').textContent = `Coordenadas: Lat ${toDMS(signal.lat, true)}, Lng ${toDMS(signal.lng, false)}`;
+        document.getElementById('delPreviewJurisdiction').textContent = `Jurisdição: ${signal.jurisdiction || 'CHN-4'}`;
+    }
+
+    document.getElementById('selectSignalToDeleteModal')?.addEventListener('change', (e) => {
+        updateDeletePreviewCardModal(e.target.value);
+    });
+
+    document.getElementById('btnConfirmDeleteSignalModal')?.addEventListener('click', () => {
+        const select = document.getElementById('selectSignalToDeleteModal');
+        if (!select || !select.value) return;
+
+        const code = select.value;
+        const signal = signalsData.find(s => s.code === code);
+        if (!signal) return;
+
+        if (confirm(`⚠️ ATENÇÃO: Deseja realmente EXCLUIR PERMANENTEMENTE o sinal náutico [${signal.code} - ${signal.name}]?`)) {
+            const index = signalsData.findIndex(s => s.code === code);
+            if (index !== -1) signalsData.splice(index, 1);
+
+            if (mapMarkers[code]) {
+                map.removeLayer(mapMarkers[code]);
+                delete mapMarkers[code];
+            }
+
+            routeWaypoints = routeWaypoints.filter(wp => wp.code !== code);
+            updateRoute();
+
+            updateIE();
+            renderMapMarkers();
+            renderSignalList();
+
+            modalAddSignal.classList.remove('active');
+            showToast(`Sinal ${code} excluído com sucesso do sistema.`, 'danger');
+        }
     });
 
     // Button: click on map to capture lat/lng for new signal

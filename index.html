@@ -48,9 +48,9 @@
                 <div class="ie-pill-value" id="headerIeValue">--%</div>
             </div>
 
-            <!-- Button: Add/Edit Signal -->
-            <button class="btn btn-primary" id="btnOpenAddSignalHeader" title="Cadastrar novo sinal ou alterar dados dos existentes">
-                <i class="fa-solid fa-pen-to-square"></i> Alterar / Novo Sinal
+            <!-- Button: Add/Delete Signal -->
+            <button class="btn btn-primary" id="btnOpenAddSignalHeader" title="Criar novo sinal ou excluir sinal existente">
+                <i class="fa-solid fa-plus-minus"></i> CRIAR/EXCLUIR SINAL
             </button>
 
             <!-- Import KML Button -->
@@ -732,98 +732,141 @@
         </div>
     </div>
 
-    <!-- MODAL 4: CADASTRAR NOVO SINAL NÁUTICO MANUALMENTE -->
+    <!-- MODAL 4: CRIAR OU EXCLUIR SINAL NÁUTICO -->
     <div class="modal-backdrop" id="modalAddSignal">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <div class="modal-title-wrapper">
-                        <span class="badge badge-navy">CADASTRO MANUAL</span>
-                        <h2><i class="fa-solid fa-plus-circle"></i> Registrar Novo Auxílio à Navegação</h2>
+                        <span class="badge badge-navy">GESTÃO DE SINAIS NÁUTICOS</span>
+                        <h2><i class="fa-solid fa-plus-minus"></i> Criar ou Excluir Sinal</h2>
                     </div>
                     <button class="modal-close" data-close="modalAddSignal">&times;</button>
                 </div>
 
+                <!-- Horizontal Mode Switcher: OU CRIAR, OU EXCLUIR -->
+                <div class="manage-mode-switcher">
+                    <button type="button" class="mode-tab-btn active" id="btnTabCreateMode">
+                        <i class="fa-solid fa-plus-circle"></i> 1. Criar Novo Sinal
+                    </button>
+                    <button type="button" class="mode-tab-btn" id="btnTabDeleteMode">
+                        <i class="fa-solid fa-trash-can"></i> 2. Excluir Sinal Existente
+                    </button>
+                </div>
+
                 <div class="modal-body">
-                    <form id="formAddSignal" novalidate>
-                        <div class="form-grid-2col">
-                            <!-- Col 1: Identification -->
-                            <div class="form-section">
-                                <h4 class="form-section-title"><i class="fa-solid fa-id-card"></i> Identificação</h4>
-                                <div class="form-group">
-                                    <label for="addCode">Código DH2 / Identificador *</label>
-                                    <input type="text" id="addCode" class="form-control" placeholder="Ex: PA-55, CHN-012" required>
+                    
+                    <!-- MODE 1: CRIAR SINAL PANEL -->
+                    <div id="panelCreateSignal">
+                        <form id="formAddSignal" novalidate>
+                            <div class="form-grid-2col">
+                                <!-- Col 1: Identification -->
+                                <div class="form-section">
+                                    <h4 class="form-section-title"><i class="fa-solid fa-id-card"></i> Identificação</h4>
+                                    <div class="form-group">
+                                        <label for="addCode">Código DH2 / Identificador *</label>
+                                        <input type="text" id="addCode" class="form-control" placeholder="Ex: PA-55, CHN-012" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="addName">Nome do Sinal *</label>
+                                        <input type="text" id="addName" class="form-control" placeholder="Ex: Farolete de Monte Alegre" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="addType">Tipo de Auxílio *</label>
+                                        <select id="addType" class="form-control" required>
+                                            <option value="BZ (Bóia de Balizamento)">Bóia de Balizamento (BZ)</option>
+                                            <option value="BC (Bóia Cega)">Bóia Cega / Sem Luz (BC)</option>
+                                            <option value="Baliza">Baliza</option>
+                                            <option value="Farolete">Farolete</option>
+                                            <option value="Farol">Farol</option>
+                                            <option value="Racon">Racon / Radar Beacon</option>
+                                            <option value="Marca Cardinal">Marca Cardinal (AISM)</option>
+                                            <option value="Luz de Porto">Luz de Porto</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="addStatus">Status Operacional *</label>
+                                        <select id="addStatus" class="form-control" required>
+                                            <option value="OPERACIONAL">✅ OPERACIONAL</option>
+                                            <option value="APAGADO">🟡 APAGADO</option>
+                                            <option value="A DERIVA">🔴 A DERIVA</option>
+                                            <option value="DESAPARECIDO">🔴 DESAPARECIDO</option>
+                                            <option value="EM MANUTENÇÃO">🔧 EM MANUTENÇÃO</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div class="form-group">
-                                    <label for="addName">Nome do Sinal *</label>
-                                    <input type="text" id="addName" class="form-control" placeholder="Ex: Farolete de Monte Alegre" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="addType">Tipo de Auxílio *</label>
-                                    <select id="addType" class="form-control" required>
-                                        <option value="BZ (Bóia de Balizamento)">Bóia de Balizamento (BZ)</option>
-                                        <option value="BC (Bóia Cega)">Bóia Cega / Sem Luz (BC)</option>
-                                        <option value="Baliza">Baliza</option>
-                                        <option value="Farolete">Farolete</option>
-                                        <option value="Farol">Farol</option>
-                                        <option value="Racon">Racon / Radar Beacon</option>
-                                        <option value="Marca Cardinal">Marca Cardinal (AISM)</option>
-                                        <option value="Luz de Porto">Luz de Porto</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="addStatus">Status Operacional *</label>
-                                    <select id="addStatus" class="form-control" required>
-                                        <option value="OPERACIONAL">✅ OPERACIONAL</option>
-                                        <option value="APAGADO">🟡 APAGADO</option>
-                                        <option value="A DERIVA">🔴 A DERIVA</option>
-                                        <option value="DESAPARECIDO">🔴 DESAPARECIDO</option>
-                                        <option value="EM MANUTENÇÃO">🔧 EM MANUTENÇÃO</option>
-                                    </select>
+
+                                <!-- Col 2: Location & Technical -->
+                                <div class="form-section">
+                                    <h4 class="form-section-title"><i class="fa-solid fa-map-pin"></i> Posição & Dados Técnicos</h4>
+                                    <div class="form-group">
+                                        <label>Coordenadas (Decimal) *</label>
+                                        <div class="coords-input-row">
+                                            <input type="number" id="addLat" class="form-control" placeholder="Latitude (ex: -1.3713)" step="any" required>
+                                            <input type="number" id="addLng" class="form-control" placeholder="Longitude (ex: -48.490)" step="any" required>
+                                        </div>
+                                        <button type="button" class="btn btn-outline btn-sm mt-1 w-full" id="btnPickPointOnMap">
+                                            <i class="fa-solid fa-crosshairs"></i> Ou Clique no Mapa p/ Capturar Posição
+                                        </button>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="addCharacteristic">Característica do Sinal</label>
+                                        <input type="text" id="addCharacteristic" class="form-control" placeholder="Ex: Lp. V. 4s 6m 8NM">
+                                    </div>
+                                    <div class="form-grid-2col-inner">
+                                        <div class="form-group">
+                                            <label for="addRange">Alcance (NM)</label>
+                                            <input type="number" id="addRange" class="form-control" value="0" min="0" max="50" step="0.5">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="addAltitude">Altitude (m)</label>
+                                            <input type="number" id="addAltitude" class="form-control" value="0" min="0" max="200">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="addJurisdiction">Jurisdição / Capitania</label>
+                                        <input type="text" id="addJurisdiction" class="form-control" placeholder="Ex: CHN-4 / Baía do Guajará">
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Col 2: Location & Technical -->
-                            <div class="form-section">
-                                <h4 class="form-section-title"><i class="fa-solid fa-map-pin"></i> Posição & Dados Técnicos</h4>
-                                <div class="form-group">
-                                    <label>Coordenadas (Decimal) *</label>
-                                    <div class="coords-input-row">
-                                        <input type="number" id="addLat" class="form-control" placeholder="Latitude (ex: -1.3713)" step="any" required>
-                                        <input type="number" id="addLng" class="form-control" placeholder="Longitude (ex: -48.490)" step="any" required>
-                                    </div>
-                                    <button type="button" class="btn btn-outline btn-sm mt-1 w-full" id="btnPickPointOnMap">
-                                        <i class="fa-solid fa-crosshairs"></i> Ou Clique no Mapa p/ Capturar Posição
-                                    </button>
-                                </div>
-                                <div class="form-group">
-                                    <label for="addCharacteristic">Característica do Sinal</label>
-                                    <input type="text" id="addCharacteristic" class="form-control" placeholder="Ex: Lp. V. 4s 6m 8NM">
-                                </div>
-                                <div class="form-grid-2col-inner">
-                                    <div class="form-group">
-                                        <label for="addRange">Alcance (NM)</label>
-                                        <input type="number" id="addRange" class="form-control" value="0" min="0" max="50" step="0.5">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="addAltitude">Altitude (m)</label>
-                                        <input type="number" id="addAltitude" class="form-control" value="0" min="0" max="200">
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="addJurisdiction">Jurisdição / Capitania</label>
-                                    <input type="text" id="addJurisdiction" class="form-control" placeholder="Ex: CHN-4 / Baía do Guajará">
-                                </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fa-solid fa-floppy-disk"></i> Registrar Novo Sinal no Sistema
+                                </button>
+                                <button type="button" class="btn btn-outline" data-close="modalAddSignal">Cancelar</button>
                             </div>
+                        </form>
+                    </div>
+
+                    <!-- MODE 2: EXCLUIR SINAL PANEL -->
+                    <div id="panelDeleteSignal" style="display: none;">
+                        <div class="form-group">
+                            <label for="selectSignalToDeleteModal"><i class="fa-solid fa-tower-observation"></i> Selecione o Sinal Náutico a ser Excluído / Cancelado:</label>
+                            <select id="selectSignalToDeleteModal" class="form-control">
+                                <!-- Dynamically populated -->
+                            </select>
                         </div>
 
-                        <div class="modal-footer">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fa-solid fa-floppy-disk"></i> Registrar Sinal no Sistema
+                        <!-- Live preview card of signal selected for deletion -->
+                        <div class="delete-preview-card" id="deletePreviewCard">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span class="badge badge-navy" id="delPreviewCode">PA-05</span>
+                                <span class="badge badge-op" id="delPreviewStatus">OPERACIONAL</span>
+                            </div>
+                            <h3 style="font-family: var(--font-tech); margin: 4px 0;" id="delPreviewName">PEDRAS DA BARRA</h3>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);" id="delPreviewType">Bóia de Balizamento</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);" id="delPreviewPos">Lat: -1.3713, Lng: -48.4905</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);" id="delPreviewJurisdiction">Jurisdição: CHN-4</div>
+                        </div>
+
+                        <div class="modal-footer mt-4">
+                            <button type="button" class="btn btn-danger-outline btn-lg w-full" id="btnConfirmDeleteSignalModal">
+                                <i class="fa-solid fa-trash-can"></i> Excluir Sinal Permanentemente do Sistema
                             </button>
-                            <button type="button" class="btn btn-outline" data-close="modalAddSignal">Cancelar</button>
                         </div>
-                    </form>
+                    </div>
+
                 </div>
             </div>
         </div>
