@@ -635,12 +635,18 @@
                             
                             <form id="formUpdateStatus">
                                 <div class="form-group">
-                                    <label for="selectNewStatus">Novo Status Operacional:</label>
+                                    <label for="selectNewStatus">Novo Status Operacional / Ocorrência:</label>
                                     <select id="selectNewStatus" class="form-control">
                                         <option value="OPERACIONAL">🟢 Operacional</option>
-                                        <option value="APAGADO">🔴 Avariado - Apagado</option>
-                                        <option value="A DERIVA">🔴 Avariado - À Deriva / Fora de Posição</option>
-                                        <option value="DESTRUÍDO">🔴 Avariado - Estrutura Danificada / Destruída</option>
+                                        <option value="Avariado - Apagado">🔴 Avariado - Apagado</option>
+                                        <option value="Avariado - À deriva / Fora de posição">🔴 Avariado - À deriva / Fora de posição</option>
+                                        <option value="Avariado - Destruído">🔴 Avariado - Destruído</option>
+                                        <option value="Avariado - Danificado">🔴 Avariado - Danificado</option>
+                                        <option value="Desaparecido">🔴 Desaparecido</option>
+                                        <option value="Avariado - Retirado temporariamente">🔴 Avariado - Retirado temporariamente</option>
+                                        <option value="Avariado - Exibindo Luz Fixa">🔴 Avariado - Exibindo Luz Fixa</option>
+                                        <option value="Inoperante">🔴 Inoperante</option>
+                                        <option value="Avariado - Característica Irregular">🔴 Avariado - Característica Irregular</option>
                                     </select>
                                 </div>
 
@@ -836,11 +842,16 @@
                                     <div class="form-group">
                                         <label for="addStatus">Status Operacional *</label>
                                         <select id="addStatus" class="form-control" required>
-                                            <option value="OPERACIONAL">✅ OPERACIONAL</option>
-                                            <option value="APAGADO">🟡 APAGADO</option>
-                                            <option value="A DERIVA">🔴 A DERIVA</option>
-                                            <option value="DESAPARECIDO">🔴 DESAPARECIDO</option>
-                                            <option value="EM MANUTENÇÃO">🔧 EM MANUTENÇÃO</option>
+                                            <option value="OPERACIONAL">🟢 Operacional</option>
+                                            <option value="Avariado - Apagado">🔴 Avariado - Apagado</option>
+                                            <option value="Avariado - À deriva / Fora de posição">🔴 Avariado - À deriva / Fora de posição</option>
+                                            <option value="Avariado - Destruído">🔴 Avariado - Destruído</option>
+                                            <option value="Avariado - Danificado">🔴 Avariado - Danificado</option>
+                                            <option value="Desaparecido">🔴 Desaparecido</option>
+                                            <option value="Avariado - Retirado temporariamente">🔴 Avariado - Retirado temporariamente</option>
+                                            <option value="Avariado - Exibindo Luz Fixa">🔴 Avariado - Exibindo Luz Fixa</option>
+                                            <option value="Inoperante">🔴 Inoperante</option>
+                                            <option value="Avariado - Característica Irregular">🔴 Avariado - Característica Irregular</option>
                                         </select>
                                     </div>
                                 </div>

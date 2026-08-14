@@ -199,7 +199,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. FÓRMULAS NÁUTICAS & AUXILIARES
     // =========================================================================
     function isOperational(status) {
-        return status === 'OPERACIONAL';
+        if (!status) return false;
+        const s = String(status).trim().toUpperCase();
+        return s === 'OPERACIONAL' || s === 'OPERANDO NORMALMENTE' || s.includes('🟢');
     }
 
     function haversineNM(lat1, lon1, lat2, lon2) {
@@ -1133,15 +1135,24 @@ document.addEventListener('DOMContentLoaded', () => {
             note: reason
         });
 
-        // Persist to REST API
-        try {
-            await fetch(`/api/signals/${encodeURIComponent(selectedSignal.code)}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(selectedSignal)
-            });
-        } catch (err) {
-            console.warn('API REST status update fallback:', err);
+        // Persist to Firebase Firestore or REST API
+        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
+            try {
+                await db.collection("signals").doc(selectedSignal.code).set(selectedSignal, { merge: true });
+                console.log(`🔥 Firestore: Status e histórico do sinal ${selectedSignal.code} salvos na nuvem!`);
+            } catch (err) {
+                console.error("Erro ao salvar status no Firestore:", err);
+            }
+        } else {
+            try {
+                await fetch(`/api/signals/${encodeURIComponent(selectedSignal.code)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(selectedSignal)
+                });
+            } catch (err) {
+                console.warn('API REST status update fallback:', err);
+            }
         }
 
         saveLocalCache();
