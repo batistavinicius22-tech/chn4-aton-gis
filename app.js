@@ -265,11 +265,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =========================================================================
-    // 4. BANCO DE DADOS REST API & CARREGAMENTO ASSÍNCRONO
+    // 4. BANCO DE DADOS CENTRAL COMPARTILHADO (API REST / SIGNALS.JSON / FIRESTORE)
     // =========================================================================
     async function loadSignalsFromBackend() {
+        // Se o Firebase estiver ativo, o listener em tempo real (onSnapshot) gerencia a sincronização
+        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
+            return;
+        }
+
+        // Tentar API REST do servidor central (node server.js / python server.py / server.ps1)
         try {
-            // Attempt 1: Fetch from Node.js REST API
             const resp = await fetch('/api/signals');
             if (resp.ok) {
                 const data = await resp.json();
@@ -278,16 +283,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateIE();
                     renderMapMarkers();
                     renderSignalList();
-                    console.log(`Carregados ${signalsData.length} sinais via API REST.`);
+                    console.log(`✅ Carregados ${signalsData.length} sinais do banco de dados central via API REST.`);
                     return;
                 }
             }
         } catch (e) {
-            console.warn('API REST /api/signals indisponível. Tentando arquivo local signals.json...', e);
+            console.warn('API REST /api/signals indisponível. Tentando arquivo de banco de dados signals.json...', e);
         }
 
+        // Tentar ler o arquivo de banco de dados central signals.json
         try {
-            // Attempt 2: Fetch from static signals.json file
             const resp = await fetch('./signals.json');
             if (resp.ok) {
                 const data = await resp.json();
@@ -296,12 +301,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateIE();
                     renderMapMarkers();
                     renderSignalList();
-                    console.log(`Carregados ${signalsData.length} sinais via signals.json local.`);
+                    console.log(`✅ Carregados ${signalsData.length} sinais do arquivo de banco de dados central signals.json.`);
                     return;
                 }
             }
         } catch (e) {
-            console.warn('signals.json não encontrado. Utilizando backup em memória.', e);
+            console.warn('signals.json indisponível. Utilizando backup em memória.', e);
         }
 
         updateIE();
@@ -925,6 +930,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        saveLocalCache();
         renderMapMarkers();
         renderSignalList();
         openSignalDetail(selectedSignal.code);
@@ -956,8 +962,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Update local array
+        // Update local array and cache
         signalsData = signalsData.filter(s => s.code !== code);
+        saveLocalCache();
 
         if (mapMarkers[code]) {
             map.removeLayer(mapMarkers[code]);
@@ -1071,6 +1078,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('API REST status update fallback:', err);
         }
 
+        saveLocalCache();
         updateIE();
         renderMapMarkers();
         renderSignalList();
@@ -1467,6 +1475,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         }
 
         signalsData.push(newSignal);
+        saveLocalCache();
         updateIE();
         renderMapMarkers();
         renderSignalList();
