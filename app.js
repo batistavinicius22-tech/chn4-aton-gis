@@ -120,11 +120,19 @@ document.addEventListener('DOMContentLoaded', () => {
         maxZoom: 18
     });
 
-    // Layer 2: Google Satellite + Labels (Google Earth Style with City Names)
-    const googleSatLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+    // Layer 2: Google Satellite PURE (no labels, default)
+    const googleSatLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
         subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-        attribution: 'Google Satellite com Cidades (Google Earth)',
+        attribution: 'Google Satellite',
         maxZoom: 20
+    });
+
+    // Layer 2b: Google Labels Overlay (city/road names - toggled separately)
+    const googleLabelsLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=h&x={x}&y={y}&z={z}', {
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: 'Google Labels',
+        maxZoom: 20,
+        pane: 'overlayPane'
     });
 
     // Layer 3: Nautical Base Charts (OpenSeaMap & Esri Ocean)
@@ -149,6 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const overlays = {
+        "🏙️ Nomes de Cidades (Google)": googleLabelsLayer,
         "🗺️ Cartas Náuticas DHN (GeoTIFF .tif)": dhnGeoTiffGroup
     };
 
@@ -1868,6 +1877,11 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         document.getElementById('btnCoordModeGMS')?.classList.remove('active');
         document.getElementById('panelCoordDecimal').style.display = 'block';
         document.getElementById('panelCoordGMS').style.display = 'none';
+        // Restore required on decimal fields
+        const addLat = document.getElementById('addLat');
+        const addLng = document.getElementById('addLng');
+        if (addLat) addLat.required = true;
+        if (addLng) addLng.required = true;
     });
 
     document.getElementById('btnCoordModeGMS')?.addEventListener('click', () => {
@@ -1875,6 +1889,11 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         document.getElementById('btnCoordModeDecimal')?.classList.remove('active');
         document.getElementById('panelCoordGMS').style.display = 'block';
         document.getElementById('panelCoordDecimal').style.display = 'none';
+        // Remove required from hidden decimal fields so form can submit
+        const addLat = document.getElementById('addLat');
+        const addLng = document.getElementById('addLng');
+        if (addLat) addLat.required = false;
+        if (addLng) addLng.required = false;
     });
 
     function syncGmsToDecimal() {

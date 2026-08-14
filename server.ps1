@@ -87,6 +87,21 @@ while ($listener.IsListening) {
             continue
         }
 
+        if ($path.StartsWith("/api/signals/") -and $req.HttpMethod -eq "DELETE") {
+            $code = [System.Uri]::UnescapeDataString($path.Substring(13))
+            $signals = @(([System.IO.File]::ReadAllText($dbFile, [System.Text.Encoding]::UTF8)) | ConvertFrom-Json)
+            $filtered = @($signals | Where-Object { $_.code -ne $code })
+            $out = $filtered | ConvertTo-Json -Depth 10
+            [System.IO.File]::WriteAllText($dbFile, $out, $utf8NoBom)
+
+            $ret = '{"success":true}'
+            $b = [System.Text.Encoding]::UTF8.GetBytes($ret)
+            $res.StatusCode = 200
+            $res.OutputStream.Write($b, 0, $b.Length)
+            $res.Close()
+            continue
+        }
+
         # Static file serving
         $filePath = Join-Path $rootDir ($path.TrimStart('/'))
         if ($path -eq "/") { $filePath = Join-Path $rootDir "index.html" }
