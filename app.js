@@ -1110,36 +1110,47 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         if (!selectedSignal) return;
 
-        selectedSignal.code = document.getElementById('editCode').value.trim();
-        selectedSignal.name = document.getElementById('editName').value.trim();
-        selectedSignal.type = document.getElementById('editType').value.trim();
-        selectedSignal.characteristic = document.getElementById('editCharacteristic').value.trim();
-        selectedSignal.rangeNM = parseFloat(document.getElementById('editRange').value) || 0;
-        selectedSignal.altitudeM = parseFloat(document.getElementById('editAltitude').value) || 0;
-        selectedSignal.lat = parseFloat(document.getElementById('editLat').value) || selectedSignal.lat;
-        selectedSignal.lng = parseFloat(document.getElementById('editLng').value) || selectedSignal.lng;
-        selectedSignal.jurisdiction = document.getElementById('editJurisdiction').value.trim();
-        
-        const editRespEl = document.getElementById('editResponsavel');
-        if (editRespEl) selectedSignal.responsavel = editRespEl.value;
+        const oldCode = selectedSignal.code;
+        const newCode = document.getElementById('editCode').value.trim();
+        const newName = document.getElementById('editName').value.trim();
+        const newType = document.getElementById('editType').value.trim();
+        const newChar = document.getElementById('editCharacteristic').value.trim();
+        const newRange = parseFloat(document.getElementById('editRange').value) || 0;
+        const newAlt = parseFloat(document.getElementById('editAltitude').value) || 0;
+        const newLat = parseFloat(document.getElementById('editLat').value) || selectedSignal.lat;
+        const newLng = parseFloat(document.getElementById('editLng').value) || selectedSignal.lng;
+        const newJur = document.getElementById('editJurisdiction').value.trim();
+        const newResp = document.getElementById('editResponsavel')?.value || selectedSignal.responsavel || 'CHN-4';
 
-        const idx = signalsData.findIndex(s => s.code === selectedSignal.code);
-        if (idx !== -1) {
-            signalsData[idx] = selectedSignal;
+        // 1. If code changed, delete old document from Firestore/Backend first
+        if (oldCode && oldCode !== newCode) {
+            if (mapMarkers[oldCode]) {
+                map.removeLayer(mapMarkers[oldCode]);
+                delete mapMarkers[oldCode];
+            }
+            if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
+                db.collection("signals").doc(oldCode).delete().catch(console.warn);
+            }
+            fetch(`/api/signals/${encodeURIComponent(oldCode)}`, { method: 'DELETE' }).catch(console.warn);
+            signalsData = signalsData.filter(s => s.code !== oldCode);
         }
 
-        toggleEditSpecMode(false);
-        openSignalDetail(selectedSignal.code);
-        saveLocalCache();
-        updateTypeFilterDropdown();
-        updateIE();
-        renderMapMarkers();
-        renderSignalList();
+        // 2. Update object fields
+        selectedSignal.code = newCode;
+        selectedSignal.name = newName;
+        selectedSignal.type = newType;
+        selectedSignal.characteristic = newChar;
+        selectedSignal.rangeNM = newRange;
+        selectedSignal.altitudeM = newAlt;
+        selectedSignal.lat = newLat;
+        selectedSignal.lng = newLng;
+        selectedSignal.jurisdiction = newJur;
+        selectedSignal.responsavel = newResp;
 
-        showToast('Ficha Técnica atualizada e salva no banco de dados!', 'success');
-
+        // 3. Save to backend (Cloud Firestore + REST API / signals.json)
         saveSignalToBackend(selectedSignal);
 
+        // 4. Update UI in real-time "in hot"
         toggleEditSpecMode(false);
         openSignalDetail(selectedSignal.code);
         saveLocalCache();
@@ -1148,7 +1159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderMapMarkers();
         renderSignalList();
 
-        showToast('Ficha Técnica atualizada e salva no banco de dados!', 'success');
+        showToast(`Ficha Técnica do sinal ${newCode} salva com sucesso no banco de dados!`, 'success');
     });
 
     // Delete Signal Function
