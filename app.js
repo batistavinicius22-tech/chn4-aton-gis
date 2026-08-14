@@ -273,40 +273,56 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        let loadedSignals = null;
+
         // Tentar API REST do servidor central (node server.js / python server.py / server.ps1)
         try {
             const resp = await fetch('/api/signals');
             if (resp.ok) {
                 const data = await resp.json();
                 if (Array.isArray(data) && data.length > 0) {
-                    signalsData = data;
-                    updateIE();
-                    renderMapMarkers();
-                    renderSignalList();
-                    console.log(`✅ Carregados ${signalsData.length} sinais do banco de dados central via API REST.`);
-                    return;
+                    loadedSignals = Array.isArray(data[0]) ? data[0] : (data[0] && data[0].value ? data[0].value : data);
                 }
             }
         } catch (e) {
-            console.warn('API REST /api/signals indisponível. Tentando arquivo de banco de dados signals.json...', e);
+            console.warn('API REST /api/signals indisponível.', e);
         }
 
         // Tentar ler o arquivo de banco de dados central signals.json
-        try {
-            const resp = await fetch('./signals.json');
-            if (resp.ok) {
-                const data = await resp.json();
-                if (Array.isArray(data) && data.length > 0) {
-                    signalsData = data;
-                    updateIE();
-                    renderMapMarkers();
-                    renderSignalList();
-                    console.log(`✅ Carregados ${signalsData.length} sinais do arquivo de banco de dados central signals.json.`);
-                    return;
+        if (!loadedSignals) {
+            try {
+                const resp = await fetch('./signals.json');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        loadedSignals = Array.isArray(data[0]) ? data[0] : (data[0] && data[0].value ? data[0].value : data);
+                    }
                 }
+            } catch (e) {
+                console.warn('signals.json indisponível.', e);
             }
-        } catch (e) {
-            console.warn('signals.json indisponível. Utilizando backup em memória.', e);
+        }
+
+        if (loadedSignals && Array.isArray(loadedSignals) && loadedSignals.length > 0 && loadedSignals[0].code) {
+            signalsData = loadedSignals;
+            console.log(`✅ Carregados ${signalsData.length} sinais do banco de dados central.`);
+        } else if (typeof googleEarthSignals !== 'undefined' && Array.isArray(googleEarthSignals) && googleEarthSignals.length > 0) {
+            signalsData = googleEarthSignals.map(s => {
+                if (!s.responsavel) {
+                    const code = s.code || '';
+                    const jur = s.jurisdiction || '';
+                    const name = s.name || '';
+                    if (jur.includes('Amapa') || name.includes('Amapa') || jur.includes('CPAP') || code.startsWith('AP-')) s.responsavel = 'CPAP';
+                    else if (jur.includes('Maranhao') || name.includes('Maranhao') || jur.includes('CPMA') || code.startsWith('MA-')) s.responsavel = 'CPMA';
+                    else if (jur.includes('Para') || name.includes('Para') || jur.includes('CPPA') || code.startsWith('PA-')) {
+                        if (jur.includes('Guajara') || jur.includes('Belem') || jur.includes('CHN-4')) s.responsavel = 'CHN-4';
+                        else s.responsavel = 'CPPA';
+                    } else if (jur.includes('Extra-MB') || jur.includes('Privado')) s.responsavel = 'Extra-MB';
+                    else s.responsavel = 'CHN-4';
+                }
+                return s;
+            });
+            console.log(`✅ Carregados ${signalsData.length} sinais do backup em memória.`);
         }
 
         updateIE();
@@ -651,6 +667,44 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('simCountRepaired').textContent = countSimRepaired;
     }
 
+    // Responsável Layer Checkbox Listeners
+    ['chkRespCHN4', 'chkRespCPAP', 'chkRespCPMA', 'chkRespCPPA', 'chkRespExtra'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', () => {
+            renderMapMarkers();
+            renderSignalList();
+        });
+    });
+
+    document.getElementById('btnOnlyCHN4')?.addEventListener('click', () => {
+        const c1 = document.getElementById('chkRespCHN4');
+        const c2 = document.getElementById('chkRespCPAP');
+        const c3 = document.getElementById('chkRespCPMA');
+        const c4 = document.getElementById('chkRespCPPA');
+        const c5 = document.getElementById('chkRespExtra');
+        if (c1) c1.checked = true;
+        if (c2) c2.checked = false;
+        if (c3) c3.checked = false;
+        if (c4) c4.checked = false;
+        if (c5) c5.checked = false;
+        renderMapMarkers();
+        renderSignalList();
+    });
+
+    document.getElementById('btnSelectAllResp')?.addEventListener('click', () => {
+        const c1 = document.getElementById('chkRespCHN4');
+        const c2 = document.getElementById('chkRespCPAP');
+        const c3 = document.getElementById('chkRespCPMA');
+        const c4 = document.getElementById('chkRespCPPA');
+        const c5 = document.getElementById('chkRespExtra');
+        if (c1) c1.checked = true;
+        if (c2) c2.checked = true;
+        if (c3) c3.checked = true;
+        if (c4) c4.checked = true;
+        if (c5) c5.checked = true;
+        renderMapMarkers();
+        renderSignalList();
+    });
+
     // =========================================================================
     // 8. RENDERIZAÇÃO E FILTRAGEM DE MARCADORES E LISTA (COM RESPONSÁVEL)
     // =========================================================================
@@ -674,14 +728,28 @@ document.addEventListener('DOMContentLoaded', () => {
         return getTypeCategory(signal.type) === currentTypeFilter;
     }
 
+    function getSelectedResponsaveis() {
+        const selected = [];
+        if (document.getElementById('chkRespCHN4')?.checked) selected.push('CHN-4');
+        if (document.getElementById('chkRespCPAP')?.checked) selected.push('CPAP');
+        if (document.getElementById('chkRespCPMA')?.checked) selected.push('CPMA');
+        if (document.getElementById('chkRespCPPA')?.checked) selected.push('CPPA');
+        if (document.getElementById('chkRespExtra')?.checked) selected.push('EXTRA-MB', 'ÓRGÃOS EXTRA-MB', 'PRIVADO');
+        return selected;
+    }
+
     function matchesResponsavelFilter(signal) {
-        if (currentResponsavelFilter === 'ALL') return true;
-        const resp = (signal.responsavel || '').toUpperCase();
-        const filter = currentResponsavelFilter.toUpperCase();
-        if (filter === 'EXTRA-MB') {
-            return resp.includes('EXTRA') || resp.includes('PRIVADO') || resp.includes('ÓRGÃOS');
-        }
-        return resp === filter;
+        const selected = getSelectedResponsaveis();
+        if (selected.length === 0) return false;
+
+        const resp = (signal.responsavel || 'CHN-4').toUpperCase();
+
+        return selected.some(s => {
+            if (s === 'EXTRA-MB') {
+                return resp.includes('EXTRA') || resp.includes('PRIVADO') || resp.includes('ÓRGÃOS');
+            }
+            return resp === s;
+        });
     }
 
     function renderMapMarkers() {

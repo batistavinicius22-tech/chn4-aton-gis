@@ -165,17 +165,35 @@
                         </select>
                     </div>
 
-                    <!-- Filter Row 3: Responsável / Órgão (CHN-4, CPAP, CPMA, Extra-MB) -->
+                    <!-- Filter Row 3: Responsável / Órgão (Camadas com CHN-4 por Padrão) -->
                     <div class="responsavel-filter-group mt-2">
-                        <label for="responsavelFilterSelect" class="filter-label"><i class="fa-solid fa-building-user"></i> Filtrar por Responsável:</label>
-                        <select id="responsavelFilterSelect" class="form-control form-control-sm">
-                            <option value="ALL">Todos os Responsáveis (CHN-4, CPAP, CPMA, Extra-MB...)</option>
-                            <option value="CHN-4">CHN-4 (Centro de Hidrografia do Norte)</option>
-                            <option value="CPAP">CPAP (Capitania dos Portos do Amapá)</option>
-                            <option value="CPMA">CPMA (Capitania dos Portos do Maranhão)</option>
-                            <option value="CPPA">CPPA (Capitania dos Portos do Pará)</option>
-                            <option value="Extra-MB">Órgãos Extra-Marinha do Brasil</option>
-                        </select>
+                        <label class="filter-label"><i class="fa-solid fa-layer-group"></i> Exibir Responsáveis (Camadas):</label>
+                        <div class="responsavel-checkbox-container">
+                            <label class="resp-chk-item">
+                                <input type="checkbox" id="chkRespCHN4" value="CHN-4" checked>
+                                <span class="badge-dot resp-chn4"></span> CHN-4 (Padrão)
+                            </label>
+                            <label class="resp-chk-item">
+                                <input type="checkbox" id="chkRespCPAP" value="CPAP">
+                                <span class="badge-dot resp-cpap"></span> CPAP (Amapá)
+                            </label>
+                            <label class="resp-chk-item">
+                                <input type="checkbox" id="chkRespCPMA" value="CPMA">
+                                <span class="badge-dot resp-cpma"></span> CPMA (Maranhão)
+                            </label>
+                            <label class="resp-chk-item">
+                                <input type="checkbox" id="chkRespCPPA" value="CPPA">
+                                <span class="badge-dot resp-cppa"></span> CPPA (Pará)
+                            </label>
+                            <label class="resp-chk-item" style="grid-column: span 2;">
+                                <input type="checkbox" id="chkRespExtra" value="Extra-MB">
+                                <span class="badge-dot resp-extra"></span> Órgãos Extra-MB
+                            </label>
+                        </div>
+                        <div class="resp-quick-actions">
+                            <button type="button" class="btn-quick-resp" id="btnOnlyCHN4">Apenas CHN-4</button>
+                            <button type="button" class="btn-quick-resp" id="btnSelectAllResp">Marcar Todos</button>
+                        </div>
                     </div>
 
                     <!-- Import/Export Action Buttons -->
