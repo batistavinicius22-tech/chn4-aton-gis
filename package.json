@@ -1,0 +1,20 @@
+{
+  "name": "chn4-aton-gis",
+  "version": "2.0.0",
+  "description": "Sistema de Gestão de Auxílios à Navegação do CHN-4 (Marinha do Brasil) - GIS, BD JSON e Interoperabilidade Multi-Usuário",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build-db": "powershell -ExecutionPolicy Bypass -File build_db.ps1"
+  },
+  "keywords": [
+    "marinha",
+    "chn4",
+    "gis",
+    "aton",
+    "leaflet",
+    "multi-user"
+  ],
+  "author": "Marinha do Brasil / CHN-4",
+  "license": "ISC"
+}

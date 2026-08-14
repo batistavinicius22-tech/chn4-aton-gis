@@ -162,50 +162,44 @@
                             <option value="FAROLETE">Faroletes</option>
                             <option value="BOIA">Bóias (Luminosas BZ e Cegas BC)</option>
                             <option value="BALIZA">Balizas</option>
-                        </select>
-                    </div>
-
-                    <!-- Filter Row 3: Responsável / Órgão (Camadas com CHN-4 por Padrão) -->
-                    <div class="responsavel-filter-group mt-2">
-                        <label class="filter-label"><i class="fa-solid fa-layer-group"></i> Exibir Responsáveis (Camadas):</label>
-                        <div class="responsavel-checkbox-container">
-                            <label class="resp-chk-item">
+                                      <!-- Filter Row 3: Órgãos Responsáveis (Seletores Circulares Leves) -->
+                    <div class="responsavel-filter-group mt-3">
+                        <div class="resp-header">
+                            <label class="filter-label"><i class="fa-solid fa-layer-group"></i> Exibir Responsáveis:</label>
+                            <div class="resp-quick-links">
+                                <button type="button" id="btnOnlyCHN4" class="quick-link-btn">Apenas CHN-4</button>
+                                <span class="sep">•</span>
+                                <button type="button" id="btnSelectAllResp" class="quick-link-btn">Todos</button>
+                            </div>
+                        </div>
+                        <div class="resp-bullets-container">
+                            <label class="resp-bullet-item chn4">
                                 <input type="checkbox" id="chkRespCHN4" value="CHN-4" checked>
-                                <span class="badge-dot resp-chn4"></span> CHN-4 (Padrão)
+                                <span class="bullet-radio"></span>
+                                <span class="bullet-label">CHN-4</span>
                             </label>
-                            <label class="resp-chk-item">
+                            <label class="resp-bullet-item cpap">
                                 <input type="checkbox" id="chkRespCPAP" value="CPAP">
-                                <span class="badge-dot resp-cpap"></span> CPAP (Amapá)
+                                <span class="bullet-radio"></span>
+                                <span class="bullet-label">CPAP</span>
                             </label>
-                            <label class="resp-chk-item">
+                            <label class="resp-bullet-item cpma">
                                 <input type="checkbox" id="chkRespCPMA" value="CPMA">
-                                <span class="badge-dot resp-cpma"></span> CPMA (Maranhão)
+                                <span class="bullet-radio"></span>
+                                <span class="bullet-label">CPMA</span>
                             </label>
-                            <label class="resp-chk-item">
+                            <label class="resp-bullet-item cppa">
                                 <input type="checkbox" id="chkRespCPPA" value="CPPA">
-                                <span class="badge-dot resp-cppa"></span> CPPA (Pará)
+                                <span class="bullet-radio"></span>
+                                <span class="bullet-label">CPPA</span>
                             </label>
-                            <label class="resp-chk-item" style="grid-column: span 2;">
+                            <label class="resp-bullet-item extra">
                                 <input type="checkbox" id="chkRespExtra" value="Extra-MB">
-                                <span class="badge-dot resp-extra"></span> Órgãos Extra-MB
+                                <span class="bullet-radio"></span>
+                                <span class="bullet-label">Extra-MB</span>
                             </label>
-                        </div>
-                        <div class="resp-quick-actions">
-                            <button type="button" class="btn-quick-resp" id="btnOnlyCHN4">Apenas CHN-4</button>
-                            <button type="button" class="btn-quick-resp" id="btnSelectAllResp">Marcar Todos</button>
                         </div>
                     </div>
-
-                    <!-- Import/Export Action Buttons -->
-                    <div class="mt-2 pt-2 border-top" style="display: flex; flex-direction: column; gap: 6px;">
-                        <button class="btn btn-outline btn-sm w-full" id="btnExportJsonDb" title="Baixar/Salvar a versão atualizada do banco de dados signals.json para salvar no Google Drive">
-                            <i class="fa-solid fa-download"></i> 💾 Salvar/Exportar BD signals.json
-                        </button>
-                        <button class="btn btn-outline btn-sm w-full" id="btnImportKmlHeader" title="Importar sinais do Google Earth (KML)">
-                            <i class="fa-solid fa-file-import"></i> 📥 Importar Base KML (Google Earth)
-                        </button>
-                        <input type="file" id="inputKmlFile" accept=".kml,.kmz" style="display:none;">
-                        <input type="file" id="inputJsonDbFile" accept=".json" style="display:none;">
                         <input type="file" id="inputGeotiffFile" accept=".tif,.tiff" style="display:none;" multiple>
                     </div>
                 </div>

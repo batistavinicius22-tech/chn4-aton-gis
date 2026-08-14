@@ -1583,6 +1583,23 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                         if (updated) selectedSignal = updated;
                     }
                     console.log(`🔥 Cloud Firestore: ${signalsData.length} sinais sincronizados em tempo real.`);
+                } else {
+                    console.log("🔥 Firestore está vazio. Iniciando carga automática (auto-seed)...");
+                    showToast("Populando o banco de dados Firebase Firestore com a base de dados...", "info");
+                    
+                    const batch = db.batch();
+                    signalsData.forEach(s => {
+                        if (s.code) {
+                            const ref = db.collection("signals").doc(s.code);
+                            batch.set(ref, s);
+                        }
+                    });
+                    batch.commit().then(() => {
+                        console.log("🔥 Firestore populado com sucesso!");
+                        showToast("🔥 Base de dados enviada para o Firebase Firestore na nuvem!", "success");
+                    }).catch(err => {
+                        console.error("Erro no auto-seed do Firestore:", err);
+                    });
                 }
             }, (err) => {
                 console.warn("Erro no listener Firestore:", err);
