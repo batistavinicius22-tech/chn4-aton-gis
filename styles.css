@@ -2077,4 +2077,78 @@ html, body {
     box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
 }
 
+/* Coordinate Input Mode & GMS Styles */
+.coord-mode-toggle {
+    display: inline-flex;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 2px;
+}
+
+.coord-mode-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: var(--font-tech);
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.coord-mode-btn.active {
+    background: var(--navy-700);
+    color: var(--accent-gold-light);
+    font-weight: 700;
+    box-shadow: 0 0 6px rgba(0,0,0,0.3);
+}
+
+.gms-input-block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+}
+
+.gms-label {
+    font-family: var(--font-tech);
+    font-size: 0.72rem;
+    color: var(--accent-gold-light);
+    font-weight: 700;
+}
+
+.gms-fields {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.gms-field {
+    padding: 4px 6px !important;
+    font-family: var(--font-tech);
+    font-size: 0.85rem !important;
+    text-align: center;
+    width: 52px;
+}
+
+.gms-field.gms-sec {
+    flex: 1;
+    min-width: 80px;
+    text-align: left;
+}
+
+.gms-hem {
+    width: 85px !important;
+    padding: 4px 4px !important;
+    font-family: var(--font-tech);
+    font-size: 0.82rem !important;
+    font-weight: 700;
+    color: var(--accent-cyan);
+}
+
 

@@ -825,24 +825,63 @@
                                             <option value="Avariado - Retirado temporariamente">🔴 Avariado - Retirado temporariamente</option>
                                             <option value="Avariado - Exibindo Luz Fixa">🔴 Avariado - Exibindo Luz Fixa</option>
                                             <option value="Inoperante">🔴 Inoperante</option>
-                                            <option value="Avariado - Característica Irregular">🔴 Avariado - Característica Irregular</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <!-- Col 2: Location & Technical -->
-                                <div class="form-section">
+<div class="form-section">
                                     <h4 class="form-section-title"><i class="fa-solid fa-map-pin"></i> Posição & Dados Técnicos</h4>
                                     <div class="form-group">
-                                        <label>Coordenadas (Decimal) *</label>
-                                        <div class="coords-input-row">
-                                            <input type="number" id="addLat" class="form-control" placeholder="Latitude (ex: -1.3713)" step="any" required>
-                                            <input type="number" id="addLng" class="form-control" placeholder="Longitude (ex: -48.490)" step="any" required>
-                                        </div>
-                                        <button type="button" class="btn btn-outline btn-sm mt-1 w-full" id="btnPickPointOnMap">
-                                            <i class="fa-solid fa-crosshairs"></i> Ou Clique no Mapa p/ Capturar Posição
-                                        </button>
-                                    </div>
+                                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                             <label style="margin: 0;"><i class="fa-solid fa-compass"></i> Coordenadas da Posição *</label>
+                                             <div class="coord-mode-toggle">
+                                                 <button type="button" id="btnCoordModeDecimal" class="coord-mode-btn active">Decimal (DD)</button>
+                                                 <button type="button" id="btnCoordModeGMS" class="coord-mode-btn">GMS (GG° MM' SS")</button>
+                                             </div>
+                                         </div>
+
+                                         <!-- Mode 1: Decimal (DD.dddd) -->
+                                         <div id="panelCoordDecimal">
+                                             <div class="coords-input-row">
+                                                 <input type="number" id="addLat" class="form-control" placeholder="Latitude (ex: -1.371333)" step="any" required>
+                                                 <input type="number" id="addLng" class="form-control" placeholder="Longitude (ex: -48.490500)" step="any" required>
+                                             </div>
+                                         </div>
+
+                                         <!-- Mode 2: GMS (GG° MM' SS.ssss" N/S E/W) -->
+                                         <div id="panelCoordGMS" style="display: none;">
+                                             <div class="gms-input-block mb-1">
+                                                 <span class="gms-label">Latitude (GMS):</span>
+                                                 <div class="gms-fields">
+                                                     <input type="number" id="addLatDeg" min="0" max="90" placeholder="GG" class="form-control gms-field">
+                                                     <span class="unit">°</span>
+                                                     <input type="number" id="addLatMin" min="0" max="59" placeholder="MM" class="form-control gms-field">
+                                                     <span class="unit">'</span>
+                                                     <input type="number" id="addLatSec" min="0" step="any" placeholder="SS.ssss" class="form-control gms-field gms-sec">
+                                                     <span class="unit">"</span>
+                                                     <select id="addLatHem" class="form-control gms-hem">
+                                                         <option value="S">S (Sul)</option>
+                                                         <option value="N">N (Norte)</option>
+                                                     </select>
+                                                 </div>
+                                             </div>
+                                             <div class="gms-input-block">
+                                                 <span class="gms-label">Longitude (GMS):</span>
+                                                 <div class="gms-fields">
+                                                     <input type="number" id="addLngDeg" min="0" max="180" placeholder="GG" class="form-control gms-field">
+                                                     <span class="unit">°</span>
+                                                     <input type="number" id="addLngMin" min="0" max="59" placeholder="MM" class="form-control gms-field">
+                                                     <span class="unit">'</span>
+                                                     <input type="number" id="addLngSec" min="0" step="any" placeholder="SS.ssss" class="form-control gms-field gms-sec">
+                                                     <span class="unit">"</span>
+                                                     <select id="addLngHem" class="form-control gms-hem">
+                                                         <option value="W">W (Oeste)</option>
+                                                         <option value="E">E (Leste)</option>
+                                                     </select>
+                                                 </div>
+                                             </div>
+                                         </div>
+
+                                         <button type="button" class="btn btn-outline btn-sm mt-2 w-full" id="btnPickPointOnMap">
+                                             <i class="fa-solid fa-crosshairs"></i> Capturar Posição Clicando no Mapa
+                                         </button>
+                                     </div>
                                     <div class="form-group">
                                         <label for="addCharacteristic">Característica do Sinal</label>
                                         <input type="text" id="addCharacteristic" class="form-control" placeholder="Ex: Lp. V. 4s 6m 8NM">

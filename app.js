@@ -751,8 +751,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getSignalTypeKey(signal) {
         if (!signal) return 'OUTROS';
-        const code = String(signal.code || '').trim().toUpperCase();
         const type = String(signal.type || '').trim().toUpperCase();
+        const code = String(signal.code || '').trim().toUpperCase();
+        const name = String(signal.name || '').trim().toUpperCase();
+
+        if (type === 'BC' || type.includes('CEGA') || type.includes('SEM LUZ')) {
+            return 'BC';
+        }
+        if (type === 'BZA' || type.includes('BALIZA ARTICULADA')) {
+            return 'BZA';
+        }
+        if (type === 'BA' || type.includes('BOIA ARTICULADA') || type.includes('BÓIA ARTICULADA')) {
+            return 'BA';
+        }
+        if (type === 'BZ' || type === 'BL' || type.includes('BALIZAMENTO') || type.includes('LUMINOSA') || type.includes('BOIA') || type.includes('BÓIA')) {
+            return 'BL';
+        }
+        if (type === 'BALIZA' || name.startsWith('BALIZA')) {
+            return 'BZ';
+        }
+        if (type === 'FAROL' || type === 'FAR' || name.startsWith('FAROL')) {
+            return 'FAR';
+        }
+        if (type === 'FAROLETE' || type === 'FTE' || name.startsWith('FAROLETE')) {
+            return 'FTE';
+        }
+        if (type === 'BF' || type.includes('BARCA')) {
+            return 'BF';
+        }
+        if (type === 'RF' || type.includes('RADIO')) {
+            return 'RF';
+        }
+        if (type.includes('RACON') || code.includes('RACON') || name.includes('RACON')) {
+            return 'RACON';
+        }
+        if (type.includes('AIS') || code.includes('AIS') || name.includes('AIS')) {
+            return 'AIS';
+        }
+        if (type.includes('DGPS') || code.includes('DGPS')) {
+            return 'ERDGPS';
+        }
 
         if (/^FAR[\s\-_0-9]/i.test(code) || /^FAR$/i.test(code)) return 'FAR';
         if (/^FTE[\s\-_0-9]/i.test(code) || /^FTE$/i.test(code)) return 'FTE';
@@ -760,22 +798,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (/^BA[\s\-_0-9]/i.test(code) || /^BA$/i.test(code)) return 'BA';
         if (/^BL[\s\-_0-9]/i.test(code) || /^BL$/i.test(code)) return 'BL';
         if (/^BC[\s\-_0-9]/i.test(code) || /^BC$/i.test(code)) return 'BC';
-        if (/^BZ[\s\-_0-9]/i.test(code) || /^BZ$/i.test(code)) return 'BZ';
+        if (/^BZ[\s\-_0-9]/i.test(code) || /^BZ$/i.test(code)) return 'BL';
         if (/^BF[\s\-_0-9]/i.test(code) || /^BF$/i.test(code)) return 'BF';
         if (/^RF[\s\-_0-9]/i.test(code) || /^RF$/i.test(code)) return 'RF';
-        if (code.includes('RACON') || type.includes('RACON')) return 'RACON';
-        if (code.includes('AIS') || type.includes('AIS')) return 'AIS';
-        if (code.includes('ERDGPS') || code.includes('DGPS') || type.includes('DGPS')) return 'ERDGPS';
-
-        if (type.includes('FAROLETE')) return 'FTE';
-        if (type.includes('FAROL') && !type.includes('BARCA')) return 'FAR';
-        if (type.includes('BALIZA ARTICULADA')) return 'BZA';
-        if (type.includes('BOIA ARTICULADA') || type.includes('BÓIA ARTICULADA')) return 'BA';
-        if (type.includes('BALIZA')) return 'BZ';
-        if (type.includes('CEGA') || type.includes('SEM LUZ')) return 'BC';
-        if (type.includes('LUMINOSA') || type.includes('BOIA') || type.includes('BÓIA') || type.includes('BZ')) return 'BL';
-        if (type.includes('BARCA')) return 'BF';
-        if (type.includes('RADIO')) return 'RF';
 
         return 'OUTROS';
     }
@@ -1807,6 +1832,103 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             console.warn('Realtime sync setup skipped.', err);
         }
     }
+
+    // =========================================================================
+    // GMS (GG° MM' SS") <-> DECIMAL (DD) COORDINATE CONVERTERS
+    // =========================================================================
+    function gmsToDecimal(deg, min, sec, hem) {
+        const d = Math.abs(parseFloat(deg) || 0);
+        const m = Math.abs(parseFloat(min) || 0);
+        const s = Math.abs(parseFloat(sec) || 0);
+        let dec = d + (m / 60) + (s / 3600);
+        if (hem === 'S' || hem === 'W') dec = -dec;
+        return dec;
+    }
+
+    function decimalToGMS(dec, isLat) {
+        const num = parseFloat(dec);
+        if (isNaN(num)) return { deg: '', min: '', sec: '', hem: isLat ? 'S' : 'W' };
+        const hem = num < 0 ? (isLat ? 'S' : 'W') : (isLat ? 'N' : 'E');
+        const abs = Math.abs(num);
+        const deg = Math.floor(abs);
+        const remMin = (abs - deg) * 60;
+        const min = Math.floor(remMin);
+        const sec = (remMin - min) * 60;
+        return {
+            deg: deg,
+            min: min,
+            sec: parseFloat(sec.toFixed(6)),
+            hem: hem
+        };
+    }
+
+    document.getElementById('btnCoordModeDecimal')?.addEventListener('click', () => {
+        document.getElementById('btnCoordModeDecimal')?.classList.add('active');
+        document.getElementById('btnCoordModeGMS')?.classList.remove('active');
+        document.getElementById('panelCoordDecimal').style.display = 'block';
+        document.getElementById('panelCoordGMS').style.display = 'none';
+    });
+
+    document.getElementById('btnCoordModeGMS')?.addEventListener('click', () => {
+        document.getElementById('btnCoordModeGMS')?.classList.add('active');
+        document.getElementById('btnCoordModeDecimal')?.classList.remove('active');
+        document.getElementById('panelCoordGMS').style.display = 'block';
+        document.getElementById('panelCoordDecimal').style.display = 'none';
+    });
+
+    function syncGmsToDecimal() {
+        const latDeg = document.getElementById('addLatDeg')?.value;
+        const latMin = document.getElementById('addLatMin')?.value;
+        const latSec = document.getElementById('addLatSec')?.value;
+        const latHem = document.getElementById('addLatHem')?.value;
+
+        if (latDeg !== '' || latMin !== '' || latSec !== '') {
+            const latDec = gmsToDecimal(latDeg, latMin, latSec, latHem);
+            const addLatEl = document.getElementById('addLat');
+            if (addLatEl) addLatEl.value = latDec.toFixed(7);
+        }
+
+        const lngDeg = document.getElementById('addLngDeg')?.value;
+        const lngMin = document.getElementById('addLngMin')?.value;
+        const lngSec = document.getElementById('addLngSec')?.value;
+        const lngHem = document.getElementById('addLngHem')?.value;
+
+        if (lngDeg !== '' || lngMin !== '' || lngSec !== '') {
+            const lngDec = gmsToDecimal(lngDeg, lngMin, lngSec, lngHem);
+            const addLngEl = document.getElementById('addLng');
+            if (addLngEl) addLngEl.value = lngDec.toFixed(7);
+        }
+    }
+
+    function syncDecimalToGms() {
+        const latVal = document.getElementById('addLat')?.value;
+        if (latVal !== '') {
+            const gms = decimalToGMS(latVal, true);
+            if (document.getElementById('addLatDeg')) document.getElementById('addLatDeg').value = gms.deg;
+            if (document.getElementById('addLatMin')) document.getElementById('addLatMin').value = gms.min;
+            if (document.getElementById('addLatSec')) document.getElementById('addLatSec').value = gms.sec;
+            if (document.getElementById('addLatHem')) document.getElementById('addLatHem').value = gms.hem;
+        }
+
+        const lngVal = document.getElementById('addLng')?.value;
+        if (lngVal !== '') {
+            const gms = decimalToGMS(lngVal, false);
+            if (document.getElementById('addLngDeg')) document.getElementById('addLngDeg').value = gms.deg;
+            if (document.getElementById('addLngMin')) document.getElementById('addLngMin').value = gms.min;
+            if (document.getElementById('addLngSec')) document.getElementById('addLngSec').value = gms.sec;
+            if (document.getElementById('addLngHem')) document.getElementById('addLngHem').value = gms.hem;
+        }
+    }
+
+    ['addLatDeg', 'addLatMin', 'addLatSec', 'addLatHem', 'addLngDeg', 'addLngMin', 'addLngSec', 'addLngHem'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', syncGmsToDecimal);
+        document.getElementById(id)?.addEventListener('change', syncGmsToDecimal);
+    });
+
+    ['addLat', 'addLng'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', syncDecimalToGms);
+        document.getElementById(id)?.addEventListener('change', syncDecimalToGms);
+    });
 
     // =========================================================================
     // 15. INITIAL BOOTSTRAP
