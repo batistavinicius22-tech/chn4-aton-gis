@@ -48,7 +48,12 @@
                 <div class="ie-pill-value" id="headerIeValue">--%</div>
             </div>
 
-            <!-- Button: Add/Delete Signal -->
+            <!-- Real-time Multi-User Sync Status Badge -->
+            <div class="sync-badge" id="syncStatusBadge" title="Status de Interoperabilidade Multi-Usuário em Tempo Real">
+                <span class="sync-dot sync-online"></span>
+                <span class="sync-text" id="syncStatusText">ONLINE (MULTI-USUÁRIO)</span>
+            </div>
+
             <button class="btn btn-primary" id="btnOpenAddSignalHeader" title="Criar novo sinal ou excluir sinal existente">
                 <i class="fa-solid fa-plus-minus"></i> CRIAR/EXCLUIR SINAL
             </button>
@@ -160,12 +165,29 @@
                         </select>
                     </div>
 
-                    <!-- Import KML Action Button -->
-                    <div class="mt-2 pt-2 border-top">
+                    <!-- Filter Row 3: Responsável / Órgão (CHN-4, CPAP, CPMA, Extra-MB) -->
+                    <div class="responsavel-filter-group mt-2">
+                        <label for="responsavelFilterSelect" class="filter-label"><i class="fa-solid fa-building-user"></i> Filtrar por Responsável:</label>
+                        <select id="responsavelFilterSelect" class="form-control form-control-sm">
+                            <option value="ALL">Todos os Responsáveis (CHN-4, CPAP, CPMA, Extra-MB...)</option>
+                            <option value="CHN-4">CHN-4 (Centro de Hidrografia do Norte)</option>
+                            <option value="CPAP">CPAP (Capitania dos Portos do Amapá)</option>
+                            <option value="CPMA">CPMA (Capitania dos Portos do Maranhão)</option>
+                            <option value="CPPA">CPPA (Capitania dos Portos do Pará)</option>
+                            <option value="Extra-MB">Órgãos Extra-Marinha do Brasil</option>
+                        </select>
+                    </div>
+
+                    <!-- Import/Export Action Buttons -->
+                    <div class="mt-2 pt-2 border-top" style="display: flex; flex-direction: column; gap: 6px;">
+                        <button class="btn btn-outline btn-sm w-full" id="btnExportJsonDb" title="Baixar/Salvar a versão atualizada do banco de dados signals.json para salvar no Google Drive">
+                            <i class="fa-solid fa-download"></i> 💾 Salvar/Exportar BD signals.json
+                        </button>
                         <button class="btn btn-outline btn-sm w-full" id="btnImportKmlHeader" title="Importar sinais do Google Earth (KML)">
                             <i class="fa-solid fa-file-import"></i> 📥 Importar Base KML (Google Earth)
                         </button>
                         <input type="file" id="inputKmlFile" accept=".kml,.kmz" style="display:none;">
+                        <input type="file" id="inputJsonDbFile" accept=".json" style="display:none;">
                         <input type="file" id="inputGeotiffFile" accept=".tif,.tiff" style="display:none;" multiple>
                     </div>
                 </div>
@@ -502,6 +524,10 @@
                                         <td id="modalSpecJurisdiction">--</td>
                                     </tr>
                                     <tr>
+                                        <th>Órgão Responsável:</th>
+                                        <td id="modalSpecResponsavel" class="text-highlight">--</td>
+                                    </tr>
+                                    <tr>
                                         <th>Estado Atual:</th>
                                         <td id="modalSpecStatus">--</td>
                                     </tr>
@@ -545,6 +571,16 @@
                                 <div class="form-group">
                                     <label>Jurisdição:</label>
                                     <input type="text" id="editJurisdiction" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Órgão Responsável:</label>
+                                    <select id="editResponsavel" class="form-control" required>
+                                        <option value="CHN-4">CHN-4 (Centro de Hidrografia do Norte)</option>
+                                        <option value="CPAP">CPAP (Capitania dos Portos do Amapá)</option>
+                                        <option value="CPMA">CPMA (Capitania dos Portos do Maranhão)</option>
+                                        <option value="CPPA">CPPA (Capitania dos Portos do Pará)</option>
+                                        <option value="Extra-MB">Órgãos Extra-Marinha do Brasil</option>
+                                    </select>
                                 </div>
                                 <div class="form-actions-grid mt-3">
                                     <button type="submit" class="btn btn-success">
@@ -832,6 +868,16 @@
                                         <label for="addJurisdiction">Jurisdição / Capitania</label>
                                         <input type="text" id="addJurisdiction" class="form-control" placeholder="Ex: CHN-4 / Baía do Guajará">
                                     </div>
+                                    <div class="form-group">
+                                        <label for="addResponsavel">Órgão Responsável *</label>
+                                        <select id="addResponsavel" class="form-control" required>
+                                            <option value="CHN-4">CHN-4 (Centro de Hidrografia do Norte)</option>
+                                            <option value="CPAP">CPAP (Capitania dos Portos do Amapá)</option>
+                                            <option value="CPMA">CPMA (Capitania dos Portos do Maranhão)</option>
+                                            <option value="CPPA">CPPA (Capitania dos Portos do Pará)</option>
+                                            <option value="Extra-MB">Órgãos Extra-Marinha do Brasil</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 
@@ -863,6 +909,7 @@
                             <div style="font-size: 0.85rem; color: var(--text-secondary);" id="delPreviewType">Bóia de Balizamento</div>
                             <div style="font-size: 0.8rem; color: var(--text-muted);" id="delPreviewPos">Lat: -1.3713, Lng: -48.4905</div>
                             <div style="font-size: 0.8rem; color: var(--text-muted);" id="delPreviewJurisdiction">Jurisdição: CHN-4</div>
+                            <div style="font-size: 0.8rem; color: #d4a017; font-weight: 600;" id="delPreviewResponsavel">Responsável: CHN-4</div>
                         </div>
 
                         <div class="modal-footer mt-4">
@@ -884,6 +931,11 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
+    <!-- Firebase SDK Cloud Database (Nuvem em Tempo Real no GitHub Pages) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
     <!-- Google Earth KML Signals Data -->
     <script src="kml_signals.js"></script>
 

@@ -1,7 +1,7 @@
 /* ==========================================================================
    CENTRO DE HIDROGRAFIA DO NORTE (CHN-4 / 4º DISTRITO NAVAL)
    SISTEMA DE GESTÃO DE AUXÍLIOS À NAVEGAÇÃO (AtoN)
-   Código JavaScript ES6+ — Atualizado com Suporte a GeoTIFF, KML, Derrota Náutica e Fotos
+   Código JavaScript ES6+ — Suporte a BD JSON, Responsável, Interoperabilidade & Realtime
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
             rangeNM: 6,
             altitudeM: 4,
             jurisdiction: "CHN-4 / Baía do Guajará",
+            responsavel: "CHN-4",
             image: null,
             photoDate: null,
             history: [
@@ -38,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
             rangeNM: 6,
             altitudeM: 5,
             jurisdiction: "CHN-4 / Baía do Guajará",
+            responsavel: "CHN-4",
             image: null,
             photoDate: null,
             history: [
@@ -55,61 +57,11 @@ document.addEventListener('DOMContentLoaded', () => {
             rangeNM: 0,
             altitudeM: 3,
             jurisdiction: "Capitania Fluvial de Santarém",
-            image: "https://mymaps.usercontent.google.com/hostedimage/m/*/3AAjQbR5Q1itYVd0D8mXLEsiEb1PsiOPWPGQ0Wx9bota-J-yc-oJP98LJlArTcBJuGOibU7THbeFZ0xQJbY-re1uIi-lUA9fwUz_e9GW1zwhWw0XAzt6FDdurshE03dUj6L9voy6cexWtFR4n1_iR0hEQhilXkkR2R1Mi2XbGFtcLE2vF7FjmSYZIpC8XSsb9UdSrc35Ci0fz8zHgGynX4jrsCLelJ01bwpk3y70gXs8iXjWyslkNbpE-ZAGyQpI?fife=s16383",
+            responsavel: "CHN-4",
+            image: null,
             photoDate: "2026-06-25",
             history: [
                 { date: "2026-06-25 13:43", status: "A DERIVA", note: "Notificação CFAREM: Sinal DESAPARECIDO / Garreado de sua posição original." }
-            ]
-        },
-        {
-            code: "CHN-001",
-            name: "Farol de Salinópolis (Pontal da Atalaia)",
-            type: "Farol",
-            status: "OPERACIONAL",
-            lat: -0.59833,
-            lng: -47.35528,
-            characteristic: "Lp. W. 6s 59m 23NM",
-            rangeNM: 23,
-            altitudeM: 59,
-            jurisdiction: "Capitania dos Portos do Pará",
-            image: null,
-            photoDate: null,
-            history: [
-                { date: "2026-07-15 10:30", status: "OPERACIONAL", note: "Inspeção semestral realizada. Lâmpada e baterias ok." }
-            ]
-        },
-        {
-            code: "CHN-002",
-            name: "Farol de Ponta de Pedras (Ilha de Marajó)",
-            type: "Farol",
-            status: "APAGADO",
-            lat: -1.38556,
-            lng: -48.86528,
-            characteristic: "Lp(2) W 10s 25m 14NM",
-            rangeNM: 14,
-            altitudeM: 25,
-            jurisdiction: "CHN-4 / Baía do Guajará",
-            image: null,
-            photoDate: null,
-            history: [
-                { date: "2026-08-01 14:20", status: "APAGADO", note: "Notificação de praticagem: relampejador inoperante devido à descarga atmosférica." }
-            ]
-        },
-        {
-            code: "CHN-004",
-            name: "Farol Cabeço do Norte (Foz do Amazonas)",
-            type: "Farol",
-            status: "A DERIVA",
-            lat: 1.28889,
-            lng: -49.92333,
-            characteristic: "Lp. B. 10s 18m 15NM",
-            rangeNM: 15,
-            altitudeM: 18,
-            jurisdiction: "Capitania dos Portos do Amapá",
-            image: null,
-            photoDate: null,
-            history: [
-                { date: "2026-08-05 18:45", status: "A DERIVA", note: "Garreamento da estrutura flutuante de sinalização após forte corrente de maré." }
             ]
         }
     ];
@@ -130,6 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentFilter = 'all';
     let currentSearch = '';
     let currentTypeFilter = 'ALL'; // Category filter: ALL | FAROL | FAROLETE | BOIA | BALIZA
+    let currentResponsavelFilter = 'ALL'; // Responsible filter: ALL | CHN-4 | CPAP | CPMA | CPPA | Extra-MB
     let isPickingPosition = false; // map-click-to-pick mode for new signal form
     let isPickingBasePosition = false; // map-click-to-pick mode for custom departure point
     
@@ -242,20 +195,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     autoLoadLocalDHNCharts();
 
-    map.on('baselayerchange', (e) => {
-        const nameSpan = document.getElementById('activeLayerName');
-        if (nameSpan) nameSpan.textContent = e.name;
-    });
-
     // =========================================================================
-    // 3. FÓRMULAS NÁUTICAS (HAVERSINE NM, BEARING/RUMO VERDADEIRO, ETA)
+    // 3. FÓRMULAS NÁUTICAS & AUXILIARES
     // =========================================================================
     function isOperational(status) {
         return status === 'OPERACIONAL';
     }
 
     function haversineNM(lat1, lon1, lat2, lon2) {
-        const R_NM = 3440.065; // Radius Earth in Nautical Miles
+        const R_NM = 3440.065;
         const dLat = (lat2 - lat1) * Math.PI / 180;
         const dLon = (lon2 - lon1) * Math.PI / 180;
         const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -269,7 +217,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const φ1 = lat1 * Math.PI / 180;
         const φ2 = lat2 * Math.PI / 180;
         const Δλ = (lon2 - lon1) * Math.PI / 180;
-
         const y = Math.sin(Δλ) * Math.cos(φ2);
         const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
         const θ = Math.atan2(y, x);
@@ -318,7 +265,52 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =========================================================================
-    // 4. PARSER E IMPORTADOR DE GOOGLE EARTH (KML)
+    // 4. BANCO DE DADOS REST API & CARREGAMENTO ASSÍNCRONO
+    // =========================================================================
+    async function loadSignalsFromBackend() {
+        try {
+            // Attempt 1: Fetch from Node.js REST API
+            const resp = await fetch('/api/signals');
+            if (resp.ok) {
+                const data = await resp.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    signalsData = data;
+                    updateIE();
+                    renderMapMarkers();
+                    renderSignalList();
+                    console.log(`Carregados ${signalsData.length} sinais via API REST.`);
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn('API REST /api/signals indisponível. Tentando arquivo local signals.json...', e);
+        }
+
+        try {
+            // Attempt 2: Fetch from static signals.json file
+            const resp = await fetch('./signals.json');
+            if (resp.ok) {
+                const data = await resp.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    signalsData = data;
+                    updateIE();
+                    renderMapMarkers();
+                    renderSignalList();
+                    console.log(`Carregados ${signalsData.length} sinais via signals.json local.`);
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn('signals.json não encontrado. Utilizando backup em memória.', e);
+        }
+
+        updateIE();
+        renderMapMarkers();
+        renderSignalList();
+    }
+
+    // =========================================================================
+    // 5. PARSER E IMPORTADOR DE KML (GOOGLE EARTH)
     // =========================================================================
     async function loadKML(kmlSource) {
         let kmlText = kmlSource;
@@ -348,62 +340,72 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = nameNode ? nameNode.textContent.trim() : `Sinal KML ${i + 1}`;
 
             const descNode = pm.getElementsByTagName("description")[0];
-            const desc = descNode ? descNode.textContent : "";
+            const desc = descNode ? descNode.textContent.trim() : "";
 
-            let imageUrl = null;
             const imgMatch = desc.match(/<img [^>]*src=["']([^"']+)["']/i);
-            if (imgMatch) imageUrl = imgMatch[1];
+            const imageUrl = imgMatch ? imgMatch[1] : null;
 
             let nrord = null;
-            let tipo = "Sinal Náutico";
+            let tipo = "Bóia de Balizamento";
             let situacao = "OPERACIONAL";
             let mensagem = "";
 
-            const dataNodes = pm.getElementsByTagName("Data");
-            for (let j = 0; j < dataNodes.length; j++) {
-                const dName = dataNodes[j].getAttribute("name");
-                const valNode = dataNodes[j].getElementsByTagName("value")[0];
-                const val = valNode ? valNode.textContent.trim() : "";
+            const extData = pm.getElementsByTagName("ExtendedData")[0];
+            if (extData) {
+                const dataNodes = extData.getElementsByTagName("Data");
+                for (let j = 0; j < dataNodes.length; j++) {
+                    const data = dataNodes[j];
+                    const dataName = data.getAttribute("name");
+                    const valNode = data.getElementsByTagName("value")[0];
+                    const val = valNode ? valNode.textContent.trim() : "";
 
-                if (dName === "NRORD" && val) nrord = val;
-                if (dName === "TIPO" && val) tipo = val;
-                if ((dName === "SITUAÇÃO ACD ÚLTIMA INSPEÇÃO" || dName === "SITUACAO") && val) situacao = val;
-                if (dName === "MENSAGEM DE ALTERAÇÃO" && val) mensagem = val;
-                if (dName === "gx_media_links" && val && !imageUrl) imageUrl = val;
+                    if (dataName === "NRORD" && val) nrord = val;
+                    if (dataName === "TIPO" && val) tipo = val;
+                    if ((dataName === "SITUAÇÃO ACD ÚLTIMA INSPEÇÃO" || dataName === "SITUACAO") && val) situacao = val;
+                    if (dataName === "MENSAGEM DE ALTERAÇÃO" && val) mensagem = val;
+                }
             }
 
-            const coordNode = pm.getElementsByTagName("coordinates")[0];
-            if (coordNode && coordNode.textContent) {
-                const coordsStr = coordNode.textContent.trim().split(",");
-                if (coordsStr.length >= 2) {
-                    const lng = parseFloat(coordsStr[0]);
-                    const lat = parseFloat(coordsStr[1]);
+            const pointNode = pm.getElementsByTagName("Point")[0];
+            if (pointNode) {
+                const coordsNode = pointNode.getElementsByTagName("coordinates")[0];
+                if (coordsNode && coordsNode.textContent) {
+                    const coords = coordsNode.textContent.trim().split(',');
+                    if (coords.length >= 2) {
+                        const lng = parseFloat(coords[0]);
+                        const lat = parseFloat(coords[1]);
+                        const code = nrord ? nrord : `CHN-${i + 1}`;
 
-                    if (!isNaN(lat) && !isNaN(lng)) {
                         let status = "OPERACIONAL";
                         const sitUpper = situacao.toUpperCase();
-                        if (sitUpper.includes("DESAPARECIDO") || sitUpper.includes("APAGADO") || sitUpper.includes("A DERIVA") || sitUpper.includes("AVARIADO") || sitUpper.includes("FORA")) {
-                            status = (sitUpper.includes("DERIVA") || sitUpper.includes("DESAPARECIDO")) ? "A DERIVA" : "APAGADO";
-                        }
+                        if (sitUpper.includes("DESAPARECIDO")) status = "DESAPARECIDO";
+                        else if (sitUpper.includes("APAGADO") || sitUpper.includes("AVARIADO")) status = "APAGADO";
+                        else if (sitUpper.includes("A DERIVA")) status = "A DERIVA";
+
+                        let responsavel = "CHN-4";
+                        if (desc.toUpperCase().includes("AMAPÁ") || code.startsWith("AP-")) responsavel = "CPAP";
+                        else if (desc.toUpperCase().includes("MARANHÃO") || code.startsWith("MA-")) responsavel = "CPMA";
+                        else if (code.startsWith("PA-")) responsavel = "CHN-4";
 
                         imported.push({
-                            code: nrord || `PA-${String(i + 1).padStart(2, '0')}`,
+                            code: code,
                             name: name,
-                            type: tipo || "Bóia/Farol",
+                            type: tipo,
                             status: status,
                             lat: lat,
                             lng: lng,
-                            characteristic: tipo.includes("BZ") || tipo.includes("BC") ? "Lp. V. 3s 4m 6NM" : "Lp. W. 6s 15m 12NM",
+                            characteristic: "Lp. V. 5s 4m 6NM",
                             rangeNM: 6,
                             altitudeM: 4,
-                            jurisdiction: "CHN-4 / 4º DN",
+                            jurisdiction: `Jurisdição ${responsavel}`,
+                            responsavel: responsavel,
                             image: imageUrl,
                             photoDate: imageUrl ? "2026-08-01" : null,
                             history: [
                                 {
                                     date: "2026-08-10 10:00",
                                     status: status,
-                                    note: mensagem || `Importado do Google Earth. Situação: ${situacao}`
+                                    note: mensagem || `Importado do KML. Situação: ${situacao}`
                                 }
                             ]
                         });
@@ -417,37 +419,38 @@ document.addEventListener('DOMContentLoaded', () => {
             updateIE();
             renderMapMarkers();
             renderSignalList();
-            showToast(`${imported.length} sinais do Google Earth importados com sucesso!`, 'success');
+            showToast(`${imported.length} sinais importados do KML com sucesso!`, 'success');
         }
     }
 
-    // Attempt auto-load of google_earth_signals.kml if pre-parsed signals are not present
-    if (typeof googleEarthSignals === 'undefined' || !googleEarthSignals.length) {
-        loadKML('./google_earth_signals.kml');
-    }
-
-    // KML File Upload Listeners
+    // KML & JSON File Upload / Export Listeners
     const inputKmlFile = document.getElementById('inputKmlFile');
     document.getElementById('btnImportKmlHeader')?.addEventListener('click', () => inputKmlFile.click());
-
-    inputKmlFile.addEventListener('change', (e) => {
+    inputKmlFile?.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (event) => {
-            loadKML(event.target.result);
-        };
+        reader.onload = (event) => loadKML(event.target.result);
         reader.readAsText(file);
     });
 
+    // Export JSON DB for Google Drive
+    document.getElementById('btnExportJsonDb')?.addEventListener('click', () => {
+        const jsonStr = JSON.stringify(signalsData, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'signals.json';
+        link.click();
+        showToast('Arquivo signals.json gerado! Salve-o na pasta do Google Drive.', 'success');
+    });
+
     // =========================================================================
-    // 5. CARREGADOR E GERENCIADOR DE CARTAS GEOTIFF (.TIF)
+    // 6. CARREGADOR DE CARTAS GEOTIFF (.TIF)
     // =========================================================================
     const inputGeotiffFile = document.getElementById('inputGeotiffFile');
-    document.getElementById('btnLoadGeotiffHeader')?.addEventListener('click', () => inputGeotiffFile.click());
     document.getElementById('btnUploadTifTab')?.addEventListener('click', () => inputGeotiffFile.click());
 
-    // Helper to parse and render a GeoTIFF (.tif/.tiff) file
     async function loadGeoTIFFFile(file) {
         try {
             showToast(`Processando carta GeoTIFF: ${file.name}...`, 'info');
@@ -455,7 +458,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (typeof parseGeoRaster !== 'undefined') {
                 const georaster = await parseGeoRaster(arrayBuffer);
-                
                 const layer = new GeoRasterLayer({
                     georaster: georaster,
                     opacity: 0.85,
@@ -475,50 +477,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 renderGeoTIFFLayersList();
                 showToast(`Carta GeoTIFF ${file.name} sobreposta no mapa com sucesso!`, 'success');
-            } else {
-                showToast(`Biblioteca GeoRaster indisponível no momento.`, 'danger');
             }
         } catch (err) {
             console.error("GeoTIFF parse error:", err);
-            showToast(`Aviso: O arquivo ${file.name} não possui metadados GeoTIFF georreferenciados válidos ou a projeção necessita de conversão.`, 'warning');
+            showToast(`Erro ao carregar arquivo GeoTIFF.`, 'warning');
         }
     }
 
-    inputGeotiffFile.addEventListener('change', async (e) => {
+    inputGeotiffFile?.addEventListener('change', async (e) => {
         const files = e.target.files;
         if (!files || files.length === 0) return;
         for (let i = 0; i < files.length; i++) {
             await loadGeoTIFFFile(files[i]);
         }
     });
-
-    // Enable Drag & Drop of GeoTIFF (.tif/.tiff) and KML (.kml) files directly onto the Map
-    const mapContainer = document.getElementById('map');
-    if (mapContainer) {
-        mapContainer.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-        });
-
-        mapContainer.addEventListener('drop', async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const files = e.dataTransfer.files;
-            if (!files || files.length === 0) return;
-
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const fname = file.name.toLowerCase();
-                if (fname.endsWith('.tif') || fname.endsWith('.tiff')) {
-                    await loadGeoTIFFFile(file);
-                } else if (fname.endsWith('.kml') || fname.endsWith('.kmz')) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => loadKML(event.target.result);
-                    reader.readAsText(file);
-                }
-            }
-        });
-    }
 
     function renderGeoTIFFLayersList() {
         const container = document.getElementById('geotiffLayersList');
@@ -568,9 +540,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // =========================================================================
-    // 6. ÍNDICE DE EFICÁCIA (IE) & SIMULADOR
+    // 7. ÍNDICE DE EFICÁCIA (IE) & SIMULADOR
     // =========================================================================
-    // Classify a signal type into a broad category for the filter
     function getTypeCategory(type) {
         const t = (type || '').toUpperCase();
         if (t.includes('FAROLETE')) return 'FAROLETE';
@@ -605,7 +576,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (statOpCount) statOpCount.textContent = opCount;
         if (statAvCount) statAvCount.textContent = avCount;
 
-        // Type breakdown counts
         const boiaCount = signalsData.filter(s => getTypeCategory(s.type) === 'BOIA').length;
         const farolCount = signalsData.filter(s => getTypeCategory(s.type) === 'FAROL' || getTypeCategory(s.type) === 'FAROLETE').length;
         const statBoiaEl = document.getElementById('statBoiaCount');
@@ -619,9 +589,9 @@ document.addEventListener('DOMContentLoaded', () => {
             circleGauge.style.background = `conic-gradient(${color} 0deg ${deg}deg, var(--navy-700) ${deg}deg 360deg)`;
         }
 
-        document.getElementById('countAll').textContent = total;
-        document.getElementById('countOp').textContent = opCount;
-        document.getElementById('countAv').textContent = avCount;
+        if (document.getElementById('countAll')) document.getElementById('countAll').textContent = total;
+        if (document.getElementById('countOp')) document.getElementById('countOp').textContent = opCount;
+        if (document.getElementById('countAv')) document.getElementById('countAv').textContent = avCount;
     }
 
     function openSimulator() {
@@ -670,16 +640,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('simCurrentIe').textContent = `${currentIE.toFixed(1)}%`;
         document.getElementById('simCurrentRatio').textContent = `${currentOp} / ${total} operacionais`;
-        
         document.getElementById('simProjectedIe').textContent = `${projectedIE.toFixed(1)}%`;
         document.getElementById('simProjectedRatio').textContent = `${projectedOp} / ${total} operacionais`;
-        
         document.getElementById('simDeltaIe').textContent = `+${deltaIE.toFixed(1)}%`;
         document.getElementById('simCountRepaired').textContent = countSimRepaired;
     }
 
     // =========================================================================
-    // 7. RENDERIZAÇÃO PADRONIZADA DE MARCADORES (INTUITIVO VERDE/VERMELHO)
+    // 8. RENDERIZAÇÃO E FILTRAGEM DE MARCADORES E LISTA (COM RESPONSÁVEL)
     // =========================================================================
     function createCustomIcon(signal) {
         const isOp = isOperational(signal.status);
@@ -688,7 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return L.divIcon({
             className: 'custom-aton-marker-wrapper',
-            html: `<div class="aton-marker ${statusClass}" title="${signal.code} - ${signal.name}">
+            html: `<div class="aton-marker ${statusClass}" title="${signal.code} - ${signal.name} (${signal.responsavel || 'CHN-4'})">
                      <i class="fa-solid ${iconType}"></i>
                    </div>`,
             iconSize: [32, 32],
@@ -701,19 +669,34 @@ document.addEventListener('DOMContentLoaded', () => {
         return getTypeCategory(signal.type) === currentTypeFilter;
     }
 
+    function matchesResponsavelFilter(signal) {
+        if (currentResponsavelFilter === 'ALL') return true;
+        const resp = (signal.responsavel || '').toUpperCase();
+        const filter = currentResponsavelFilter.toUpperCase();
+        if (filter === 'EXTRA-MB') {
+            return resp.includes('EXTRA') || resp.includes('PRIVADO') || resp.includes('ÓRGÃOS');
+        }
+        return resp === filter;
+    }
+
     function renderMapMarkers() {
         Object.values(mapMarkers).forEach(m => map.removeLayer(m));
         mapMarkers = {};
 
-        signalsData.filter(s => matchesTypeFilter(s)).forEach(signal => {
+        signalsData.filter(s => matchesTypeFilter(s) && matchesResponsavelFilter(s)).forEach(signal => {
             const marker = L.marker([signal.lat, signal.lng], {
                 icon: createCustomIcon(signal)
             }).addTo(map);
 
             const isOp = isOperational(signal.status);
+            const respClass = (signal.responsavel === 'CPAP') ? 'resp-cpap' : (signal.responsavel === 'CPMA') ? 'resp-cpma' : (signal.responsavel === 'Extra-MB') ? 'resp-extra' : 'resp-chn4';
+
             const popupHtml = `
                 <div style="font-family: var(--font-sans); padding: 4px;">
-                    <span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${signal.status}</span>
+                    <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 4px;">
+                        <span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${signal.status}</span>
+                        <span class="responsavel-badge ${respClass}"><i class="fa-solid fa-building-user"></i> ${signal.responsavel || 'CHN-4'}</span>
+                    </div>
                     <h3 style="font-family: var(--font-tech); margin: 6px 0 2px 0; font-size: 1.05rem;">${signal.code} - ${signal.name}</h3>
                     <p style="margin: 0; font-size: 0.8rem; color: #475569;"><strong>Carac:</strong> ${signal.characteristic}</p>
                     <p style="margin: 2px 0 8px 0; font-size: 0.8rem; color: #475569;"><strong>Pos:</strong> ${toDMS(signal.lat, true)} ${toDMS(signal.lng, false)}</p>
@@ -747,13 +730,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const searchLower = currentSearch.toLowerCase();
             const matchesSearch = s.code.toLowerCase().includes(searchLower) ||
                 s.name.toLowerCase().includes(searchLower) ||
-                s.jurisdiction.toLowerCase().includes(searchLower);
+                (s.jurisdiction && s.jurisdiction.toLowerCase().includes(searchLower)) ||
+                (s.responsavel && s.responsavel.toLowerCase().includes(searchLower));
 
-            return matchesFilter && matchesSearch && matchesTypeFilter(s);
+            return matchesFilter && matchesSearch && matchesTypeFilter(s) && matchesResponsavelFilter(s);
         });
 
         if (filtered.length === 0) {
-            container.innerHTML = '<div class="text-muted p-3 text-center">Nenhum auxílio à navegação encontrado.</div>';
+            container.innerHTML = '<div class="text-muted p-3 text-center">Nenhum auxílio à navegação encontrado para os filtros selecionados.</div>';
             return;
         }
 
@@ -763,13 +747,18 @@ document.addEventListener('DOMContentLoaded', () => {
             card.className = `signal-card ${isOp ? 'status-op' : 'status-av'}`;
             card.id = `card-${s.code}`;
             
+            const respClass = (s.responsavel === 'CPAP') ? 'resp-cpap' : (s.responsavel === 'CPMA') ? 'resp-cpma' : (s.responsavel === 'Extra-MB') ? 'resp-extra' : 'resp-chn4';
+
             card.innerHTML = `
                 <div class="signal-card-head">
                     <div class="signal-code-title">
                         <i class="fa-solid ${s.type.toLowerCase().includes('boia') || s.type.toLowerCase().includes('bz') ? 'fa-anchor' : 'fa-tower-observation'}" style="color:${isOp ? 'var(--status-op)' : 'var(--status-av)'}"></i>
                         <h4>${s.code}</h4>
                     </div>
-                    <span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${s.status}</span>
+                    <div style="display: flex; gap: 4px; align-items: center;">
+                        <span class="responsavel-badge ${respClass}">${s.responsavel || 'CHN-4'}</span>
+                        <span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${s.status}</span>
+                    </div>
                 </div>
                 <div class="signal-card-body">
                     <strong>${s.name}</strong>
@@ -803,7 +792,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =========================================================================
-    // 8. DETALHES DO SINAL: EDICÃO DE FICHA TÉCNICA E GERENCIAMENTO DE FOTO
+    // 9. DETALHES DO SINAL: EDICAO E GERENCIAMENTO
     // =========================================================================
     function openSignalDetail(code) {
         const signal = signalsData.find(s => s.code === code);
@@ -823,26 +812,24 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('modalSpecChar').textContent = signal.characteristic;
         document.getElementById('modalSpecRange').textContent = `${signal.rangeNM} NM`;
         document.getElementById('modalSpecAltitude').textContent = `${signal.altitudeM} m`;
-        document.getElementById('modalSpecJurisdiction').textContent = signal.jurisdiction;
+        document.getElementById('modalSpecJurisdiction').textContent = signal.jurisdiction || 'CHN-4';
+        
+        const specRespEl = document.getElementById('modalSpecResponsavel');
+        if (specRespEl) specRespEl.textContent = signal.responsavel || 'CHN-4';
 
         const isOp = isOperational(signal.status);
         document.getElementById('modalSpecStatus').innerHTML = `<span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${signal.status}</span>`;
 
-        // Reset Modes
         toggleEditSpecMode(false);
-
-        // Photo Display
         renderSignalPhoto(signal);
 
-        // Form Inputs Reset
         document.getElementById('selectNewStatus').value = isOp ? 'OPERACIONAL' : signal.status;
         document.getElementById('textOccurrenceReason').value = '';
 
         const btnAvradio = document.getElementById('btnGenerateAvradioModal');
-        btnAvradio.style.display = isOp ? 'none' : 'inline-flex';
+        if (btnAvradio) btnAvradio.style.display = isOp ? 'none' : 'inline-flex';
 
         renderHistoryTimeline(signal.history);
-
         modal.classList.add('active');
     }
 
@@ -865,7 +852,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Toggle Technical Specification Edit Mode
     function toggleEditSpecMode(enable) {
         const viewMode = document.getElementById('viewSpecMode');
         const editForm = document.getElementById('formEditSpec');
@@ -884,7 +870,10 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('editAltitude').value = selectedSignal.altitudeM;
             document.getElementById('editLat').value = selectedSignal.lat;
             document.getElementById('editLng').value = selectedSignal.lng;
-            document.getElementById('editJurisdiction').value = selectedSignal.jurisdiction;
+            document.getElementById('editJurisdiction').value = selectedSignal.jurisdiction || 'CHN-4';
+            
+            const editRespEl = document.getElementById('editResponsavel');
+            if (editRespEl) editRespEl.value = selectedSignal.responsavel || 'CHN-4';
         } else {
             viewMode.style.display = 'block';
             editForm.style.display = 'none';
@@ -899,7 +888,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Save Technical Specification Edit
-    document.getElementById('formEditSpec').addEventListener('submit', (e) => {
+    document.getElementById('formEditSpec').addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!selectedSignal) return;
 
@@ -912,59 +901,116 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedSignal.lat = parseFloat(document.getElementById('editLat').value) || selectedSignal.lat;
         selectedSignal.lng = parseFloat(document.getElementById('editLng').value) || selectedSignal.lng;
         selectedSignal.jurisdiction = document.getElementById('editJurisdiction').value.trim();
+        
+        const editRespEl = document.getElementById('editResponsavel');
+        if (editRespEl) selectedSignal.responsavel = editRespEl.value;
+
+        // Persist to Firebase Firestore or REST API
+        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
+            try {
+                await db.collection("signals").doc(selectedSignal.code).set(selectedSignal, { merge: true });
+                console.log(`🔥 Firestore: Sinal ${selectedSignal.code} atualizado na nuvem!`);
+            } catch (err) {
+                console.error("Erro ao salvar no Firestore:", err);
+            }
+        } else {
+            try {
+                await fetch(`/api/signals/${encodeURIComponent(selectedSignal.code)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(selectedSignal)
+                });
+            } catch (err) {
+                console.warn('Persistência API REST em modo fallback offline:', err);
+            }
+        }
 
         renderMapMarkers();
         renderSignalList();
         openSignalDetail(selectedSignal.code);
 
-        showToast('Ficha Técnica atualizada com sucesso!', 'success');
+        showToast('Ficha Técnica atualizada e salva no banco de dados!', 'success');
     });
 
-    // Delete/Cancel Signal Permanently
+    // Delete Signal Function
+    async function deleteSignalPermanently(code, name) {
+        if (!confirm(`ATENÇÃO: Deseja realmente EXCLUIR PERMANENTEMENTE o auxílio à navegação [${code} - ${name}]?`)) {
+            return;
+        }
+
+        // Delete from Firebase Firestore or REST API
+        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
+            try {
+                await db.collection("signals").doc(code).delete();
+                console.log(`🔥 Firestore: Sinal ${code} excluído da nuvem!`);
+            } catch (err) {
+                console.error("Erro ao excluir do Firestore:", err);
+            }
+        } else {
+            try {
+                await fetch(`/api/signals/${encodeURIComponent(code)}`, {
+                    method: 'DELETE'
+                });
+            } catch (err) {
+                console.warn('Exclusão via API REST em modo fallback:', err);
+            }
+        }
+
+        // Update local array
+        signalsData = signalsData.filter(s => s.code !== code);
+
+        if (mapMarkers[code]) {
+            map.removeLayer(mapMarkers[code]);
+            delete mapMarkers[code];
+        }
+
+        routeWaypoints = routeWaypoints.filter(wp => wp.code !== code);
+        updateRoute();
+
+        document.getElementById('modalSignalDetail').classList.remove('active');
+        document.getElementById('modalAddSignal').classList.remove('active');
+        selectedSignal = null;
+
+        updateIE();
+        renderMapMarkers();
+        renderSignalList();
+
+        showToast(`Sinal ${code} excluído permanentemente do banco de dados!`, 'warning');
+    }
+
+    // Delete Button in Signal Detail Modal
     document.getElementById('btnDeleteSignal')?.addEventListener('click', () => {
         if (!selectedSignal) return;
-        const code = selectedSignal.code;
-        const name = selectedSignal.name;
-        
-        if (confirm(`ATENÇÃO: Deseja realmente EXCLUIR PERMANENTEMENTE o auxílio à navegação ${code} - ${name}?`)) {
-            // Remove from array
-            signalsData = signalsData.filter(s => s.code !== code);
-            
-            // Remove marker from map
-            if (mapMarkers[code]) {
-                map.removeLayer(mapMarkers[code]);
-                delete mapMarkers[code];
-            }
-            
-            // Close modal
-            document.getElementById('modalSignalDetail').classList.remove('active');
-            selectedSignal = null;
-
-            // Recalculate IE & re-render
-            updateIE();
-            renderMapMarkers();
-            renderSignalList();
-
-            showToast(`Sinal ${code} excluído com sucesso!`, 'warning');
-        }
+        deleteSignalPermanently(selectedSignal.code, selectedSignal.name);
     });
 
     // Attach/Upload Signal Photo Listener
     const inputPhotoFile = document.getElementById('inputPhotoFile');
     document.getElementById('btnTriggerPhotoUpload').addEventListener('click', () => inputPhotoFile.click());
 
-    inputPhotoFile.addEventListener('change', (e) => {
+    inputPhotoFile.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file || !selectedSignal) return;
 
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
             selectedSignal.image = event.target.result;
             const now = new Date();
             selectedSignal.photoDate = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
 
+            // Persist to REST API
+            try {
+                await fetch(`/api/signals/${encodeURIComponent(selectedSignal.code)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(selectedSignal)
+                });
+            } catch (err) {
+                console.warn('API REST upload photo fallback:', err);
+            }
+
             renderSignalPhoto(selectedSignal);
-            showToast('Foto do sinal atualizada!', 'success');
+            showToast('Foto do sinal salva no banco de dados!', 'success');
         };
         reader.readAsDataURL(file);
     });
@@ -991,7 +1037,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    document.getElementById('formUpdateStatus').addEventListener('submit', (e) => {
+    document.getElementById('formUpdateStatus').addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!selectedSignal) return;
 
@@ -1007,18 +1053,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
         selectedSignal.status = newStatus;
+        if (!selectedSignal.history) selectedSignal.history = [];
         selectedSignal.history.push({
             date: dateStr,
             status: newStatus,
             note: reason
         });
 
+        // Persist to REST API
+        try {
+            await fetch(`/api/signals/${encodeURIComponent(selectedSignal.code)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(selectedSignal)
+            });
+        } catch (err) {
+            console.warn('API REST status update fallback:', err);
+        }
+
         updateIE();
         renderMapMarkers();
         renderSignalList();
         openSignalDetail(selectedSignal.code);
 
-        showToast(`Status do sinal ${selectedSignal.code} atualizado com sucesso!`, 'success');
+        showToast(`Status do sinal ${selectedSignal.code} atualizado!`, 'success');
 
         if (!isOperational(newStatus)) {
             generateAVRADIO(selectedSignal, reason);
@@ -1026,7 +1084,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =========================================================================
-    // 9. EMISSÃO DE AVRADIO (NORMAM-601/DHN)
+    // 10. EMISSÃO DE AVRADIO (NORMAM-601/DHN)
     // =========================================================================
     function generateAVRADIO(signal, occurrenceReason = '') {
         const modal = document.getElementById('modalAvradio');
@@ -1048,18 +1106,16 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         modal.classList.add('active');
     }
 
-    document.getElementById('btnCopyAvradio').addEventListener('click', () => {
+    document.getElementById('btnCopyAvradio')?.addEventListener('click', () => {
         const textarea = document.getElementById('avradioTextarea');
         if (!textarea) return;
         textarea.select();
         navigator.clipboard.writeText(textarea.value).then(() => {
             showToast('Texto da Minuta AVRADIO copiado com sucesso!', 'success');
-        }).catch(() => {
-            showToast('Erro ao copiar texto.', 'danger');
         });
     });
 
-    document.getElementById('btnDownloadAvradio').addEventListener('click', () => {
+    document.getElementById('btnDownloadAvradio')?.addEventListener('click', () => {
         const text = document.getElementById('avradioTextarea').value;
         const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
         const link = document.createElement('a');
@@ -1069,7 +1125,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
     });
 
     // =========================================================================
-    // 10. MÓDULO DE TRAÇADO INTERATIVO DA DERROTA NÁUTICA (CANAL SEGURO)
+    // 11. TRAÇADO DE DERROTA NÁUTICA (CANAL SEGURO)
     // =========================================================================
     function updateRoute() {
         const baseKey = document.getElementById('routeBaseSelect').value;
@@ -1080,7 +1136,6 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             ...routeWaypoints
         ];
 
-        // Clear existing markers and lines
         if (routePolyline) map.removeLayer(routePolyline);
         waypointMarkers.forEach(m => map.removeLayer(m));
         waypointMarkers = [];
@@ -1094,53 +1149,30 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                 lineJoin: 'round'
             }).addTo(map);
 
-            // Render draggable Waypoint Markers (Partida, Guinadas, Destino)
             fullSequence.forEach((wp, index) => {
                 const isFirst = index === 0;
                 const isLast = index === fullSequence.length - 1 && fullSequence.length > 1;
-                
-                let iconHtml = '';
-                let iconAnchor = [13, 13];
-                let iconSize = [26, 26];
+                let colorClass = 'wp-waypoint';
+                if (isFirst) colorClass = 'wp-base';
+                if (isLast) colorClass = 'wp-destination';
 
-                if (isFirst) {
-                    iconHtml = `<div class="waypoint-marker-partida"><i class="fa-solid fa-anchor"></i> PARTIDA: ${wp.name.split('(')[0].trim()}</div>`;
-                    iconAnchor = [40, 14];
-                    iconSize = [160, 28];
-                } else if (isLast) {
-                    iconHtml = `<div class="waypoint-marker-destino"><i class="fa-solid fa-flag-checkered"></i> DESTINO: ${wp.name.split('-')[0].trim()}</div>`;
-                    iconAnchor = [40, 14];
-                    iconSize = [160, 28];
-                } else {
-                    iconHtml = `<div class="waypoint-marker">${index}</div>`;
-                    iconAnchor = [13, 13];
-                    iconSize = [26, 26];
-                }
-
-                const wpIcon = L.divIcon({
-                    className: 'custom-wp-wrapper',
-                    html: iconHtml,
-                    iconSize: iconSize,
-                    iconAnchor: iconAnchor
+                const icon = L.divIcon({
+                    className: 'custom-wp-icon-wrapper',
+                    html: `<div class="wp-marker ${colorClass}"><span>${index === 0 ? 'P' : index}</span></div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
                 });
 
                 const marker = L.marker([wp.lat, wp.lng], {
-                    icon: wpIcon,
+                    icon: icon,
                     draggable: true
                 }).addTo(map);
-
-                // Dragging feedback
-                marker.on('drag', () => {
-                    const currentPos = marker.getLatLng();
-                    latLngs[index] = [currentPos.lat, currentPos.lng];
-                    routePolyline.setLatLngs(latLngs);
-                });
 
                 marker.on('dragend', (e) => {
                     const newPos = e.target.getLatLng();
                     if (index === 0) {
                         base.lat = newPos.lat;
-                        base.lng = newPos.lng;
+                        base.lng = newPos.lat;
                     } else {
                         routeWaypoints[index - 1].lat = newPos.lat;
                         routeWaypoints[index - 1].lng = newPos.lng;
@@ -1152,121 +1184,74 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             });
         }
 
-        // Compute Distances & Bearings
-        let totalNM = 0;
-        const waypointsInfo = [];
+        renderWaypointsList(fullSequence);
+        calculateRouteTelemetry(fullSequence);
+    }
 
-        for (let i = 0; i < fullSequence.length - 1; i++) {
-            const segDist = haversineNM(
-                fullSequence[i].lat, fullSequence[i].lng,
-                fullSequence[i+1].lat, fullSequence[i+1].lng
+    function calculateRouteTelemetry(sequence) {
+        let totalDistance = 0;
+        for (let i = 0; i < sequence.length - 1; i++) {
+            totalDistance += haversineNM(
+                sequence[i].lat, sequence[i].lng,
+                sequence[i+1].lat, sequence[i+1].lng
             );
-            totalNM += segDist;
-
-            const bearing = calculateBearing(
-                fullSequence[i].lat, fullSequence[i].lng,
-                fullSequence[i+1].lat, fullSequence[i+1].lng
-            );
-
-            waypointsInfo.push({
-                from: fullSequence[i].name,
-                to: fullSequence[i+1].name,
-                distNM: segDist,
-                bearingDeg: bearing
-            });
         }
 
-        const speedKts = parseFloat(document.getElementById('shipSpeedInput').value) || 10;
-        const totalHours = speedKts > 0 ? totalNM / speedKts : 0;
-        const days = Math.floor(totalHours / 24);
-        const hours = Math.floor(totalHours % 24);
-        const mins = Math.round((totalHours - Math.floor(totalHours)) * 60);
+        const speedInput = document.getElementById('shipSpeedInput');
+        const speed = speedInput ? parseFloat(speedInput.value) || 10 : 10;
+        const totalHours = speed > 0 ? totalDistance / speed : 0;
+        const hours = Math.floor(totalHours);
+        const minutes = Math.round((totalHours - hours) * 60);
 
-        let etaFormatted = '';
-        if (days > 0) etaFormatted += `${days}d `;
-        etaFormatted += `${hours}h ${mins < 10 ? '0' : ''}${mins}m`;
+        document.getElementById('routeDistanceVal').innerHTML = `${totalDistance.toFixed(1)} <small>NM</small>`;
+        document.getElementById('routeWaypointsCount').innerHTML = `${Math.max(0, sequence.length - 1)} <small>pts</small>`;
+        document.getElementById('routeEtaVal').textContent = `${hours}h ${String(minutes).padStart(2, '0')}m`;
+    }
 
-        document.getElementById('routeDistanceVal').innerHTML = `${totalNM.toFixed(1)} <small>NM</small>`;
-        document.getElementById('routeWaypointsCount').innerHTML = `${fullSequence.length} <small>pts</small>`;
-        document.getElementById('routeEtaVal').textContent = etaFormatted;
+    function renderWaypointsList(sequence) {
+        const container = document.getElementById('waypointsList');
+        if (!container) return;
+        container.innerHTML = '';
 
-        // Waypoints UI List
-        const listContainer = document.getElementById('waypointsList');
-        if (listContainer) {
-            listContainer.innerHTML = '';
-            fullSequence.forEach((wp, index) => {
-                const li = document.createElement('li');
-                li.className = 'waypoint-item';
+        if (sequence.length <= 1) {
+            container.innerHTML = '<li class="waypoint-item empty">Nenhum ponto de guinada adicionado à derrota.</li>';
+            return;
+        }
 
-                const isFirst = index === 0;
-                const isLast = index === fullSequence.length - 1 && fullSequence.length > 1;
+        for (let i = 0; i < sequence.length; i++) {
+            const wp = sequence[i];
+            const li = document.createElement('li');
+            li.className = 'waypoint-item';
 
-                let badgeHtml = `<span class="waypoint-num">${index}</span>`;
-                if (isFirst) {
-                    badgeHtml = `<span class="badge badge-primary" style="font-size:0.7rem;"><i class="fa-solid fa-anchor"></i> PARTIDA</span>`;
-                } else if (isLast) {
-                    badgeHtml = `<span class="badge badge-op" style="font-size:0.7rem;"><i class="fa-solid fa-flag-checkered"></i> DESTINO</span>`;
-                }
+            let legInfo = 'Origem / Ponto de Partida';
+            if (i > 0) {
+                const prev = sequence[i - 1];
+                const dist = haversineNM(prev.lat, prev.lng, wp.lat, wp.lng);
+                const bearing = calculateBearing(prev.lat, prev.lng, wp.lat, wp.lng);
+                legInfo = `Perna ${i}: Dist ${dist.toFixed(1)} NM | Rumo ${bearing}°`;
+            }
 
-                let bearingInfoStr = '';
-                if (index > 0 && waypointsInfo[index - 1]) {
-                    bearingInfoStr = `<span class="waypoint-bearing"><i class="fa-solid fa-compass"></i> Rumo: ${waypointsInfo[index - 1].bearingDeg}° | Perna: ${waypointsInfo[index - 1].distNM.toFixed(1)} NM</span>`;
-                }
-
-                li.innerHTML = `
-                    <div class="waypoint-info">
-                        ${badgeHtml}
-                        <div style="margin-left: 4px;">
-                            <strong>${wp.name}</strong>
-                            <div><small class="text-muted">${toDMS(wp.lat, true)} | ${toDMS(wp.lng, false)}</small></div>
-                            ${bearingInfoStr}
-                        </div>
-                    </div>
-                    ${index > 0 ? `<button class="btn-remove-wp" onclick="window.removeWaypointFromRoute(${index - 1})" title="Remover ponto"><i class="fa-solid fa-xmark"></i></button>` : ''}
-                `;
-                listContainer.appendChild(li);
-            });
+            li.innerHTML = `
+                <div class="wp-item-head">
+                    <span class="wp-num">${i === 0 ? 'PARTIDA' : `WPT ${i}`}</span>
+                    <strong>${wp.name}</strong>
+                    ${i > 0 ? `<button class="btn-remove-wp" onclick="window.removeWaypoint(${i - 1})">&times;</button>` : ''}
+                </div>
+                <div class="wp-item-meta">${legInfo}</div>
+                <div class="wp-coords">${toDMS(wp.lat, true)} | ${toDMS(wp.lng, false)}</div>
+            `;
+            container.appendChild(li);
         }
     }
 
-    // Toggle Interactive Derrota Drawing Mode
-    const btnToggleDrawDerrota = document.getElementById('btnToggleDrawDerrota');
-    btnToggleDrawDerrota.addEventListener('click', () => {
-        isDrawDerrotaMode = !isDrawDerrotaMode;
-        const textSpan = document.getElementById('btnDrawDerrotaText');
-
-        if (isDrawDerrotaMode) {
-            btnToggleDrawDerrota.className = 'btn btn-warning';
-            textSpan.textContent = 'Clique no Mapa p/ Add Ponto';
-            showToast('Modo de Traçado de Derrota ativado. Clique no canal navegável para adicionar pontos de guinada.', 'info');
-        } else {
-            btnToggleDrawDerrota.className = 'btn btn-primary';
-            textSpan.textContent = 'Desenhar no Mapa';
-            showToast('Modo de Traçado desativado.', 'info');
-        }
-    });
-
-    // Map Click Listener for Derrota Drawing Mode
-    map.on('click', (e) => {
-        if (!isDrawDerrotaMode) return;
-
-        routeWaypoints.push({
-            name: `Guinada Wpt ${routeWaypoints.length + 1}`,
-            lat: e.latlng.lat,
-            lng: e.latlng.lng
-        });
-
+    window.removeWaypoint = (index) => {
+        routeWaypoints.splice(index, 1);
         updateRoute();
-    });
+    };
 
-    function addSignalToRoute(code) {
+    window.addSignalToRoute = (code) => {
         const signal = signalsData.find(s => s.code === code);
         if (!signal) return;
-
-        if (routeWaypoints.some(wp => wp.code === code)) {
-            showToast(`O sinal ${code} já está na derrota da missão.`, 'warning');
-            return;
-        }
 
         routeWaypoints.push({
             code: signal.code,
@@ -1277,183 +1262,20 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
 
         isRouteVisible = true;
         updateRoute();
-        showToast(`${signal.code} adicionado à derrota!`, 'success');
-        document.querySelector('[data-tab="tab-route"]').click();
-    }
-
-    window.addSignalToRoute = addSignalToRoute;
-    window.openSignalDetail = openSignalDetail;
-    window.removeWaypointFromRoute = (index) => {
-        routeWaypoints.splice(index, 1);
-        updateRoute();
+        showToast(`Sinal ${signal.code} adicionado à derrota náutica!`, 'success');
     };
 
-    document.getElementById('btnAddDamagedToRoute')?.addEventListener('click', () => {
-        const damaged = signalsData.filter(s => !isOperational(s.status));
-        if (damaged.length === 0) {
-            showToast('Nenhum sinal avariado no momento!', 'info');
-            return;
-        }
-
-        damaged.forEach(s => {
-            if (!routeWaypoints.some(wp => wp.code === s.code)) {
-                routeWaypoints.push({
-                    code: s.code,
-                    name: `${s.code} - ${s.name}`,
-                    lat: s.lat,
-                    lng: s.lng
-                });
-            }
-        });
-
-        isRouteVisible = true;
-        updateRoute();
-        showToast(`${damaged.length} sinais adicionados à derrota!`, 'success');
-    });
-
-    document.getElementById('btnClearRoute').addEventListener('click', () => {
-        routeWaypoints = [];
-        updateRoute();
-        showToast('Derrota limpa.', 'info');
-    });
-
-    // Toggle Route Visibility on Map
-    const btnToggleRouteVisibility = document.getElementById('btnToggleRouteVisibility');
-    const btnRouteVisText = document.getElementById('btnRouteVisText');
-    if (btnToggleRouteVisibility) {
-        btnToggleRouteVisibility.addEventListener('click', () => {
-            isRouteVisible = !isRouteVisible;
-            if (isRouteVisible) {
-                btnToggleRouteVisibility.className = 'btn btn-outline';
-                btnToggleRouteVisibility.innerHTML = '<i class="fa-solid fa-eye-slash"></i> <span id="btnRouteVisText">Ocultar Derrota</span>';
-                showToast('Traçado da derrota exibido no mapa.', 'info');
-            } else {
-                btnToggleRouteVisibility.className = 'btn btn-primary';
-                btnToggleRouteVisibility.innerHTML = '<i class="fa-solid fa-eye"></i> <span id="btnRouteVisText">Exibir Derrota</span>';
-                showToast('Traçado da derrota ocultado no mapa.', 'info');
-            }
-            updateRoute();
-        });
-    }
-
-    // Pick Custom Departure Point (Partida) on Map
-    document.getElementById('btnPickBasePointOnMap')?.addEventListener('click', () => {
-        isPickingBasePosition = true;
-        map.getContainer().style.cursor = 'crosshair';
-        showToast('Clique no mapa para definir a posição exata do Ponto de Partida.', 'info');
-    });
-
-    // Open Google Maps Terrestrial Navigation for Viatura
-    document.getElementById('btnOpenGoogleMapsRoute')?.addEventListener('click', () => {
-        const baseKey = document.getElementById('routeBaseSelect').value;
-        const base = navalBases[baseKey] || navalBases.belem;
-        
-        const fullSequence = [
-            { lat: base.lat, lng: base.lng },
-            ...routeWaypoints
-        ];
-
-        if (fullSequence.length === 0) {
-            showToast('Nenhum ponto definido na derrota.', 'warning');
-            return;
-        }
-
-        const pathCoords = fullSequence.map(wp => `${wp.lat.toFixed(6)},${wp.lng.toFixed(6)}`).join('/');
-        const gmapsUrl = `https://www.google.com/maps/dir/${pathCoords}`;
-        window.open(gmapsUrl, '_blank');
-        showToast('Rota terrestre por viatura gerada e aberta no Google Maps em nova aba!', 'success');
-    });
-
-    document.getElementById('shipSpeedInput').addEventListener('input', updateRoute);
-    document.getElementById('routeBaseSelect').addEventListener('change', (e) => {
-        if (e.target.value === 'custom') {
-            isPickingBasePosition = true;
-            map.getContainer().style.cursor = 'crosshair';
-            showToast('Clique no mapa para posicionar a Partida Personalizada.', 'info');
-        }
-        updateRoute();
-    });
-
-    document.getElementById('btnApplySimulationToRoute').addEventListener('click', () => {
-        const checked = document.querySelectorAll('.sim-checkbox:checked');
-        routeWaypoints = [];
-
-        checked.forEach(cb => {
-            const signal = signalsData.find(s => s.code === cb.value);
-            if (signal) {
-                routeWaypoints.push({
-                    code: signal.code,
-                    name: `${signal.code} - ${signal.name}`,
-                    lat: signal.lat,
-                    lng: signal.lng
-                });
-            }
-        });
-
-        updateRoute();
-        document.getElementById('modalSimulator').classList.remove('active');
-        document.querySelector('[data-tab="tab-route"]').click();
-        showToast('Derrota criada com base na simulação!', 'success');
-    });
-
     // =========================================================================
-    // 11. CONTROLES DE INTERFACE & EVENT LISTENERS
+    // 12. CONTROLES DE INTERFACE & FILTROS
     // =========================================================================
-    // Mobile View Toggle Switcher (Rolar Empilhado, Só Mapa, Só Painel)
-    const btnMobileShowBoth = document.getElementById('btnMobileShowBoth');
-    const btnMobileShowMap = document.getElementById('btnMobileShowMap');
-    const btnMobileShowSidebar = document.getElementById('btnMobileShowSidebar');
-    const appContainer = document.querySelector('.app-container');
-
-    if (btnMobileShowBoth && btnMobileShowMap && btnMobileShowSidebar && appContainer) {
-        btnMobileShowBoth.addEventListener('click', () => {
-            btnMobileShowBoth.classList.add('active');
-            btnMobileShowMap.classList.remove('active');
-            btnMobileShowSidebar.classList.remove('active');
-
-            appContainer.classList.remove('mode-map-only', 'mode-sidebar-only');
-            setTimeout(() => map.invalidateSize(), 200);
-        });
-
-        btnMobileShowMap.addEventListener('click', () => {
-            btnMobileShowMap.classList.add('active');
-            btnMobileShowBoth.classList.remove('active');
-            btnMobileShowSidebar.classList.remove('active');
-
-            appContainer.classList.add('mode-map-only');
-            appContainer.classList.remove('mode-sidebar-only');
-            setTimeout(() => map.invalidateSize(), 200);
-        });
-
-        btnMobileShowSidebar.addEventListener('click', () => {
-            btnMobileShowSidebar.classList.add('active');
-            btnMobileShowBoth.classList.remove('active');
-            btnMobileShowMap.classList.remove('active');
-
-            appContainer.classList.add('mode-sidebar-only');
-            appContainer.classList.remove('mode-map-only');
-        });
-    }
-
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
-            btn.classList.add('active');
-            const tabId = btn.getAttribute('data-tab');
-            document.getElementById(tabId).classList.add('active');
-        });
-    });
-
     const searchInput = document.getElementById('searchInput');
-    searchInput.addEventListener('input', (e) => {
+    searchInput?.addEventListener('input', (e) => {
         currentSearch = e.target.value;
         renderSignalList();
     });
 
-    document.getElementById('btnClearSearch').addEventListener('click', () => {
-        searchInput.value = '';
+    document.getElementById('btnClearSearch')?.addEventListener('click', () => {
+        if (searchInput) searchInput.value = '';
         currentSearch = '';
         renderSignalList();
     });
@@ -1468,30 +1290,34 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         });
     });
 
-    // Type-category filter select
     const typeFilterSelect = document.getElementById('typeFilterSelect');
-    if (typeFilterSelect) {
-        typeFilterSelect.addEventListener('change', (e) => {
-            currentTypeFilter = e.target.value;
-            renderSignalList();
-            renderMapMarkers();
-        });
-    }
+    typeFilterSelect?.addEventListener('change', (e) => {
+        currentTypeFilter = e.target.value;
+        renderSignalList();
+        renderMapMarkers();
+    });
 
-    document.getElementById('btnCenterAll').addEventListener('click', () => {
+    const responsavelFilterSelect = document.getElementById('responsavelFilterSelect');
+    responsavelFilterSelect?.addEventListener('change', (e) => {
+        currentResponsavelFilter = e.target.value;
+        renderSignalList();
+        renderMapMarkers();
+    });
+
+    document.getElementById('btnCenterAll')?.addEventListener('click', () => {
         if (signalsData.length === 0) return;
         const bounds = L.latLngBounds(signalsData.map(s => [s.lat, s.lng]));
         map.fitBounds(bounds, { padding: [40, 40] });
     });
 
-    document.getElementById('btnMapReset').addEventListener('click', () => {
+    document.getElementById('btnMapReset')?.addEventListener('click', () => {
         map.flyTo([-0.5, -49.0], 8, { duration: 1.2 });
     });
 
     document.querySelectorAll('[data-close]').forEach(btn => {
         btn.addEventListener('click', () => {
             const modalId = btn.getAttribute('data-close');
-            document.getElementById(modalId).classList.remove('active');
+            document.getElementById(modalId)?.classList.remove('active');
         });
     });
 
@@ -1501,82 +1327,23 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         });
     });
 
-    document.getElementById('btnOpenSimulator').addEventListener('click', openSimulator);
-    document.getElementById('btnOpenSimulator2').addEventListener('click', openSimulator);
-
-    document.getElementById('btnSimSelectAll').addEventListener('click', () => {
-        document.querySelectorAll('.sim-checkbox').forEach(cb => cb.checked = true);
-        calculateSimulation();
-    });
-
-    document.getElementById('btnSimClearAll').addEventListener('click', () => {
-        document.querySelectorAll('.sim-checkbox').forEach(cb => cb.checked = false);
-        calculateSimulation();
-    });
-
-    document.getElementById('btnModalAddToRoute').addEventListener('click', () => {
-        if (selectedSignal) {
-            addSignalToRoute(selectedSignal.code);
-            document.getElementById('modalSignalDetail').classList.remove('active');
-        }
-    });
-
-    document.getElementById('btnGenerateAvradioModal').addEventListener('click', () => {
-        if (selectedSignal) {
-            generateAVRADIO(selectedSignal);
-        }
-    });
-
-    document.getElementById('btnToggleTheme').addEventListener('click', () => {
-        document.body.classList.toggle('theme-light');
-        const icon = document.querySelector('#btnToggleTheme i');
-        if (document.body.classList.contains('theme-light')) {
-            icon.className = 'fa-solid fa-sun';
-        } else {
-            icon.className = 'fa-solid fa-moon';
-        }
-    });
-
-    // Distance Measurement Tool
-    document.getElementById('btnToggleMeasure').addEventListener('click', () => {
-        isMeasureMode = !isMeasureMode;
-        const btn = document.getElementById('btnToggleMeasure');
-        
-        if (isMeasureMode) {
-            btn.style.color = 'var(--accent-gold)';
-            showToast('Modo de Medição ativado. Clique no mapa para medir distâncias.', 'info');
-            measurePoints = [];
-        } else {
-            btn.style.color = '';
-            if (measurePolyline) map.removeLayer(measurePolyline);
-            showToast('Modo de Medição desativado.', 'info');
-        }
-    });
-
+    document.getElementById('btnOpenSimulator')?.addEventListener('click', openSimulator);
+    document.getElementById('btnOpenSimulator2')?.addEventListener('click', openSimulator);
 
     // =========================================================================
-    // 12. GESTÃO DE SINAIS NÁUTICOS (CRIAR / EXCLUIR SINAL)
+    // 13. CRIAR E EXCLUIR SINAIS (COM SUPORTE A RESPONSÁVEL E PERSISTÊNCIA)
     // =========================================================================
     const modalAddSignal = document.getElementById('modalAddSignal');
     const btnTabCreateMode = document.getElementById('btnTabCreateMode');
     const btnTabDeleteMode = document.getElementById('btnTabDeleteMode');
     const panelCreateSignal = document.getElementById('panelCreateSignal');
     const panelDeleteSignal = document.getElementById('panelDeleteSignal');
-    let pickingMarker = null;
 
     function switchManageMode(mode) {
-        const STYLE_ACTIVE_CREATE = 'flex: 1; padding: 13px 10px; border: 2px solid #34d399; border-radius: 6px; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: #fff; font-family: Rajdhani, monospace; font-weight: 700; font-size: 1rem; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px rgba(16,185,129,0.45); transition: all 0.2s;';
-        const STYLE_ACTIVE_DELETE = 'flex: 1; padding: 13px 10px; border: 2px solid #f87171; border-radius: 6px; background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: #fff; font-family: Rajdhani, monospace; font-weight: 700; font-size: 1rem; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px rgba(239,68,68,0.45); transition: all 0.2s;';
-        const STYLE_INACTIVE = 'flex: 1; padding: 13px 10px; border: 2px solid #4a5568; border-radius: 6px; background: #1a2035; color: #94a3b8; font-family: Rajdhani, monospace; font-weight: 700; font-size: 1rem; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;';
-
         if (mode === 'create') {
-            if (btnTabCreateMode) btnTabCreateMode.setAttribute('style', STYLE_ACTIVE_CREATE);
-            if (btnTabDeleteMode) btnTabDeleteMode.setAttribute('style', STYLE_INACTIVE);
             if (panelCreateSignal) panelCreateSignal.style.display = 'block';
             if (panelDeleteSignal) panelDeleteSignal.style.display = 'none';
         } else {
-            if (btnTabDeleteMode) btnTabDeleteMode.setAttribute('style', STYLE_ACTIVE_DELETE);
-            if (btnTabCreateMode) btnTabCreateMode.setAttribute('style', STYLE_INACTIVE);
             if (panelDeleteSignal) panelDeleteSignal.style.display = 'block';
             if (panelCreateSignal) panelCreateSignal.style.display = 'none';
             populateDeleteSignalSelectModal();
@@ -1588,10 +1355,10 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         btnTabDeleteMode.addEventListener('click', () => switchManageMode('delete'));
     }
 
-    document.getElementById('btnOpenAddSignalHeader').addEventListener('click', () => {
-        document.getElementById('formAddSignal').reset();
+    document.getElementById('btnOpenAddSignalHeader')?.addEventListener('click', () => {
+        document.getElementById('formAddSignal')?.reset();
         switchManageMode('create');
-        modalAddSignal.classList.add('active');
+        modalAddSignal?.classList.add('active');
     });
 
     function populateDeleteSignalSelectModal() {
@@ -1600,12 +1367,11 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
 
         if (signalsData.length === 0) {
             select.innerHTML = '<option value="">Nenhum sinal cadastrado</option>';
-            document.getElementById('deletePreviewCard').innerHTML = '<div class="text-muted">Nenhum sinal no sistema.</div>';
             return;
         }
 
         select.innerHTML = signalsData.map(s => `
-            <option value="${s.code}">${s.code} - ${s.name} (${s.type})</option>
+            <option value="${s.code}">${s.code} - ${s.name} (${s.type}) [${s.responsavel || 'CHN-4'}]</option>
         `).join('');
 
         select.value = signalsData[0].code;
@@ -1622,8 +1388,9 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         document.getElementById('delPreviewStatus').className = `badge ${isOp ? 'badge-op' : 'badge-av'}`;
         document.getElementById('delPreviewName').textContent = signal.name;
         document.getElementById('delPreviewType').textContent = signal.type;
-        document.getElementById('delPreviewPos').textContent = `Coordenadas: Lat ${toDMS(signal.lat, true)}, Lng ${toDMS(signal.lng, false)}`;
+        document.getElementById('delPreviewPos').textContent = `Lat: ${toDMS(signal.lat, true)}, Lng: ${toDMS(signal.lng, false)}`;
         document.getElementById('delPreviewJurisdiction').textContent = `Jurisdição: ${signal.jurisdiction || 'CHN-4'}`;
+        document.getElementById('delPreviewResponsavel').textContent = `Responsável: ${signal.responsavel || 'CHN-4'}`;
     }
 
     document.getElementById('selectSignalToDeleteModal')?.addEventListener('change', (e) => {
@@ -1634,62 +1401,31 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         const select = document.getElementById('selectSignalToDeleteModal');
         if (!select || !select.value) return;
 
-        const code = select.value;
-        const signal = signalsData.find(s => s.code === code);
-        if (!signal) return;
-
-        if (confirm(`⚠️ ATENÇÃO: Deseja realmente EXCLUIR PERMANENTEMENTE o sinal náutico [${signal.code} - ${signal.name}]?`)) {
-            const index = signalsData.findIndex(s => s.code === code);
-            if (index !== -1) signalsData.splice(index, 1);
-
-            if (mapMarkers[code]) {
-                map.removeLayer(mapMarkers[code]);
-                delete mapMarkers[code];
-            }
-
-            routeWaypoints = routeWaypoints.filter(wp => wp.code !== code);
-            updateRoute();
-
-            updateIE();
-            renderMapMarkers();
-            renderSignalList();
-
-            modalAddSignal.classList.remove('active');
-            showToast(`Sinal ${code} excluído com sucesso do sistema.`, 'danger');
-        }
+        deleteSignalPermanently(select.value, select.options[select.selectedIndex].text);
     });
 
-    // Button: click on map to capture lat/lng for new signal
-    document.getElementById('btnPickPointOnMap').addEventListener('click', () => {
-        if (!modalAddSignal) return;
-        modalAddSignal.classList.remove('active'); // temporarily hide modal
-        isPickingPosition = true;
-        showToast('Clique no mapa para definir a posição do novo sinal.', 'info');
-        document.getElementById('btnPickPointOnMap').textContent = '⏳ Aguardando clique no mapa...';
-        map.getContainer().style.cursor = 'crosshair';
-    });
-
-    // Form submit: save new signal
-    document.getElementById('formAddSignal').addEventListener('submit', (e) => {
+    // Form Submit: Save New Signal
+    document.getElementById('formAddSignal')?.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const lat = parseFloat(document.getElementById('addLat').value);
         const lng = parseFloat(document.getElementById('addLng').value);
 
         if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
-            showToast('Informe as coordenadas ou clique no mapa para posicionar o sinal.', 'danger');
+            showToast('Informe as coordenadas válidas.', 'danger');
             return;
         }
 
         const code = document.getElementById('addCode').value.trim();
         if (signalsData.some(s => s.code === code)) {
-            showToast(`Já existe um sinal com o código ${code}. Use um código único.`, 'danger');
+            showToast(`Já existe um sinal com o código ${code}.`, 'danger');
             return;
         }
 
         const now = new Date();
         const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
         const statusVal = document.getElementById('addStatus').value;
+        const responsavelVal = document.getElementById('addResponsavel').value;
 
         const newSignal = {
             code: code,
@@ -1698,111 +1434,135 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             status: statusVal,
             lat: lat,
             lng: lng,
-            characteristic: document.getElementById('addCharacteristic').value.trim(),
-            rangeNM: parseFloat(document.getElementById('addRange').value) || 0,
-            altitudeM: parseFloat(document.getElementById('addAltitude').value) || 0,
-            jurisdiction: document.getElementById('addJurisdiction').value.trim(),
+            characteristic: document.getElementById('addCharacteristic').value.trim() || 'Lp. W. 5s 6m 8NM',
+            rangeNM: parseFloat(document.getElementById('addRange').value) || 6,
+            altitudeM: parseFloat(document.getElementById('addAltitude').value) || 5,
+            jurisdiction: document.getElementById('addJurisdiction').value.trim() || `Jurisdição ${responsavelVal}`,
+            responsavel: responsavelVal,
             image: null,
             photoDate: null,
             history: [
-                { date: dateStr, status: statusVal, note: 'Sinal cadastrado manualmente pelo operador.' }
+                { date: dateStr, status: statusVal, note: `Sinal cadastrado no sistema. Responsável: ${responsavelVal}` }
             ]
         };
+
+        // Persist to Firebase Firestore or REST API
+        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
+            try {
+                await db.collection("signals").doc(code).set(newSignal);
+                console.log(`🔥 Firestore: Sinal ${code} criado na nuvem!`);
+            } catch (err) {
+                console.error("Erro ao criar no Firestore:", err);
+            }
+        } else {
+            try {
+                await fetch('/api/signals', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newSignal)
+                });
+            } catch (err) {
+                console.warn('API REST POST fallback:', err);
+            }
+        }
 
         signalsData.push(newSignal);
         updateIE();
         renderMapMarkers();
         renderSignalList();
 
-        modalAddSignal.classList.remove('active');
-        showToast(`Sinal ${code} cadastrado com sucesso!`, 'success');
+        modalAddSignal?.classList.remove('active');
+        showToast(`Sinal ${code} registrado e salvo no banco de dados!`, 'success');
 
-        // Fly to new signal
         map.flyTo([lat, lng], 12, { duration: 1.2 });
         if (mapMarkers[code]) mapMarkers[code].openPopup();
     });
 
     // =========================================================================
-    // 13. UNIFIED MAP CLICK HANDLER
-    //     Handles: derrota drawing, position pick for new signal, measurement
+    // 14. INTEROPERABILIDADE E SINCRONIZAÇÃO EM TEMPO REAL (FIREBASE FIRESTORE / SSE)
     // =========================================================================
-    map.on('click', (e) => {
-        // Priority 1: picking position for new signal form
-        if (isPickingPosition) {
-            isPickingPosition = false;
-            map.getContainer().style.cursor = '';
+    function setupRealtimeSync() {
+        const syncText = document.getElementById('syncStatusText');
+        const syncDot = document.querySelector('#syncStatusBadge .sync-dot');
 
-            document.getElementById('addLat').value = e.latlng.lat.toFixed(6);
-            document.getElementById('addLng').value = e.latlng.lng.toFixed(6);
+        // Priority 1: Firebase Cloud Firestore Real-time listener (Nuvem / GitHub Pages)
+        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
+            if (syncText) syncText.textContent = 'ONLINE (FIREBASE CLOUD)';
+            if (syncDot) syncDot.className = 'sync-dot sync-online';
 
-            // Show temporary marker on map
-            if (pickingMarker) map.removeLayer(pickingMarker);
-            pickingMarker = L.circleMarker(e.latlng, {
-                radius: 10, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.7
-            }).addTo(map).bindPopup('📍 Posição capturada para novo sinal').openPopup();
+            db.collection("signals").onSnapshot((snapshot) => {
+                if (!snapshot.empty) {
+                    const remoteSignals = [];
+                    snapshot.forEach(doc => {
+                        remoteSignals.push(doc.data());
+                    });
+                    signalsData = remoteSignals;
+                    updateIE();
+                    renderMapMarkers();
+                    renderSignalList();
 
-            // Re-open form modal
-            modalAddSignal.classList.add('active');
-            const btnPick = document.getElementById('btnPickPointOnMap');
-            if (btnPick) btnPick.innerHTML = '<i class="fa-solid fa-crosshairs"></i> Ou Clique no Mapa p/ Capturar Posição';
-            showToast(`Posição capturada: ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`, 'success');
-            return;
-        }
-
-        // Priority 1b: picking custom departure point for route
-        if (isPickingBasePosition) {
-            isPickingBasePosition = false;
-            map.getContainer().style.cursor = '';
-
-            navalBases.custom.lat = e.latlng.lat;
-            navalBases.custom.lng = e.latlng.lng;
-            navalBases.custom.name = `Partida Customizada (${toDMS(e.latlng.lat, true)}, ${toDMS(e.latlng.lng, false)})`;
-
-            const selectEl = document.getElementById('routeBaseSelect');
-            if (selectEl) selectEl.value = 'custom';
-
-            isRouteVisible = true;
-            updateRoute();
-
-            showToast(`Ponto de Partida gravado no mapa: ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`, 'success');
-            return;
-        }
-
-        // Priority 2: derrota drawing mode
-        if (isDrawDerrotaMode) {
-            isRouteVisible = true;
-            routeWaypoints.push({
-                name: `Guinada Wpt ${routeWaypoints.length + 1}`,
-                lat: e.latlng.lat,
-                lng: e.latlng.lng
-            });
-            updateRoute();
-            return;
-        }
-
-        // Priority 3: distance measurement mode
-        if (isMeasureMode) {
-            measurePoints.push(e.latlng);
-            if (measurePolyline) map.removeLayer(measurePolyline);
-            measurePolyline = L.polyline(measurePoints, { color: '#06b6d4', weight: 3 }).addTo(map);
-            if (measurePoints.length > 1) {
-                let dist = 0;
-                for (let i = 0; i < measurePoints.length - 1; i++) {
-                    dist += haversineNM(
-                        measurePoints[i].lat, measurePoints[i].lng,
-                        measurePoints[i+1].lat, measurePoints[i+1].lng
-                    );
+                    if (selectedSignal) {
+                        const updated = signalsData.find(s => s.code === selectedSignal.code);
+                        if (updated) selectedSignal = updated;
+                    }
+                    console.log(`🔥 Cloud Firestore: ${signalsData.length} sinais sincronizados em tempo real.`);
                 }
-                showToast(`Distância Medida: ${dist.toFixed(2)} NM (${(dist * 1.852).toFixed(2)} km)`, 'info');
-            }
+            }, (err) => {
+                console.warn("Erro no listener Firestore:", err);
+            });
+            return;
         }
-    });
+
+        // Priority 2: Local Server-Sent Events (SSE) fallback
+        if (typeof EventSource === 'undefined') return;
+
+        try {
+            const evtSource = new EventSource('/api/events');
+
+            evtSource.onopen = () => {
+                if (syncText) syncText.textContent = 'ONLINE (MULTI-USUÁRIO LOCAL)';
+                if (syncDot) syncDot.className = 'sync-dot sync-online';
+            };
+
+            evtSource.addEventListener('signal-change', async (event) => {
+                try {
+                    console.log('Realtime SSE Event received:', event.data);
+                    const resp = await fetch('/api/signals');
+                    if (resp.ok) {
+                        signalsData = await resp.json();
+                        updateIE();
+                        renderMapMarkers();
+                        renderSignalList();
+                        
+                        if (selectedSignal) {
+                            const updated = signalsData.find(s => s.code === selectedSignal.code);
+                            if (updated) selectedSignal = updated;
+                        }
+
+                        showToast('📢 Atualização remota recebida! Base sincronizada.', 'info');
+                    }
+                } catch (err) {
+                    console.warn('SSE event parsing error:', err);
+                }
+            });
+
+            evtSource.onerror = () => {
+                if (syncText) syncText.textContent = 'MODO LOCAL';
+                if (syncDot) syncDot.className = 'sync-dot sync-offline';
+            };
+        } catch (err) {
+            console.warn('Realtime sync setup skipped.', err);
+        }
+    }
 
     // =========================================================================
-    // 14. INITIAL BOOTSTRAP
+    // 15. INITIAL BOOTSTRAP
     // =========================================================================
-    updateIE();
-    renderMapMarkers();
-    renderSignalList();
-    updateRoute();
+    async function init() {
+        await loadSignalsFromBackend();
+        setupRealtimeSync();
+        updateRoute();
+    }
+
+    init();
 });
