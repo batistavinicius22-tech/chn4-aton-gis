@@ -3,15 +3,14 @@
    Configuração do Firebase Cloud Firestore (Banco de Dados em Tempo Real na Nuvem)
    ========================================================================== */
 
-// Configuração do seu Projeto Firebase
-// Substitua as chaves abaixo pelas chaves fornecidas no seu Console Firebase (https://console.firebase.google.com)
+// Configuração Oficial do Projeto Firebase CHN-4 AtoN GIS
 const firebaseConfig = {
-    apiKey: "AIzaSy_SUA_CHAVE_API_AQUI",
+    apiKey: "AIzaSyDJL4FNu6LEVxaI8Gjion9L5ZA0wlSnvKc",
     authDomain: "chn4-aton-gis.firebaseapp.com",
     projectId: "chn4-aton-gis",
-    storageBucket: "chn4-aton-gis.appspot.com",
-    messagingSenderId: "1234567890",
-    appId: "1:1234567890:web:abcdef123456"
+    storageBucket: "chn4-aton-gis.firebasestorage.app",
+    messagingSenderId: "720021866185",
+    appId: "1:720021866185:web:6bea568c3bd29e2d886f18"
 };
 
 let db = null;
