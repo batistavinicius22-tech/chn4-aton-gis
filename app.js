@@ -1054,7 +1054,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Save Technical Specification Edit
-    document.getElementById('formEditSpec').addEventListener('submit', async (e) => {
+    document.getElementById('formEditSpec').addEventListener('submit', (e) => {
         e.preventDefault();
         if (!selectedSignal) return;
 
@@ -1071,32 +1071,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const editRespEl = document.getElementById('editResponsavel');
         if (editRespEl) selectedSignal.responsavel = editRespEl.value;
 
-        // Persist to Firebase Firestore or REST API
-        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
-            try {
-                await db.collection("signals").doc(selectedSignal.code).set(selectedSignal, { merge: true });
-                console.log(`🔥 Firestore: Sinal ${selectedSignal.code} atualizado na nuvem!`);
-            } catch (err) {
-                console.error("Erro ao salvar no Firestore:", err);
-            }
-        } else {
-            try {
-                await fetch(`/api/signals/${encodeURIComponent(selectedSignal.code)}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(selectedSignal)
-                });
-            } catch (err) {
-                console.warn('Persistência API REST em modo fallback offline:', err);
-            }
+        const idx = signalsData.findIndex(s => s.code === selectedSignal.code);
+        if (idx !== -1) {
+            signalsData[idx] = selectedSignal;
         }
 
+        toggleEditSpecMode(false);
+        openSignalDetail(selectedSignal.code);
         saveLocalCache();
+        updateTypeFilterDropdown();
+        updateIE();
         renderMapMarkers();
         renderSignalList();
-        openSignalDetail(selectedSignal.code);
 
         showToast('Ficha Técnica atualizada e salva no banco de dados!', 'success');
+
+        // Async Background Persistence
+        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
+            db.collection("signals").doc(selectedSignal.code).set(selectedSignal, { merge: true })
+                .then(() => console.log(`🔥 Firestore: Sinal ${selectedSignal.code} atualizado na nuvem!`))
+                .catch(err => console.error("Erro ao salvar no Firestore:", err));
+        } else {
+            fetch(`/api/signals/${encodeURIComponent(selectedSignal.code)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(selectedSignal)
+            }).catch(err => console.warn('Persistência API REST em modo fallback offline:', err));
+        }
     });
 
     // Delete Signal Function
@@ -1210,7 +1211,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    document.getElementById('formUpdateStatus').addEventListener('submit', async (e) => {
+    document.getElementById('formUpdateStatus').addEventListener('submit', (e) => {
         e.preventDefault();
         if (!selectedSignal) return;
 
@@ -1233,36 +1234,41 @@ document.addEventListener('DOMContentLoaded', () => {
             note: reason
         });
 
-        // Persist to Firebase Firestore or REST API
-        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
-            try {
-                await db.collection("signals").doc(selectedSignal.code).set(selectedSignal, { merge: true });
-                console.log(`🔥 Firestore: Status e histórico do sinal ${selectedSignal.code} salvos na nuvem!`);
-            } catch (err) {
-                console.error("Erro ao salvar status no Firestore:", err);
-            }
-        } else {
-            try {
-                await fetch(`/api/signals/${encodeURIComponent(selectedSignal.code)}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(selectedSignal)
-                });
-            } catch (err) {
-                console.warn('API REST status update fallback:', err);
-            }
+        const idx = signalsData.findIndex(s => s.code === selectedSignal.code);
+        if (idx !== -1) {
+            signalsData[idx] = selectedSignal;
         }
 
+        // Close Ficha DH2 modal immediately so user sees real-time "in hot" map & card update!
+        const modalDetail = document.getElementById('modalSignalDetail');
+        if (modalDetail) modalDetail.classList.remove('active');
+
         saveLocalCache();
+        updateTypeFilterDropdown();
         updateIE();
         renderMapMarkers();
         renderSignalList();
-        openSignalDetail(selectedSignal.code);
 
         showToast(`Status do sinal ${selectedSignal.code} atualizado!`, 'success');
 
+        // Automatically open AVRADIO modal if status is damaged/inoperable
         if (!isOperational(newStatus)) {
-            generateAVRADIO(selectedSignal, reason);
+            setTimeout(() => {
+                generateAVRADIO(selectedSignal, reason);
+            }, 100);
+        }
+
+        // Async Background Persistence
+        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
+            db.collection("signals").doc(selectedSignal.code).set(selectedSignal, { merge: true })
+                .then(() => console.log(`🔥 Firestore: Status e histórico do sinal ${selectedSignal.code} salvos na nuvem!`))
+                .catch(err => console.error("Erro ao salvar status no Firestore:", err));
+        } else {
+            fetch(`/api/signals/${encodeURIComponent(selectedSignal.code)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(selectedSignal)
+            }).catch(err => console.warn('API REST status update fallback:', err));
         }
     });
 
