@@ -120,10 +120,11 @@ document.addEventListener('DOMContentLoaded', () => {
         maxZoom: 18
     });
 
-    // Layer 2: Google Satellite
-    const googleSatLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-        attribution: 'Google Maps Satellite',
-        maxZoom: 19
+    // Layer 2: Google Satellite + Labels (Google Earth Style with City Names)
+    const googleSatLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: 'Google Satellite com Cidades (Google Earth)',
+        maxZoom: 20
     });
 
     // Layer 3: Nautical Base Charts (OpenSeaMap & Esri Ocean)
