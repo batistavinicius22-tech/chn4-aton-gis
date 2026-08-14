@@ -1,4 +1,4 @@
-﻿const googleEarthSignals = [
+const googleEarthSignals = [
     {
         "code":  "PA-05",
         "name":  "PEDRAS DA BARRA",
@@ -18,7 +18,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "PA-10",
@@ -39,7 +40,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "PA-20",
@@ -60,7 +62,8 @@
                             "status":  "A DERIVA",
                             "note":  "R-251343Z/JUN/26 CFAREM"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "PA-25",
@@ -81,7 +84,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "R-251343Z/JUN/26 CFAREM"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "PA-35",
@@ -102,7 +106,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "PA-50",
@@ -123,7 +128,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "R-251343Z/JUN/26 CFAREM"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "32",
@@ -144,7 +150,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-011533Z/JUL/21 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "40",
@@ -165,7 +172,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-011533Z/JUL/21 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "44",
@@ -186,7 +194,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-011533Z/JUL/21 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "56",
@@ -207,7 +216,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-011533Z/JUL/21 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "58",
@@ -228,7 +238,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-182013Z/DEZ/23 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "80",
@@ -249,7 +260,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-121903Z/MAR/25 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "90",
@@ -270,7 +282,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "100",
@@ -291,7 +304,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-121903Z/MAR/25 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "120",
@@ -312,7 +326,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-121903Z/MAR/25 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "122",
@@ -333,7 +348,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-121903Z/MAR/25 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "140",
@@ -354,7 +370,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "141",
@@ -375,7 +392,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-131813Z/MAR/25 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "142",
@@ -396,7 +414,8 @@
                             "status":  "APAGADO",
                             "note":  "P-082233Z/FEV/24 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "144",
@@ -417,7 +436,8 @@
                             "status":  "APAGADO",
                             "note":  "P-082233Z/FEV/24 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "148",
@@ -438,7 +458,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "150",
@@ -459,7 +480,8 @@
                             "status":  "APAGADO",
                             "note":  "P-101910/JUN/25 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "151",
@@ -480,7 +502,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "152",
@@ -501,7 +524,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "153",
@@ -522,7 +546,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "153.2",
@@ -543,7 +568,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "153.4",
@@ -564,7 +590,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "156",
@@ -583,9 +610,10 @@
                         {
                             "date":  "2026-08-10 10:00",
                             "status":  "APAGADO",
-                            "note":  "Importado do Google Earth. Situacao: Fora da posição de projeto"
+                            "note":  "Importado do Google Earth. Situacao: Fora da posiÃ§Ã£o de projeto"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "158",
@@ -606,7 +634,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-011614Z/SET/15 CLSAOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "160",
@@ -627,7 +656,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "164",
@@ -648,7 +678,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "167",
@@ -669,7 +700,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "168",
@@ -690,7 +722,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "172",
@@ -711,7 +744,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "176",
@@ -732,7 +766,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "180",
@@ -753,7 +788,8 @@
                             "status":  "APAGADO",
                             "note":  "P151950Z/MAI/2025 NBTELO"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "184",
@@ -774,7 +810,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "188",
@@ -795,7 +832,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "192",
@@ -816,7 +854,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "208",
@@ -837,7 +876,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "214",
@@ -858,7 +898,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "268",
@@ -879,7 +920,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: RETIRADA TEMPORARIAMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "PA-15",
@@ -900,7 +942,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "270.6",
@@ -921,7 +964,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "284",
@@ -942,7 +986,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "288",
@@ -963,7 +1008,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "292",
@@ -984,7 +1030,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "296",
@@ -1005,7 +1052,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "300",
@@ -1026,7 +1074,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "302.2",
@@ -1047,7 +1096,8 @@
                             "status":  "A DERIVA",
                             "note":  "P-252208Z/MAR/26 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "304",
@@ -1068,7 +1118,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "306",
@@ -1089,7 +1140,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "308",
@@ -1110,7 +1162,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "312",
@@ -1129,9 +1182,10 @@
                         {
                             "date":  "2026-08-10 10:00",
                             "status":  "OPERACIONAL",
-                            "note":  "Importado do Google Earth. Situacao: DESTRUÍDO"
+                            "note":  "Importado do Google Earth. Situacao: DESTRUÃDO"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "316",
@@ -1152,7 +1206,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-252208Z/MAR/26 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "318",
@@ -1173,7 +1228,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "319",
@@ -1194,7 +1250,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "319.2",
@@ -1215,7 +1272,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "319.3",
@@ -1236,7 +1294,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-252208Z/MAR/26 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "320",
@@ -1257,7 +1316,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-252208Z/MAR/26 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "324",
@@ -1278,7 +1338,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-252208Z/MAR/26 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "328",
@@ -1299,7 +1360,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "345",
@@ -1318,9 +1380,10 @@
                         {
                             "date":  "2026-08-10 10:00",
                             "status":  "OPERACIONAL",
-                            "note":  "Última inspeção MAR26"
+                            "note":  "Ãšltima inspeÃ§Ã£o MAR26"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "345.1",
@@ -1341,7 +1404,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "346",
@@ -1362,7 +1426,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "347",
@@ -1383,7 +1448,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "347.1",
@@ -1404,7 +1470,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "350",
@@ -1425,7 +1492,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "351",
@@ -1446,7 +1514,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-252208Z/MAR/26 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "353",
@@ -1467,7 +1536,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "354",
@@ -1488,7 +1558,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-252208Z/MAR/26 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "355",
@@ -1509,7 +1580,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "356",
@@ -1530,7 +1602,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-252208Z/MAR/26 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "357.3",
@@ -1551,7 +1624,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "358",
@@ -1572,7 +1646,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "360",
@@ -1593,7 +1668,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "361",
@@ -1614,7 +1690,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "362",
@@ -1635,7 +1712,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "372",
@@ -1656,7 +1734,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "380",
@@ -1677,7 +1756,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "384",
@@ -1698,7 +1778,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "388",
@@ -1719,7 +1800,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "394",
@@ -1740,7 +1822,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "394.1",
@@ -1761,7 +1844,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "395.17",
@@ -1782,7 +1866,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-121704Z/JUN/15 SINNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "395.2",
@@ -1803,7 +1888,8 @@
                             "status":  "A DERIVA",
                             "note":  "P-252208Z/MAR/26 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "395.3",
@@ -1824,7 +1910,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "400",
@@ -1845,7 +1932,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "R-042032Z/ABR/25 CFAREM"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "406",
@@ -1866,7 +1954,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "472",
@@ -1887,7 +1976,8 @@
                             "status":  "APAGADO",
                             "note":  "Importado do Google Earth. Situacao: APAGADO"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "476",
@@ -1908,7 +1998,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "480",
@@ -1929,7 +2020,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "484",
@@ -1948,9 +2040,10 @@
                         {
                             "date":  "2026-08-10 10:00",
                             "status":  "OPERACIONAL",
-                            "note":  "Importado do Google Earth. Situacao: DESTRUÍDO"
+                            "note":  "Importado do Google Earth. Situacao: DESTRUÃDO"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "488",
@@ -1971,7 +2064,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "P-181123Z/ABR/18 CHNNOR"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "204.2",
@@ -1992,7 +2086,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERACIONAL"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "205.2",
@@ -2013,7 +2108,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERACIONAL"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "206",
@@ -2034,7 +2130,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERACIONAL"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "206.4",
@@ -2055,7 +2152,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERACIONAL"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "212",
@@ -2076,11 +2174,12 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERACIONAL"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "CHN-100",
-        "name":  "BL VAL DE CÃES NORTE",
+        "name":  "BL VAL DE CÃƒES NORTE",
         "type":  "Sinal Nautico",
         "status":  "OPERACIONAL",
         "lat":  -1.3902,
@@ -2097,7 +2196,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERACIONAL"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "220",
@@ -2118,7 +2218,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERACIONAL"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "222",
@@ -2139,11 +2240,12 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERACIONAL"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "236",
-        "name":  "PORTO DE BELEM N° 1",
+        "name":  "Bl PORTO DE BELEM N° 2",
         "type":  "Sinal Nautico",
         "status":  "OPERACIONAL",
         "lat":  -1.4077,
@@ -2160,7 +2262,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERACIONAL"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "236",
@@ -2181,7 +2284,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERACIONAL"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "240",
@@ -2202,7 +2306,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERACIONAL"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "244",
@@ -2223,7 +2328,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERACIONAL"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "248",
@@ -2244,7 +2350,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERACIONAL"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "252",
@@ -2265,7 +2372,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERACIONAL"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "CHN-109",
@@ -2286,7 +2394,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERACIONAL"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "204",
@@ -2307,7 +2416,8 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERACIONAL"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     },
     {
         "code":  "392",
@@ -2328,6 +2438,7 @@
                             "status":  "OPERACIONAL",
                             "note":  "Importado do Google Earth. Situacao: OPERANDO NORMALMENTE"
                         }
-                    ]
+                    ],
+        "responsavel":  "CHN-4"
     }
 ];

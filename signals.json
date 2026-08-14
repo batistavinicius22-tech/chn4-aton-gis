@@ -23,7 +23,7 @@
     },
     {
         "code":  "PA-10",
-        "name":  "VAL-DE-CÃƒES",
+        "name":  "VAL-DE-CÃES",
         "type":  "BZ",
         "status":  "OPERACIONAL",
         "lat":  -1.3895,
@@ -67,7 +67,7 @@
     },
     {
         "code":  "PA-25",
-        "name":  "SURUCUÃ NR 01",
+        "name":  "SURUCUÁ NR 01",
         "type":  "BZ",
         "status":  "OPERACIONAL",
         "lat":  -2.88683333333333,
@@ -89,7 +89,7 @@
     },
     {
         "code":  "PA-35",
-        "name":  "SÃƒO TOMÃ‰ NR 01",
+        "name":  "SÃO TOMÉ NR 01",
         "type":  "BZ",
         "status":  "OPERACIONAL",
         "lat":  -3.0730731,
@@ -133,7 +133,7 @@
     },
     {
         "code":  "32",
-        "name":  "CURUÃ NR 01",
+        "name":  "CURUÁ NR 01",
         "type":  "BL",
         "status":  "OPERACIONAL",
         "lat":  1.0733333,
@@ -155,7 +155,7 @@
     },
     {
         "code":  "40",
-        "name":  "CURUÃ NR 02",
+        "name":  "CURUÁ NR 02",
         "type":  "BL",
         "status":  "OPERACIONAL",
         "lat":  1.0616667,
@@ -177,7 +177,7 @@
     },
     {
         "code":  "44",
-        "name":  "CURUÃ NR 04",
+        "name":  "CURUÁ NR 04",
         "type":  "BL",
         "status":  "OPERACIONAL",
         "lat":  0.998,
@@ -199,7 +199,7 @@
     },
     {
         "code":  "56",
-        "name":  "CURUÃ NR 06",
+        "name":  "CURUÁ NR 06",
         "type":  "BL",
         "status":  "OPERACIONAL",
         "lat":  0.9066667,
@@ -221,7 +221,7 @@
     },
     {
         "code":  "58",
-        "name":  "CURUÃ NR 08",
+        "name":  "CURUÁ NR 08",
         "type":  "BL",
         "status":  "OPERACIONAL",
         "lat":  0.88,
@@ -265,7 +265,7 @@
     },
     {
         "code":  "90",
-        "name":  "CAÃ‡ÃƒO GRANDE",
+        "name":  "CAÇÃO GRANDE",
         "type":  "BL",
         "status":  "OPERACIONAL",
         "lat":  -0.183333333333333,
@@ -375,7 +375,7 @@
     },
     {
         "code":  "141",
-        "name":  "PASSAGEM DE MAZAGÃƒO",
+        "name":  "PASSAGEM DE MAZAGÃO",
         "type":  "BL",
         "status":  "OPERACIONAL",
         "lat":  -0.208,
@@ -397,7 +397,7 @@
     },
     {
         "code":  "142",
-        "name":  "ILHA CAMALEÃƒO",
+        "name":  "ILHA CAMALEÃO",
         "type":  "FAR",
         "status":  "APAGADO",
         "lat":  -0.1522282,
@@ -441,7 +441,7 @@
     },
     {
         "code":  "148",
-        "name":  "SIMÃƒO GRANDE",
+        "name":  "SIMÃO GRANDE",
         "type":  "FAR",
         "status":  "OPERACIONAL",
         "lat":  -0.2568333,
@@ -793,7 +793,7 @@
     },
     {
         "code":  "184",
-        "name":  "CHAPÃ‰U VIRADO",
+        "name":  "CHAPÉU VIRADO",
         "type":  "FAR",
         "status":  "OPERACIONAL",
         "lat":  -1.1353333,
@@ -881,7 +881,7 @@
     },
     {
         "code":  "214",
-        "name":  "ILHA DAS ONÃ‡AS",
+        "name":  "ILHA DAS ONÇAS",
         "type":  "BL",
         "status":  "OPERACIONAL",
         "lat":  -1.3858333,
@@ -1013,7 +1013,7 @@
     },
     {
         "code":  "292",
-        "name":  "CARNAPIJÃ“",
+        "name":  "CARNAPIJÓ",
         "type":  "FTE",
         "status":  "OPERACIONAL",
         "lat":  -1.3638333,
@@ -1145,7 +1145,7 @@
     },
     {
         "code":  "308",
-        "name":  "ITAGUARÃ",
+        "name":  "ITAGUARÍ",
         "type":  "FTE",
         "status":  "OPERACIONAL",
         "lat":  -1.4256415,
@@ -1211,7 +1211,7 @@
     },
     {
         "code":  "318",
-        "name":  "ATUÃ",
+        "name":  "ATUÁ",
         "type":  "FTE",
         "status":  "OPERACIONAL",
         "lat":  -1.5341667,
@@ -1233,7 +1233,7 @@
     },
     {
         "code":  "319",
-        "name":  "MARAPATÃ",
+        "name":  "MARAPATÁ",
         "type":  "BL",
         "status":  "OPERACIONAL",
         "lat":  -1.62,
@@ -1321,7 +1321,7 @@
     },
     {
         "code":  "324",
-        "name":  "MANDIÃ",
+        "name":  "MANDIÍ",
         "type":  "FAR",
         "status":  "OPERACIONAL",
         "lat":  -1.6159862,
@@ -1343,7 +1343,7 @@
     },
     {
         "code":  "328",
-        "name":  "MANDIÃ NR 01",
+        "name":  "MANDIÍ NR 01",
         "type":  "BL",
         "status":  "OPERACIONAL",
         "lat":  -1.6316667,
@@ -1497,7 +1497,7 @@
     },
     {
         "code":  "351",
-        "name":  "PEDRAS SANTO ANTÃ”NIO",
+        "name":  "PEDRAS SANTO ANTÔNIO",
         "type":  "BL",
         "status":  "OPERACIONAL",
         "lat":  -1.74833330555556,
@@ -1585,7 +1585,7 @@
     },
     {
         "code":  "356",
-        "name":  "CAMALEÃƒO",
+        "name":  "CAMALEÃO",
         "type":  "FTE",
         "status":  "OPERACIONAL",
         "lat":  -1.8196778,
@@ -1673,7 +1673,7 @@
     },
     {
         "code":  "361",
-        "name":  "BANCO OIÃ",
+        "name":  "BANCO OIÁ",
         "type":  "BL",
         "status":  "OPERACIONAL",
         "lat":  -1.8221359,
@@ -1739,7 +1739,7 @@
     },
     {
         "code":  "380",
-        "name":  "BOIUÃ‡U",
+        "name":  "BOIUÇU",
         "type":  "FTE",
         "status":  "OPERACIONAL",
         "lat":  -1.8082258,
@@ -1827,7 +1827,7 @@
     },
     {
         "code":  "394.1",
-        "name":  "CURUÃ",
+        "name":  "CURUÁ",
         "type":  "FTE",
         "status":  "OPERACIONAL",
         "lat":  -2.3049973,
@@ -1849,7 +1849,7 @@
     },
     {
         "code":  "395.17",
-        "name":  "SURUCUÃ NR 02",
+        "name":  "SURUCUÁ NR 02",
         "type":  "FTE",
         "status":  "OPERACIONAL",
         "lat":  -2.89516666666667,
@@ -1871,7 +1871,7 @@
     },
     {
         "code":  "395.2",
-        "name":  "PEDRAS DE SÃƒO TOMÃ‰",
+        "name":  "PEDRAS DE SÃO TOMÉ",
         "type":  "BL",
         "status":  "A DERIVA",
         "lat":  -3.0535,
@@ -1893,7 +1893,7 @@
     },
     {
         "code":  "395.3",
-        "name":  "SÃƒO TOMÃ‰ NR 02",
+        "name":  "SÃO TOMÉ NR 02",
         "type":  "FTE",
         "status":  "OPERACIONAL",
         "lat":  -3.0617366,
@@ -1959,7 +1959,7 @@
     },
     {
         "code":  "472",
-        "name":  "CURUÃ‡Ã",
+        "name":  "CURUÇÁ",
         "type":  "FAR",
         "status":  "APAGADO",
         "lat":  -0.5646428,
@@ -2003,7 +2003,7 @@
     },
     {
         "code":  "480",
-        "name":  "SALINÃ“POLIS",
+        "name":  "SALINÓPOLIS",
         "type":  "FG",
         "status":  "OPERACIONAL",
         "lat":  -0.6154497,
@@ -2025,7 +2025,7 @@
     },
     {
         "code":  "484",
-        "name":  "CAETÃ‰",
+        "name":  "CAETÉ",
         "type":  "FAR",
         "status":  "OPERACIONAL",
         "lat":  -0.8169759,
@@ -2047,7 +2047,7 @@
     },
     {
         "code":  "488",
-        "name":  "APEÃš",
+        "name":  "APEÚ",
         "type":  "FAR",
         "status":  "OPERACIONAL",
         "lat":  -0.9103344,
@@ -2069,7 +2069,7 @@
     },
     {
         "code":  "204.2",
-        "name":  "BL TAPANÃƒ CDP",
+        "name":  "BL TAPANÃ CDP",
         "type":  "Lateral Boreste Encarnado",
         "status":  "OPERACIONAL",
         "lat":  -1.3098,
@@ -2201,7 +2201,7 @@
     },
     {
         "code":  "220",
-        "name":  "BL VAL DE CÃƒES",
+        "name":  "BL VAL DE CÃES",
         "type":  "Sinal Nautico",
         "status":  "OPERACIONAL",
         "lat":  -1.3917,
@@ -2223,7 +2223,7 @@
     },
     {
         "code":  "222",
-        "name":  "BL VAL DE CÃƒES SUL",
+        "name":  "BL VAL DE CÃES SUL",
         "type":  "Sinal Nautico",
         "status":  "OPERACIONAL",
         "lat":  -1.393,
@@ -2245,7 +2245,7 @@
     },
     {
         "code":  "236",
-        "name":  "PORTO DE BELEM NÂ° 1",
+        "name":  "Bl PORTO DE BELEM N° 2",
         "type":  "Sinal Nautico",
         "status":  "OPERACIONAL",
         "lat":  -1.4077,
@@ -2267,7 +2267,7 @@
     },
     {
         "code":  "236",
-        "name":  "Bl PORTO DE BELEM NÂ° 2",
+        "name":  "Bl PORTO DE BELEM N° 2",
         "type":  "Sinal Nautico",
         "status":  "OPERACIONAL",
         "lat":  -1.4288,
@@ -2289,7 +2289,7 @@
     },
     {
         "code":  "240",
-        "name":  "BL PORTO DE BELÃ‰M NÂ°3",
+        "name":  "BL PORTO DE BELÉM N°3",
         "type":  "Sinal Nautico",
         "status":  "OPERACIONAL",
         "lat":  -1.4218,
@@ -2311,7 +2311,7 @@
     },
     {
         "code":  "244",
-        "name":  "PORTO DE BELEM NÂ° 5",
+        "name":  "PORTO DE BELEM N° 5",
         "type":  "Sinal Nautico",
         "status":  "OPERACIONAL",
         "lat":  -1.4277,
@@ -2333,7 +2333,7 @@
     },
     {
         "code":  "248",
-        "name":  "PORTO DE BELEM NÂ°7",
+        "name":  "PORTO DE BELEM N°7",
         "type":  "Sinal Nautico",
         "status":  "OPERACIONAL",
         "lat":  -1.4392,
@@ -2355,7 +2355,7 @@
     },
     {
         "code":  "252",
-        "name":  "PORTO DE BELÃ‰M NÂ°9",
+        "name":  "PORTO DE BELÉM N°9",
         "type":  "Sinal Nautico",
         "status":  "OPERACIONAL",
         "lat":  -1.4467,

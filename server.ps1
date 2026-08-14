@@ -56,11 +56,27 @@ while ($listener.IsListening) {
             continue
         }
 
-        if ($path.StartsWith("/api/signals/") -and $req.HttpMethod -eq "DELETE") {
+        if ($path.StartsWith("/api/signals/") -and ($req.HttpMethod -eq "PUT" -or $req.HttpMethod -eq "POST")) {
             $code = [System.Uri]::UnescapeDataString($path.Substring(13))
+            $reader = New-Object System.IO.StreamReader($req.InputStream, [System.Text.Encoding]::UTF8)
+            $body = $reader.ReadToEnd()
+            $updatedSignal = $body | ConvertFrom-Json
+            
             $signals = @(([System.IO.File]::ReadAllText($dbFile, [System.Text.Encoding]::UTF8)) | ConvertFrom-Json)
-            $filtered = @($signals | Where-Object { $_.code -ne $code })
-            $out = $filtered | ConvertTo-Json -Depth 10
+            
+            $found = $false
+            for ($i = 0; $i -lt $signals.Count; $i++) {
+                if ($signals[$i].code -eq $code -or $signals[$i].code -eq $updatedSignal.code) {
+                    $signals[$i] = $updatedSignal
+                    $found = $true
+                    break
+                }
+            }
+            if (-not $found) {
+                $signals += $updatedSignal
+            }
+
+            $out = $signals | ConvertTo-Json -Depth 10
             [System.IO.File]::WriteAllText($dbFile, $out, $utf8NoBom)
 
             $ret = '{"success":true}'

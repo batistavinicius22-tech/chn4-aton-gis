@@ -138,13 +138,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const nauticalGroup = L.layerGroup([esriOceanLayer, openSeaMapLayer]);
-    nauticalGroup.addTo(map);
+    googleSatLayer.addTo(map);
     dhnGeoTiffGroup.addTo(map);
 
     const baseLayers = {
-        "Carta Náutica Base (Ocean/OpenSeaMap)": nauticalGroup,
+        "Satélite Google": googleSatLayer,
         "Satélite Esri Imagery": satLayer,
-        "Satélite Google": googleSatLayer
+        "Carta Náutica Base (Ocean/OpenSeaMap)": nauticalGroup
     };
 
     const overlays = {
@@ -152,6 +152,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     L.control.layers(baseLayers, overlays, { position: 'topright' }).addTo(map);
+
+    const activeNameSpan = document.getElementById('activeLayerName');
+    if (activeNameSpan) activeNameSpan.textContent = "Satélite Google";
 
     map.on('baselayerchange', (e) => {
         const nameSpan = document.getElementById('activeLayerName');
@@ -960,6 +963,55 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================================
     // 9. DETALHES DO SINAL: EDICAO E GERENCIAMENTO
     // =========================================================================
+    function sanitizeForDatabase(signal) {
+        if (!signal) return null;
+        return {
+            code: String(signal.code || '').trim(),
+            name: String(signal.name || '').trim(),
+            type: String(signal.type || '').trim(),
+            status: String(signal.status || '').trim(),
+            lat: typeof signal.lat === 'number' ? signal.lat : parseFloat(signal.lat) || 0,
+            lng: typeof signal.lng === 'number' ? signal.lng : parseFloat(signal.lng) || 0,
+            characteristic: String(signal.characteristic || '').trim(),
+            rangeNM: typeof signal.rangeNM === 'number' ? signal.rangeNM : parseFloat(signal.rangeNM) || 0,
+            altitudeM: typeof signal.altitudeM === 'number' ? signal.altitudeM : parseFloat(signal.altitudeM) || 0,
+            jurisdiction: String(signal.jurisdiction || 'CHN-4').trim(),
+            responsavel: String(signal.responsavel || 'CHN-4').trim(),
+            image: signal.image || null,
+            photoDate: signal.photoDate || null,
+            history: Array.isArray(signal.history) ? signal.history.map(h => ({
+                date: String(h.date || ''),
+                status: String(h.status || ''),
+                note: String(h.note || '')
+            })) : []
+        };
+    }
+
+    function saveSignalToBackend(signal) {
+        const clean = sanitizeForDatabase(signal);
+        if (!clean || !clean.code) return;
+
+        const idx = signalsData.findIndex(s => s.code === clean.code);
+        if (idx !== -1) {
+            signalsData[idx] = clean;
+        } else {
+            signalsData.push(clean);
+        }
+
+        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
+            db.collection("signals").doc(clean.code).set(clean, { merge: true })
+                .then(() => console.log(`🔥 Firestore: Sinal ${clean.code} salvo na nuvem com sucesso!`))
+                .catch(err => console.error("Erro ao salvar no Firestore:", err));
+        }
+
+        fetch(`/api/signals/${encodeURIComponent(clean.code)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(clean)
+        }).then(r => console.log(`💾 REST API: Sinal ${clean.code} salvo localmente!`))
+          .catch(err => console.warn('API REST fallback:', err));
+    }
+
     function openSignalDetail(code) {
         const signal = signalsData.find(s => s.code === code);
         if (!signal) return;
@@ -1086,18 +1138,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         showToast('Ficha Técnica atualizada e salva no banco de dados!', 'success');
 
-        // Async Background Persistence
-        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
-            db.collection("signals").doc(selectedSignal.code).set(selectedSignal, { merge: true })
-                .then(() => console.log(`🔥 Firestore: Sinal ${selectedSignal.code} atualizado na nuvem!`))
-                .catch(err => console.error("Erro ao salvar no Firestore:", err));
-        } else {
-            fetch(`/api/signals/${encodeURIComponent(selectedSignal.code)}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(selectedSignal)
-            }).catch(err => console.warn('Persistência API REST em modo fallback offline:', err));
-        }
+        saveSignalToBackend(selectedSignal);
+
+        toggleEditSpecMode(false);
+        openSignalDetail(selectedSignal.code);
+        saveLocalCache();
+        updateTypeFilterDropdown();
+        updateIE();
+        renderMapMarkers();
+        renderSignalList();
+
+        showToast('Ficha Técnica atualizada e salva no banco de dados!', 'success');
     });
 
     // Delete Signal Function
@@ -1234,14 +1285,11 @@ document.addEventListener('DOMContentLoaded', () => {
             note: reason
         });
 
-        const idx = signalsData.findIndex(s => s.code === selectedSignal.code);
-        if (idx !== -1) {
-            signalsData[idx] = selectedSignal;
-        }
-
-        // Close Ficha DH2 modal immediately so user sees real-time "in hot" map & card update!
+        // Immediate Ficha DH2 close & real-time "in hot" UI update
         const modalDetail = document.getElementById('modalSignalDetail');
         if (modalDetail) modalDetail.classList.remove('active');
+
+        saveSignalToBackend(selectedSignal);
 
         saveLocalCache();
         updateTypeFilterDropdown();
@@ -1249,26 +1297,13 @@ document.addEventListener('DOMContentLoaded', () => {
         renderMapMarkers();
         renderSignalList();
 
-        showToast(`Status do sinal ${selectedSignal.code} atualizado!`, 'success');
+        showToast(`Status do sinal ${selectedSignal.code} atualizado com sucesso!`, 'success');
 
         // Automatically open AVRADIO modal if status is damaged/inoperable
         if (!isOperational(newStatus)) {
             setTimeout(() => {
                 generateAVRADIO(selectedSignal, reason);
-            }, 100);
-        }
-
-        // Async Background Persistence
-        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
-            db.collection("signals").doc(selectedSignal.code).set(selectedSignal, { merge: true })
-                .then(() => console.log(`🔥 Firestore: Status e histórico do sinal ${selectedSignal.code} salvos na nuvem!`))
-                .catch(err => console.error("Erro ao salvar status no Firestore:", err));
-        } else {
-            fetch(`/api/signals/${encodeURIComponent(selectedSignal.code)}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(selectedSignal)
-            }).catch(err => console.warn('API REST status update fallback:', err));
+            }, 120);
         }
     });
 
