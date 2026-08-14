@@ -1058,11 +1058,21 @@ html, body {
 }
 
 .modal-body {
-    padding: 20px;
+    padding: 20px 20px 30px 20px;
     overflow-y: auto;
+    max-height: calc(85vh - 80px);
     -webkit-overflow-scrolling: touch;
     flex: 1;
     min-height: 0;
+}
+
+.modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: var(--navy-600);
+    border-radius: 3px;
 }
 
 .form-actions-grid {

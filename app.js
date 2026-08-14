@@ -327,6 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`✅ Carregados ${signalsData.length} sinais do backup em memória.`);
         }
 
+        updateTypeFilterDropdown();
         updateIE();
         renderMapMarkers();
         renderSignalList();
@@ -669,6 +670,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('simCountRepaired').textContent = countSimRepaired;
     }
 
+    // Type Filter Select Listener
+    document.getElementById('typeFilterSelect')?.addEventListener('change', () => {
+        renderMapMarkers();
+        renderSignalList();
+    });
+
     // Responsável Layer Checkbox Listeners
     ['chkRespCHN4', 'chkRespCPAP', 'chkRespCPMA', 'chkRespExtra'].forEach(id => {
         document.getElementById(id)?.addEventListener('change', () => {
@@ -721,9 +728,95 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // =========================================================================
+    // NAVAL TYPE MAP & PARSER (FAR, FTE, BL, BC, BZ, BZA, BA, BF, RF, RACON, AIS, ERDGPS)
+    // =========================================================================
+    const NAVAL_TYPE_MAP = {
+        'BL':     { name: 'BL — Bóia Luminosa', order: 1 },
+        'BC':     { name: 'BC — Bóia Cega', order: 2 },
+        'BZ':     { name: 'BZ — Baliza', order: 3 },
+        'FAR':    { name: 'FAR — Farol', order: 4 },
+        'FTE':    { name: 'FTE — Farolete', order: 5 },
+        'BZA':    { name: 'BZA — Baliza Articulada', order: 6 },
+        'BA':     { name: 'BA — Bóia Articulada', order: 7 },
+        'BF':     { name: 'BF — Barca-Farol', order: 8 },
+        'RF':     { name: 'RF — Radiofarol', order: 9 },
+        'RACON':  { name: 'RACON — Radar Beacon', order: 10 },
+        'AIS':    { name: 'AIS — Transponder AIS', order: 11 },
+        'ERDGPS': { name: 'ERDGPS — Estação DGPS', order: 12 }
+    };
+
+    function getSignalTypeKey(signal) {
+        if (!signal) return 'OUTROS';
+        const code = String(signal.code || '').trim().toUpperCase();
+        const type = String(signal.type || '').trim().toUpperCase();
+
+        if (/^FAR[\s\-_0-9]/i.test(code) || /^FAR$/i.test(code)) return 'FAR';
+        if (/^FTE[\s\-_0-9]/i.test(code) || /^FTE$/i.test(code)) return 'FTE';
+        if (/^BZA[\s\-_0-9]/i.test(code) || /^BZA$/i.test(code)) return 'BZA';
+        if (/^BA[\s\-_0-9]/i.test(code) || /^BA$/i.test(code)) return 'BA';
+        if (/^BL[\s\-_0-9]/i.test(code) || /^BL$/i.test(code)) return 'BL';
+        if (/^BC[\s\-_0-9]/i.test(code) || /^BC$/i.test(code)) return 'BC';
+        if (/^BZ[\s\-_0-9]/i.test(code) || /^BZ$/i.test(code)) return 'BZ';
+        if (/^BF[\s\-_0-9]/i.test(code) || /^BF$/i.test(code)) return 'BF';
+        if (/^RF[\s\-_0-9]/i.test(code) || /^RF$/i.test(code)) return 'RF';
+        if (code.includes('RACON') || type.includes('RACON')) return 'RACON';
+        if (code.includes('AIS') || type.includes('AIS')) return 'AIS';
+        if (code.includes('ERDGPS') || code.includes('DGPS') || type.includes('DGPS')) return 'ERDGPS';
+
+        if (type.includes('FAROLETE')) return 'FTE';
+        if (type.includes('FAROL') && !type.includes('BARCA')) return 'FAR';
+        if (type.includes('BALIZA ARTICULADA')) return 'BZA';
+        if (type.includes('BOIA ARTICULADA') || type.includes('BÓIA ARTICULADA')) return 'BA';
+        if (type.includes('BALIZA')) return 'BZ';
+        if (type.includes('CEGA') || type.includes('SEM LUZ')) return 'BC';
+        if (type.includes('LUMINOSA') || type.includes('BOIA') || type.includes('BÓIA') || type.includes('BZ')) return 'BL';
+        if (type.includes('BARCA')) return 'BF';
+        if (type.includes('RADIO')) return 'RF';
+
+        return 'OUTROS';
+    }
+
+    function updateTypeFilterDropdown() {
+        const select = document.getElementById('typeFilterSelect');
+        if (!select) return;
+
+        const currentSelection = select.value || 'ALL';
+        const counts = {};
+
+        signalsData.forEach(s => {
+            const key = getSignalTypeKey(s);
+            counts[key] = (counts[key] || 0) + 1;
+        });
+
+        let html = `<option value="ALL">Todos os Tipos (${signalsData.length})</option>`;
+
+        const keysPresent = Object.keys(counts).sort((a, b) => {
+            const orderA = NAVAL_TYPE_MAP[a] ? NAVAL_TYPE_MAP[a].order : 99;
+            const orderB = NAVAL_TYPE_MAP[b] ? NAVAL_TYPE_MAP[b].order : 99;
+            return orderA - orderB;
+        });
+
+        keysPresent.forEach(key => {
+            const labelInfo = NAVAL_TYPE_MAP[key];
+            const label = labelInfo ? labelInfo.name : `${key} — Outros Auxílios`;
+            html += `<option value="${key}">${label} (${counts[key]})</option>`;
+        });
+
+        select.innerHTML = html;
+        if (keysPresent.includes(currentSelection) || currentSelection === 'ALL') {
+            select.value = currentSelection;
+        } else {
+            select.value = 'ALL';
+        }
+    }
+
     function matchesTypeFilter(signal) {
-        if (currentTypeFilter === 'ALL') return true;
-        return getTypeCategory(signal.type) === currentTypeFilter;
+        const select = document.getElementById('typeFilterSelect');
+        const filterVal = select ? select.value : 'ALL';
+        if (!filterVal || filterVal === 'ALL') return true;
+
+        return getSignalTypeKey(signal) === filterVal;
     }
 
     function getSelectedResponsaveis() {
@@ -1046,12 +1139,17 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('modalAddSignal').classList.remove('active');
         selectedSignal = null;
 
+        updateTypeFilterDropdown();
         updateIE();
         renderMapMarkers();
         renderSignalList();
 
         showToast(`Sinal ${code} excluído permanentemente do banco de dados!`, 'warning');
     }
+
+    window.deleteSignalFromCard = (code, name) => {
+        deleteSignalPermanently(code, name);
+    };
 
     // Delete Button in Signal Detail Modal
     document.getElementById('btnDeleteSignal')?.addEventListener('click', () => {
