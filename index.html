@@ -54,8 +54,8 @@
                 <span class="sync-text" id="syncStatusText">ONLINE (MULTI-USUÁRIO)</span>
             </div>
 
-            <button class="btn btn-primary" id="btnOpenAddSignalHeader" title="Criar novo sinal ou excluir sinal existente">
-                <i class="fa-solid fa-plus-minus"></i> CRIAR/EXCLUIR SINAL
+            <button class="btn btn-primary" id="btnOpenAddSignalHeader" title="Cadastrar novo auxílio à navegação no banco de dados">
+                <i class="fa-solid fa-plus-circle"></i> CRIAR SINAL
             </button>
 
             <button class="btn btn-simulation" id="btnOpenSimulator">
@@ -153,7 +153,7 @@
                         <button class="pill-btn status-av" data-filter="av">🔴 Avariados (<span id="countAv">0</span>)</button>
                     </div>
 
-                    <!-- Filter Row 2: Type Category (Bóias, Balizas, Faróis, Faroletes) -->
+                    <!-- Filter Row 2: Type Category -->
                     <div class="type-filter-group">
                         <label for="typeFilterSelect" class="filter-label"><i class="fa-solid fa-filter"></i> Filtrar por Tipo de Sinal:</label>
                         <select id="typeFilterSelect" class="form-control form-control-sm">
@@ -162,7 +162,10 @@
                             <option value="FAROLETE">Faroletes</option>
                             <option value="BOIA">Bóias (Luminosas BZ e Cegas BC)</option>
                             <option value="BALIZA">Balizas</option>
-                                      <!-- Filter Row 3: Órgãos Responsáveis (Seletores Circulares Leves) -->
+                        </select>
+                    </div>
+
+                    <!-- Filter Row 3: Órgãos Responsáveis (CHN-4, CPAP, CPMA, Extra-MB) -->
                     <div class="responsavel-filter-group mt-3">
                         <div class="resp-header">
                             <label class="filter-label"><i class="fa-solid fa-layer-group"></i> Exibir Responsáveis:</label>
@@ -188,19 +191,12 @@
                                 <span class="bullet-radio"></span>
                                 <span class="bullet-label">CPMA</span>
                             </label>
-                            <label class="resp-bullet-item cppa">
-                                <input type="checkbox" id="chkRespCPPA" value="CPPA">
-                                <span class="bullet-radio"></span>
-                                <span class="bullet-label">CPPA</span>
-                            </label>
                             <label class="resp-bullet-item extra">
                                 <input type="checkbox" id="chkRespExtra" value="Extra-MB">
                                 <span class="bullet-radio"></span>
                                 <span class="bullet-label">Extra-MB</span>
                             </label>
                         </div>
-                    </div>
-                        <input type="file" id="inputGeotiffFile" accept=".tif,.tiff" style="display:none;" multiple>
                     </div>
                 </div>
 

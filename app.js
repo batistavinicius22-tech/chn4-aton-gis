@@ -668,7 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Responsável Layer Checkbox Listeners
-    ['chkRespCHN4', 'chkRespCPAP', 'chkRespCPMA', 'chkRespCPPA', 'chkRespExtra'].forEach(id => {
+    ['chkRespCHN4', 'chkRespCPAP', 'chkRespCPMA', 'chkRespExtra'].forEach(id => {
         document.getElementById(id)?.addEventListener('change', () => {
             renderMapMarkers();
             renderSignalList();
@@ -679,12 +679,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const c1 = document.getElementById('chkRespCHN4');
         const c2 = document.getElementById('chkRespCPAP');
         const c3 = document.getElementById('chkRespCPMA');
-        const c4 = document.getElementById('chkRespCPPA');
         const c5 = document.getElementById('chkRespExtra');
         if (c1) c1.checked = true;
         if (c2) c2.checked = false;
         if (c3) c3.checked = false;
-        if (c4) c4.checked = false;
         if (c5) c5.checked = false;
         renderMapMarkers();
         renderSignalList();
@@ -694,12 +692,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const c1 = document.getElementById('chkRespCHN4');
         const c2 = document.getElementById('chkRespCPAP');
         const c3 = document.getElementById('chkRespCPMA');
-        const c4 = document.getElementById('chkRespCPPA');
         const c5 = document.getElementById('chkRespExtra');
         if (c1) c1.checked = true;
         if (c2) c2.checked = true;
         if (c3) c3.checked = true;
-        if (c4) c4.checked = true;
         if (c5) c5.checked = true;
         renderMapMarkers();
         renderSignalList();
@@ -733,7 +729,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (document.getElementById('chkRespCHN4')?.checked) selected.push('CHN-4');
         if (document.getElementById('chkRespCPAP')?.checked) selected.push('CPAP');
         if (document.getElementById('chkRespCPMA')?.checked) selected.push('CPMA');
-        if (document.getElementById('chkRespCPPA')?.checked) selected.push('CPPA');
         if (document.getElementById('chkRespExtra')?.checked) selected.push('EXTRA-MB', 'ÓRGÃOS EXTRA-MB', 'PRIVADO');
         return selected;
     }
@@ -831,6 +826,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="display: flex; gap: 4px; align-items: center;">
                         <span class="responsavel-badge ${respClass}">${s.responsavel || 'CHN-4'}</span>
                         <span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${s.status}</span>
+                        <button type="button" class="btn-card-delete" onclick="event.stopPropagation(); window.deleteSignalFromCard('${s.code}', '${s.name.replace(/'/g, "\\'")}')" title="Excluir Sinal Náutico">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
                     </div>
                 </div>
                 <div class="signal-card-body">
