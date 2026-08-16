@@ -280,8 +280,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =========================================================================
-    // 4. BANCO DE DADOS CENTRAL COMPARTILHADO (API REST / SIGNALS.JSON / FIRESTORE)
+    // 4. BANCO DE DADOS CENTRAL COMPARTILHADO (API REST / SIGNALS.JSON / FIRESTORE / LOCALSTORAGE)
     // =========================================================================
+    function saveLocalCache() {
+        try {
+            const payload = {
+                timestamp: Date.now(),
+                signals: signalsData
+            };
+            localStorage.setItem('chn4_aton_signals_cache', JSON.stringify(payload));
+        } catch (e) {
+            console.warn('Erro ao salvar no localStorage:', e);
+        }
+    }
+
+    function loadLocalCache() {
+        try {
+            const raw = localStorage.getItem('chn4_aton_signals_cache');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed && Array.isArray(parsed.signals) && parsed.signals.length > 0) {
+                    return parsed.signals;
+                }
+            }
+        } catch (e) {
+            console.warn('Erro ao ler localStorage:', e);
+        }
+        return null;
+    }
+
     async function loadSignalsFromBackend() {
         // Se o Firebase estiver ativo, o listener em tempo real (onSnapshot) gerencia a sincronização
         if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
@@ -318,8 +345,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Fallback para cache local no navegador
+        if (!loadedSignals) {
+            const cached = loadLocalCache();
+            if (cached && cached.length > 0) {
+                loadedSignals = cached;
+                console.log(`✅ Carregados ${cached.length} sinais do cache local do navegador.`);
+            }
+        }
+
         if (loadedSignals && Array.isArray(loadedSignals) && loadedSignals.length > 0 && loadedSignals[0].code) {
             signalsData = loadedSignals;
+            saveLocalCache();
             console.log(`✅ Carregados ${signalsData.length} sinais do banco de dados central.`);
         } else if (typeof googleEarthSignals !== 'undefined' && Array.isArray(googleEarthSignals) && googleEarthSignals.length > 0) {
             signalsData = googleEarthSignals.map(s => {
@@ -774,11 +811,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (type === 'BA' || type.includes('BOIA ARTICULADA') || type.includes('BÓIA ARTICULADA')) {
             return 'BA';
         }
-        if (type === 'BZ' || type === 'BL' || type.includes('BALIZAMENTO') || type.includes('LUMINOSA') || type.includes('BOIA') || type.includes('BÓIA')) {
-            return 'BL';
-        }
-        if (type === 'BALIZA' || name.startsWith('BALIZA')) {
+        if (type === 'BZ' || type === 'BALIZA' || name.startsWith('BALIZA')) {
             return 'BZ';
+        }
+        if (type === 'BL' || type.includes('BALIZAMENTO') || type.includes('LUMINOSA') || type.includes('BOIA') || type.includes('BÓIA')) {
+            return 'BL';
         }
         if (type === 'FAROL' || type === 'FAR' || name.startsWith('FAROL')) {
             return 'FAR';
@@ -808,7 +845,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (/^BA[\s\-_0-9]/i.test(code) || /^BA$/i.test(code)) return 'BA';
         if (/^BL[\s\-_0-9]/i.test(code) || /^BL$/i.test(code)) return 'BL';
         if (/^BC[\s\-_0-9]/i.test(code) || /^BC$/i.test(code)) return 'BC';
-        if (/^BZ[\s\-_0-9]/i.test(code) || /^BZ$/i.test(code)) return 'BL';
+        if (/^BZ[\s\-_0-9]/i.test(code) || /^BZ$/i.test(code)) return 'BZ';
         if (/^BF[\s\-_0-9]/i.test(code) || /^BF$/i.test(code)) return 'BF';
         if (/^RF[\s\-_0-9]/i.test(code) || /^RF$/i.test(code)) return 'RF';
 
@@ -880,11 +917,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function getFilteredSignals() {
+        return signalsData.filter(s => {
+            const matchesFilter = currentFilter === 'all' ||
+                (currentFilter === 'op' && isOperational(s.status)) ||
+                (currentFilter === 'av' && !isOperational(s.status));
+            
+            const searchLower = (currentSearch || '').toLowerCase();
+            const matchesSearch = !searchLower ||
+                s.code.toLowerCase().includes(searchLower) ||
+                s.name.toLowerCase().includes(searchLower) ||
+                (s.jurisdiction && s.jurisdiction.toLowerCase().includes(searchLower)) ||
+                (s.responsavel && s.responsavel.toLowerCase().includes(searchLower));
+
+            return matchesFilter && matchesSearch && matchesTypeFilter(s) && matchesResponsavelFilter(s);
+        });
+    }
+
     function renderMapMarkers() {
         Object.values(mapMarkers).forEach(m => map.removeLayer(m));
         mapMarkers = {};
 
-        signalsData.filter(s => matchesTypeFilter(s) && matchesResponsavelFilter(s)).forEach(signal => {
+        const visibleSignals = getFilteredSignals();
+        visibleSignals.forEach(signal => {
             const marker = L.marker([signal.lat, signal.lng], {
                 icon: createCustomIcon(signal)
             }).addTo(map);
@@ -923,19 +978,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         container.innerHTML = '';
 
-        const filtered = signalsData.filter(s => {
-            const matchesFilter = currentFilter === 'all' ||
-                (currentFilter === 'op' && isOperational(s.status)) ||
-                (currentFilter === 'av' && !isOperational(s.status));
-            
-            const searchLower = currentSearch.toLowerCase();
-            const matchesSearch = s.code.toLowerCase().includes(searchLower) ||
-                s.name.toLowerCase().includes(searchLower) ||
-                (s.jurisdiction && s.jurisdiction.toLowerCase().includes(searchLower)) ||
-                (s.responsavel && s.responsavel.toLowerCase().includes(searchLower));
-
-            return matchesFilter && matchesSearch && matchesTypeFilter(s) && matchesResponsavelFilter(s);
-        });
+        const filtered = getFilteredSignals();
 
         if (filtered.length === 0) {
             container.innerHTML = '<div class="text-muted p-3 text-center">Nenhum auxílio à navegação encontrado para os filtros selecionados.</div>';
@@ -1768,6 +1811,8 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                         remoteSignals.push(doc.data());
                     });
                     signalsData = remoteSignals;
+                    saveLocalCache();
+                    updateTypeFilterDropdown();
                     updateIE();
                     renderMapMarkers();
                     renderSignalList();
@@ -1818,6 +1863,8 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                     const resp = await fetch('/api/signals');
                     if (resp.ok) {
                         signalsData = await resp.json();
+                        saveLocalCache();
+                        updateTypeFilterDropdown();
                         updateIE();
                         renderMapMarkers();
                         renderSignalList();
@@ -1877,7 +1924,6 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         document.getElementById('btnCoordModeGMS')?.classList.remove('active');
         document.getElementById('panelCoordDecimal').style.display = 'block';
         document.getElementById('panelCoordGMS').style.display = 'none';
-        // Restore required on decimal fields
         const addLat = document.getElementById('addLat');
         const addLng = document.getElementById('addLng');
         if (addLat) addLat.required = true;
@@ -1889,7 +1935,6 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         document.getElementById('btnCoordModeDecimal')?.classList.remove('active');
         document.getElementById('panelCoordGMS').style.display = 'block';
         document.getElementById('panelCoordDecimal').style.display = 'none';
-        // Remove required from hidden decimal fields so form can submit
         const addLat = document.getElementById('addLat');
         const addLng = document.getElementById('addLng');
         if (addLat) addLat.required = false;
@@ -1948,6 +1993,222 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
     ['addLat', 'addLng'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', syncDecimalToGms);
         document.getElementById(id)?.addEventListener('change', syncDecimalToGms);
+    });
+
+    // =========================================================================
+    // 16. GESTÃO DE PONTOS DE PARADA & BACKUPS
+    // =========================================================================
+    const modalBackups = document.getElementById('modalBackups');
+    const btnOpenBackupsModal = document.getElementById('btnOpenBackupsModal');
+    const btnCreateManualBackup = document.getElementById('btnCreateManualBackup');
+    const btnImportBackupFileTrigger = document.getElementById('btnImportBackupFileTrigger');
+    const inputBackupFile = document.getElementById('inputBackupFile');
+
+    btnOpenBackupsModal?.addEventListener('click', () => {
+        loadBackupsList();
+        modalBackups?.classList.add('active');
+    });
+
+    async function loadBackupsList() {
+        const tableBody = document.getElementById('backupsListTableBody');
+        if (!tableBody) return;
+
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center p-3 text-muted">Buscando pontos de parada...</td></tr>';
+
+        let backups = [];
+        try {
+            const resp = await fetch('/api/backups');
+            if (resp.ok) {
+                backups = await resp.json();
+            }
+        } catch (e) {
+            console.warn('API REST /api/backups indisponível, usando backups locais.', e);
+        }
+
+        if (!Array.isArray(backups) || backups.length === 0) {
+            try {
+                const localRaw = localStorage.getItem('chn4_aton_backups_history');
+                if (localRaw) backups = JSON.parse(localRaw);
+            } catch (e) {}
+        }
+
+        if (!Array.isArray(backups) || backups.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center p-3 text-muted">Nenhum ponto de parada ou backup encontrado. Clique em "Criar Ponto de Parada Agora".</td></tr>';
+            return;
+        }
+
+        tableBody.innerHTML = '';
+        backups.forEach(b => {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid var(--border-color)';
+
+            tr.innerHTML = `
+                <td style="padding: 10px 8px; font-weight: 500;">
+                    <i class="fa-solid fa-calendar-check text-gold"></i> ${b.formattedDate || b.createdAt}
+                </td>
+                <td style="padding: 10px 8px;">
+                    <span class="backup-badge-count">${b.count} sinais</span>
+                </td>
+                <td style="padding: 10px 8px; color: var(--text-secondary);">
+                    ${b.note || 'Ponto de Parada'}
+                </td>
+                <td style="padding: 10px 8px; text-align: right;">
+                    <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                        <button class="btn btn-primary btn-sm" onclick="window.restoreBackupPoint('${b.filename}')" title="Restaurar base de dados para este ponto">
+                            <i class="fa-solid fa-rotate-left"></i> Restaurar
+                        </button>
+                        ${b.filename ? `<button class="btn btn-outline btn-sm" onclick="window.downloadBackupFile('${b.filename}')" title="Baixar arquivo JSON de backup"><i class="fa-solid fa-download"></i></button>` : ''}
+                    </div>
+                </td>
+            `;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    btnCreateManualBackup?.addEventListener('click', async () => {
+        const notePrompt = prompt("Digite uma descrição / nota para este Ponto de Parada (opcional):", "Backup manual do operador");
+        if (notePrompt === null) return;
+
+        const note = notePrompt.trim() || 'Ponto de parada manual';
+
+        try {
+            const resp = await fetch('/api/backups/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ note: note })
+            });
+            if (resp.ok) {
+                showToast('Ponto de parada criado com sucesso!', 'success');
+                loadBackupsList();
+                return;
+            }
+        } catch (e) {
+            console.warn('API REST criar backup fallback local.', e);
+        }
+
+        try {
+            let localBackups = [];
+            const raw = localStorage.getItem('chn4_aton_backups_history');
+            if (raw) localBackups = JSON.parse(raw);
+
+            const now = new Date();
+            localBackups.unshift({
+                filename: null,
+                createdAt: now.toISOString(),
+                formattedDate: now.toLocaleString('pt-BR'),
+                count: signalsData.length,
+                note: note,
+                signals: [...signalsData]
+            });
+            localStorage.setItem('chn4_aton_backups_history', JSON.stringify(localBackups.slice(0, 30)));
+            showToast('Ponto de parada salvo localmente no navegador!', 'success');
+            loadBackupsList();
+        } catch (e) {
+            showToast('Erro ao criar ponto de parada.', 'danger');
+        }
+    });
+
+    window.restoreBackupPoint = async (filename) => {
+        if (!confirm(`ATENÇÃO: Deseja restaurar o banco de dados para o Ponto de Parada escolhido?\n\nEsta ação irá atualizar o mapa e a lista de sinais em todos os dispositivos conectados.`)) {
+            return;
+        }
+
+        if (filename) {
+            try {
+                const resp = await fetch('/api/backups/restore', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: filename })
+                });
+
+                if (resp.ok) {
+                    const resData = await resp.json();
+                    if (resData.signals && Array.isArray(resData.signals)) {
+                        signalsData = resData.signals;
+                    } else {
+                        await loadSignalsFromBackend();
+                    }
+
+                    saveLocalCache();
+                    updateTypeFilterDropdown();
+                    updateIE();
+                    renderMapMarkers();
+                    renderSignalList();
+
+                    modalBackups?.classList.remove('active');
+                    showToast(`Base restaurada com sucesso para o backup ${filename}!`, 'success');
+                    return;
+                }
+            } catch (e) {
+                console.warn('Erro ao restaurar via REST API:', e);
+            }
+        }
+
+        try {
+            const raw = localStorage.getItem('chn4_aton_backups_history');
+            if (raw) {
+                const localBackups = JSON.parse(raw);
+                const target = localBackups.find(b => b.filename === filename || (!filename && b.signals));
+                if (target && Array.isArray(target.signals)) {
+                    signalsData = [...target.signals];
+                    saveLocalCache();
+                    updateTypeFilterDropdown();
+                    updateIE();
+                    renderMapMarkers();
+                    renderSignalList();
+                    modalBackups?.classList.remove('active');
+                    showToast('Base restaurada do cache local!', 'success');
+                }
+            }
+        } catch (e) {
+            showToast('Erro ao restaurar backup.', 'danger');
+        }
+    };
+
+    window.downloadBackupFile = (filename) => {
+        window.open(`/api/backups/download?file=${encodeURIComponent(filename)}`, '_blank');
+    };
+
+    btnImportBackupFileTrigger?.addEventListener('click', () => inputBackupFile?.click());
+
+    inputBackupFile?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            try {
+                const parsed = JSON.parse(evt.target.result);
+                const restored = Array.isArray(parsed.signals) ? parsed.signals : (Array.isArray(parsed) ? parsed : null);
+                if (!restored || restored.length === 0 || !restored[0].code) {
+                    showToast('Arquivo de backup inválido ou sem sinais válidos.', 'danger');
+                    return;
+                }
+
+                if (!confirm(`Confirmar restauração de ${restored.length} sinais a partir do arquivo [${file.name}]?`)) {
+                    return;
+                }
+
+                signalsData = restored;
+                saveLocalCache();
+                updateTypeFilterDropdown();
+                updateIE();
+                renderMapMarkers();
+                renderSignalList();
+
+                try {
+                    for (const sig of restored) {
+                        saveSignalToBackend(sig);
+                    }
+                } catch (e) {}
+
+                modalBackups?.classList.remove('active');
+                showToast(`Base restaurada a partir do arquivo ${file.name}!`, 'success');
+            } catch (err) {
+                showToast('Erro ao ler o arquivo de backup.', 'danger');
+            }
+        };
+        reader.readAsText(file);
     });
 
     // =========================================================================

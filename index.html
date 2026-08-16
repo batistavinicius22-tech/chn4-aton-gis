@@ -54,6 +54,11 @@
                 <span class="sync-text" id="syncStatusText">ONLINE (MULTI-USUÁRIO)</span>
             </div>
 
+            <!-- Discreet System Backups & Stop-Points Button -->
+            <button class="btn-subtle-icon" id="btnOpenBackupsModal" title="Pontos de Parada & Backups do Sistema (Histórico)">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+            </button>
+
             <button class="btn btn-primary" id="btnOpenAddSignalHeader" title="Cadastrar novo auxílio à navegação no banco de dados">
                 <i class="fa-solid fa-plus-circle"></i> CRIAR SINAL
             </button>
@@ -952,6 +957,51 @@
                     </div>
 
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: GESTÃO DE BACKUPS & PONTOS DE PARADA (DISCRETO) -->
+    <div class="modal-backdrop" id="modalBackups">
+        <div class="modal-window modal-lg">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-clock-rotate-left text-gold"></i> PONTOS DE PARADA & BACKUPS DO SISTEMA</h2>
+                <button class="modal-close" data-close="modalBackups">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="backup-actions-bar mb-3" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <button class="btn btn-primary btn-sm" id="btnCreateManualBackup">
+                            <i class="fa-solid fa-floppy-disk"></i> Criar Ponto de Parada Agora
+                        </button>
+                        <button class="btn btn-outline btn-sm" id="btnImportBackupFileTrigger">
+                            <i class="fa-solid fa-file-import"></i> Carregar Backup (.json)
+                        </button>
+                        <input type="file" id="inputBackupFile" accept=".json" style="display: none;">
+                    </div>
+                    <div class="text-muted" style="font-size: 0.8rem;">
+                        <i class="fa-solid fa-shield-halved text-gold"></i> Snapshots salvos antes de edições
+                    </div>
+                </div>
+
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table-backups" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border-color); text-align: left; font-size: 0.8rem; color: var(--text-muted);">
+                                <th style="padding: 8px;">DATA / HORA</th>
+                                <th style="padding: 8px;">SINAIS</th>
+                                <th style="padding: 8px;">DESCRIÇÃO / MOTIVO</th>
+                                <th style="padding: 8px; text-align: right;">AÇÕES DE RESTAURAÇÃO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="backupsListTableBody">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" data-close="modalBackups">Fechar</button>
             </div>
         </div>
     </div>

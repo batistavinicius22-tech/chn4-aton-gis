@@ -9,6 +9,100 @@ const DB_FILE = path.join(__dirname, 'signals.json');
 // Store connected SSE clients for real-time broadcast
 let sseClients = [];
 
+const BACKUPS_DIR = path.join(__dirname, 'backups');
+if (!fs.existsSync(BACKUPS_DIR)) {
+    fs.mkdirSync(BACKUPS_DIR, { recursive: true });
+}
+
+// Helper to clean up old backups (keep max N)
+function cleanOldBackups(maxKeep = 50) {
+    try {
+        const files = fs.readdirSync(BACKUPS_DIR)
+            .filter(f => f.startsWith('backup_') && f.endsWith('.json'))
+            .map(f => ({
+                filename: f,
+                time: fs.statSync(path.join(BACKUPS_DIR, f)).mtimeMs
+            }))
+            .sort((a, b) => b.time - a.time);
+
+        if (files.length > maxKeep) {
+            const toDelete = files.slice(maxKeep);
+            toDelete.forEach(f => {
+                try { fs.unlinkSync(path.join(BACKUPS_DIR, f.filename)); } catch (e) {}
+            });
+        }
+    } catch (e) {
+        console.warn('Warning cleaning old backups:', e);
+    }
+}
+
+// Helper to create a backup snapshot
+function createBackupSnapshot(note = 'Ponto de parada automático', signalsData = null) {
+    try {
+        const signals = signalsData || readSignals();
+        if (!Array.isArray(signals) || signals.length === 0) return null;
+
+        const now = new Date();
+        const timestampStr = now.toISOString().replace(/[:.]/g, '-');
+        const filename = `backup_${timestampStr}.json`;
+        const filePath = path.join(BACKUPS_DIR, filename);
+
+        const meta = {
+            filename: filename,
+            createdAt: now.toISOString(),
+            formattedDate: now.toLocaleString('pt-BR'),
+            count: signals.length,
+            note: note,
+            signals: signals
+        };
+
+        fs.writeFileSync(filePath, JSON.stringify(meta, null, 2), 'utf8');
+        cleanOldBackups(50);
+        return meta;
+    } catch (err) {
+        console.error('Error creating backup snapshot:', err);
+        return null;
+    }
+}
+
+// Helper to list all backup snapshots
+function listBackups() {
+    try {
+        if (!fs.existsSync(BACKUPS_DIR)) return [];
+        const files = fs.readdirSync(BACKUPS_DIR)
+            .filter(f => f.startsWith('backup_') && f.endsWith('.json'))
+            .map(f => {
+                const p = path.join(BACKUPS_DIR, f);
+                const stat = fs.statSync(p);
+                try {
+                    const content = JSON.parse(fs.readFileSync(p, 'utf8'));
+                    return {
+                        filename: f,
+                        createdAt: content.createdAt || stat.mtime.toISOString(),
+                        formattedDate: content.formattedDate || new Date(stat.mtime).toLocaleString('pt-BR'),
+                        count: content.count || (Array.isArray(content.signals) ? content.signals.length : (Array.isArray(content) ? content.length : 0)),
+                        note: content.note || 'Ponto de parada automático',
+                        sizeBytes: stat.size
+                    };
+                } catch (e) {
+                    return {
+                        filename: f,
+                        createdAt: stat.mtime.toISOString(),
+                        formattedDate: new Date(stat.mtime).toLocaleString('pt-BR'),
+                        count: 0,
+                        note: 'Arquivo de backup',
+                        sizeBytes: stat.size
+                    };
+                }
+            })
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        return files;
+    } catch (e) {
+        console.error('Error listing backups:', e);
+        return [];
+    }
+}
+
 // Helper to read signals from signals.json
 function readSignals() {
     try {
@@ -23,9 +117,12 @@ function readSignals() {
     }
 }
 
-// Helper to write signals to signals.json
-function writeSignals(signals) {
+// Helper to write signals to signals.json with auto-backup snapshot
+function writeSignals(signals, createBackup = true, note = 'Ponto de parada automático') {
     try {
+        if (createBackup && Array.isArray(signals) && signals.length > 0) {
+            createBackupSnapshot(note, signals);
+        }
         fs.writeFileSync(DB_FILE, JSON.stringify(signals, null, 2), 'utf8');
         return true;
     } catch (err) {
@@ -188,6 +285,115 @@ const server = http.createServer((req, res) => {
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, code }));
+        return;
+    }
+
+    // -------------------------------------------------------------------------
+    // BACKUP & PONTOS DE PARADA ENDPOINTS
+    // -------------------------------------------------------------------------
+
+    // GET /api/backups (List all backups)
+    if (pathname === '/api/backups' && method === 'GET') {
+        const backups = listBackups();
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify(backups));
+        return;
+    }
+
+    // POST /api/backups/create (Create manual snapshot)
+    if (pathname === '/api/backups/create' && method === 'POST') {
+        let body = '';
+        req.on('data', chunk => body += chunk.toString());
+        req.on('end', () => {
+            try {
+                const parsed = body ? JSON.parse(body) : {};
+                const note = parsed.note || 'Ponto de parada manual';
+                const meta = createBackupSnapshot(note);
+                if (meta) {
+                    res.writeHead(201, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, backup: meta }));
+                } else {
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Erro ao criar ponto de parada.' }));
+                }
+            } catch (e) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Payload JSON inválido.' }));
+            }
+        });
+        return;
+    }
+
+    // POST /api/backups/restore (Restore database from snapshot)
+    if (pathname === '/api/backups/restore' && method === 'POST') {
+        let body = '';
+        req.on('data', chunk => body += chunk.toString());
+        req.on('end', () => {
+            try {
+                const parsed = JSON.parse(body);
+                const filename = parsed.filename;
+                if (!filename) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Nome do arquivo de backup não informado.' }));
+                    return;
+                }
+
+                const targetPath = path.join(BACKUPS_DIR, path.basename(filename));
+                if (!fs.existsSync(targetPath)) {
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Arquivo de backup não encontrado.' }));
+                    return;
+                }
+
+                const backupContent = JSON.parse(fs.readFileSync(targetPath, 'utf8'));
+                const restoredSignals = Array.isArray(backupContent.signals) 
+                    ? backupContent.signals 
+                    : (Array.isArray(backupContent) ? backupContent : []);
+
+                if (restoredSignals.length === 0) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Backup vazio ou formato inválido.' }));
+                    return;
+                }
+
+                // First create safety backup of current state before restoring
+                createBackupSnapshot(`Pré-restauração de ${filename}`);
+
+                // Write restored signals to DB
+                fs.writeFileSync(DB_FILE, JSON.stringify(restoredSignals, null, 2), 'utf8');
+
+                // Broadcast SSE event to all open tabs/devices to reload in real-time!
+                broadcastEvent('reload', { restoredFrom: filename, count: restoredSignals.length });
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: true, count: restoredSignals.length, signals: restoredSignals }));
+            } catch (e) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Erro ao restaurar backup: ' + e.message }));
+            }
+        });
+        return;
+    }
+
+    // GET /api/backups/download?file=xxx (Download specific backup file)
+    if (pathname === '/api/backups/download' && method === 'GET') {
+        const fileParam = parsedUrl.query.file;
+        if (!fileParam) {
+            res.writeHead(400);
+            res.end('Parametro file e obrigatorio.');
+            return;
+        }
+        const targetPath = path.join(BACKUPS_DIR, path.basename(fileParam));
+        if (!fs.existsSync(targetPath)) {
+            res.writeHead(404);
+            res.end('Backup nao encontrado.');
+            return;
+        }
+        res.writeHead(200, {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Content-Disposition': `attachment; filename="${path.basename(fileParam)}"`
+        });
+        fs.createReadStream(targetPath).pipe(res);
         return;
     }
 

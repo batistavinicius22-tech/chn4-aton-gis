@@ -6,3 +6,8 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+
+# Server Backups & Dependencies
+backups/
+node_modules/
+

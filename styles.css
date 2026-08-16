@@ -2151,4 +2151,51 @@ html, body {
     color: var(--accent-cyan);
 }
 
+/* Subtle Header Icon Button (Backups / History) */
+.btn-subtle-icon {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+}
+
+.btn-subtle-icon:hover {
+    background: var(--navy-700);
+    color: var(--accent-gold);
+    border-color: var(--accent-gold);
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+}
+
+/* Table Backups Styling */
+.table-backups td {
+    padding: 10px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.table-backups tr:hover td {
+    background: rgba(30, 58, 102, 0.25);
+}
+
+.backup-badge-count {
+    background: rgba(6, 182, 212, 0.15);
+    color: var(--accent-cyan);
+    border: 1px solid rgba(6, 182, 212, 0.3);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-family: var(--font-tech);
+    font-weight: 700;
+    font-size: 0.8rem;
+}
+
+
 
