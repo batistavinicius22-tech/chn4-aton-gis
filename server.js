@@ -398,6 +398,98 @@ const server = http.createServer((req, res) => {
     }
 
     // -------------------------------------------------------------------------
+    // WMS PROXY & TILE CACHE (Proteção contra HTTP 429 Rate Limiting do GeoServer IDEM)
+    // -------------------------------------------------------------------------
+    if (pathname === '/api/wms-proxy' && method === 'GET') {
+        const queryString = parsedUrl.search ? parsedUrl.search.substring(1) : '';
+        if (!queryString) {
+            res.writeHead(400);
+            res.end('Query string required');
+            return;
+        }
+
+        const WMS_CACHE_DIR = path.join(__dirname, 'wms_cache');
+        if (!fs.existsSync(WMS_CACHE_DIR)) {
+            try { fs.mkdirSync(WMS_CACHE_DIR, { recursive: true }); } catch (e) {}
+        }
+
+        const crypto = require('crypto');
+        const tileHash = crypto.createHash('md5').update(queryString).digest('hex');
+        const tilePath = path.join(WMS_CACHE_DIR, `${tileHash}.png`);
+
+        // Serve from local disk cache if valid (cached for 14 days)
+        if (fs.existsSync(tilePath)) {
+            const stat = fs.statSync(tilePath);
+            if (Date.now() - stat.mtimeMs < 14 * 24 * 3600 * 1000 && stat.size > 0) {
+                res.writeHead(200, {
+                    'Content-Type': 'image/png',
+                    'Cache-Control': 'public, max-age=1209600',
+                    'Access-Control-Allow-Origin': '*'
+                });
+                fs.createReadStream(tilePath).pipe(res);
+                return;
+            }
+        }
+
+        // Fetch from IDEM GeoServer with backoff retry
+        const https = require('https');
+        const targetUrl = `https://idem.marinha.mil.br/geoserver/wms?${queryString}`;
+
+        const fetchTile = (attempt = 1) => {
+            const reqProxy = https.get(targetUrl, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+                },
+                timeout: 10000
+            }, (proxyRes) => {
+                if (proxyRes.statusCode === 429 && attempt <= 4) {
+                    setTimeout(() => fetchTile(attempt + 1), attempt * 1200);
+                    return;
+                }
+
+                if (proxyRes.statusCode === 200) {
+                    const chunks = [];
+                    proxyRes.on('data', chunk => chunks.push(chunk));
+                    proxyRes.on('end', () => {
+                        const buffer = Buffer.concat(chunks);
+                        try { fs.writeFileSync(tilePath, buffer); } catch(e) {}
+                        res.writeHead(200, {
+                            'Content-Type': 'image/png',
+                            'Cache-Control': 'public, max-age=1209600',
+                            'Access-Control-Allow-Origin': '*'
+                        });
+                        res.end(buffer);
+                    });
+                } else {
+                    if (fs.existsSync(tilePath)) {
+                        res.writeHead(200, { 'Content-Type': 'image/png', 'Access-Control-Allow-Origin': '*' });
+                        fs.createReadStream(tilePath).pipe(res);
+                    } else {
+                        res.writeHead(proxyRes.statusCode, { 'Access-Control-Allow-Origin': '*' });
+                        res.end();
+                    }
+                }
+            });
+
+            reqProxy.on('error', () => {
+                if (attempt <= 3) {
+                    setTimeout(() => fetchTile(attempt + 1), attempt * 1000);
+                } else if (fs.existsSync(tilePath)) {
+                    res.writeHead(200, { 'Content-Type': 'image/png', 'Access-Control-Allow-Origin': '*' });
+                    fs.createReadStream(tilePath).pipe(res);
+                } else {
+                    res.writeHead(502, { 'Access-Control-Allow-Origin': '*' });
+                    res.end();
+                }
+            });
+        };
+
+        fetchTile(1);
+        return;
+    }
+
+    // -------------------------------------------------------------------------
     // STATIC FILE SERVER
     // -------------------------------------------------------------------------
     let filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);

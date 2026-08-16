@@ -3,6 +3,10 @@ import socketserver
 import json
 import os
 import datetime
+import hashlib
+import time
+import urllib.request
+import urllib.error
 from urllib.parse import unquote, parse_qs, urlparse
 
 PORT = 3000
@@ -146,6 +150,84 @@ class CHN4RequestHandler(http.server.SimpleHTTPRequestHandler):
                     self.wfile.write(content)
                     return
             self.send_response(404)
+            self.end_headers()
+            return
+
+        elif pathname == '/api/wms-proxy':
+            query_str = parsed.query
+            if not query_str:
+                self.send_response(400)
+                self.end_headers()
+                return
+
+            wms_cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wms_cache')
+            os.makedirs(wms_cache_dir, exist_ok=True)
+
+            tile_hash = hashlib.md5(query_str.encode('utf-8')).hexdigest()
+            tile_path = os.path.join(wms_cache_dir, f"{tile_hash}.png")
+
+            # Check cache (14 days)
+            if os.path.exists(tile_path):
+                mtime = os.path.getmtime(tile_path)
+                if (time.time() - mtime) < 14 * 86400 and os.path.getsize(tile_path) > 0:
+                    with open(tile_path, 'rb') as f:
+                        data = f.read()
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'image/png')
+                    self.send_header('Cache-Control', 'public, max-age=1209600')
+                    self.send_header('Access-Control-Allow-Origin', '*')
+                    self.send_header('Content-Length', str(len(data)))
+                    self.end_headers()
+                    self.wfile.write(data)
+                    return
+
+            target_url = f"https://idem.marinha.mil.br/geoserver/wms?{query_str}"
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+            }
+
+            for attempt in range(1, 5):
+                try:
+                    req = urllib.request.Request(target_url, headers=headers)
+                    with urllib.request.urlopen(req, timeout=10) as response:
+                        if response.status == 200:
+                            data = response.read()
+                            try:
+                                with open(tile_path, 'wb') as f:
+                                    f.write(data)
+                            except Exception:
+                                pass
+                            self.send_response(200)
+                            self.send_header('Content-Type', 'image/png')
+                            self.send_header('Cache-Control', 'public, max-age=1209600')
+                            self.send_header('Access-Control-Allow-Origin', '*')
+                            self.send_header('Content-Length', str(len(data)))
+                            self.end_headers()
+                            self.wfile.write(data)
+                            return
+                except urllib.error.HTTPError as e:
+                    if e.code == 429 and attempt < 4:
+                        time.sleep(attempt * 1.0)
+                        continue
+                    break
+                except Exception:
+                    if attempt < 4:
+                        time.sleep(1.0)
+                        continue
+                    break
+
+            if os.path.exists(tile_path):
+                with open(tile_path, 'rb') as f:
+                    data = f.read()
+                self.send_response(200)
+                self.send_header('Content-Type', 'image/png')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+                return
+
+            self.send_response(502)
             self.end_headers()
             return
 

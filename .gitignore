@@ -9,5 +9,7 @@ Thumbs.db
 
 # Server Backups & Dependencies
 backups/
+wms_cache/
 node_modules/
+
 

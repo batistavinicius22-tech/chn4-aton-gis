@@ -150,34 +150,45 @@ document.addEventListener('DOMContentLoaded', () => {
     // Por padrão: apenas o Satélite do Google sem rótulos e sem camadas IDEM ativadas
     googleSatLayer.addTo(map);
 
-    // IDEM GeoServer WMS Layers (Marinha do Brasil / DHN)
-    const geoserverWmsUrl = 'https://idem.marinha.mil.br/geoserver/wms';
+    // Servidor base WMS: usa o proxy local /api/wms-proxy quando rodando no servidor local, ou direto na web
+    const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const geoserverWmsUrl = isLocalHost ? '/api/wms-proxy' : 'https://idem.marinha.mil.br/geoserver/wms';
 
     function attachWmsResilience(layer) {
         layer.on('tileerror', function(error) {
-            if (error.tile && !error.tile._retried) {
-                error.tile._retried = true;
-                setTimeout(() => {
-                    if (error.tile && error.tile.src) {
-                        const cleanSrc = error.tile.src.split('&_retry=')[0];
-                        error.tile.src = cleanSrc + '&_retry=' + Date.now();
-                    }
-                }, 800);
+            const tile = error.tile;
+            if (tile) {
+                const retries = (tile._retryCount || 0) + 1;
+                tile._retryCount = retries;
+                if (retries <= 4) {
+                    setTimeout(() => {
+                        if (tile && tile.src) {
+                            const cleanSrc = tile.src.split('&_retry=')[0];
+                            tile.src = cleanSrc + '&_retry=' + Date.now() + '_' + retries;
+                        }
+                    }, retries * 1000);
+                }
             }
         });
         return layer;
     }
 
+    const defaultWmsOptions = {
+        format: 'image/png',
+        transparent: true,
+        version: '1.1.1',
+        uppercase: true,
+        tileSize: 512,
+        zoomOffset: -1,
+        updateWhenIdle: true,
+        updateWhenZooming: false,
+        keepBuffer: 8
+    };
+
     function createDHNChartWMS(layerName, title) {
         const layer = L.tileLayer.wms(geoserverWmsUrl, {
+            ...defaultWmsOptions,
             layers: `carta_nautica:${layerName}`,
-            format: 'image/png',
-            transparent: true,
-            version: '1.1.1',
-            uppercase: true,
-            tileSize: 256,
-            keepBuffer: 4,
-            updateWhenIdle: false,
             attribution: `Marinha do Brasil / DHN (${title})`
         });
         return attachWmsResilience(layer);
@@ -185,14 +196,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Mosaico com as principais Cartas Náuticas da jurisdição do CHN-4 (Belém, Macapá, Santarém, Maranhão)
     const mosaicoCartasChn4Wms = attachWmsResilience(L.tileLayer.wms(geoserverWmsUrl, {
+        ...defaultWmsOptions,
         layers: 'carta_nautica:carta_320,carta_nautica:carta_321,carta_nautica:carta_303,carta_nautica:carta_304,carta_nautica:carta_4011,carta_nautica:carta_4020A,carta_nautica:carta_411,carta_nautica:carta_221,carta_nautica:carta_232',
-        format: 'image/png',
-        transparent: true,
-        version: '1.1.1',
-        uppercase: true,
-        tileSize: 256,
-        keepBuffer: 4,
-        updateWhenIdle: false,
         attribution: 'Marinha do Brasil / DHN (Mosaico de Cartas Náuticas CHN-4)'
     }));
 
@@ -207,35 +212,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const carta232Wms = createDHNChartWMS('carta_232', 'Carta 232 - Barra Sul do Rio Amazonas');
 
     const dhnEncLimitsWms = attachWmsResilience(L.tileLayer.wms(geoserverWmsUrl, {
+        ...defaultWmsOptions,
         layers: 'carta_nautica:limites_enc',
-        format: 'image/png',
-        transparent: true,
-        attribution: 'Marinha do Brasil / DHN / IDEM',
-        version: '1.1.1'
+        attribution: 'Marinha do Brasil / DHN / IDEM'
     }));
 
     const zeeWms = attachWmsResilience(L.tileLayer.wms(geoserverWmsUrl, {
+        ...defaultWmsOptions,
         layers: 'leplac:ZONA_ECONOMICA_EXCLUSIVA',
-        format: 'image/png',
-        transparent: true,
-        attribution: 'Marinha do Brasil / LEPLAC',
-        version: '1.1.1'
+        attribution: 'Marinha do Brasil / LEPLAC'
     }));
 
     const marTerritorialWms = attachWmsResilience(L.tileLayer.wms(geoserverWmsUrl, {
+        ...defaultWmsOptions,
         layers: 'leplac:BR-12M-Line',
-        format: 'image/png',
-        transparent: true,
-        attribution: 'Marinha do Brasil / DHN',
-        version: '1.1.1'
+        attribution: 'Marinha do Brasil / DHN'
     }));
 
     const linhaBaseWms = attachWmsResilience(L.tileLayer.wms(geoserverWmsUrl, {
+        ...defaultWmsOptions,
         layers: 'leplac:BaseLine_Complete_Line',
-        format: 'image/png',
-        transparent: true,
-        attribution: 'Marinha do Brasil / DHN',
-        version: '1.1.1'
+        attribution: 'Marinha do Brasil / DHN'
     }));
 
     const baseLayers = {
