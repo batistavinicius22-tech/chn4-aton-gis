@@ -153,6 +153,41 @@ document.addEventListener('DOMContentLoaded', () => {
     // IDEM GeoServer WMS Layers (Marinha do Brasil / DHN)
     const geoserverWmsUrl = 'https://idem.marinha.mil.br/geoserver/wms';
 
+    function createDHNChartWMS(layerName, title) {
+        return L.tileLayer.wms(geoserverWmsUrl, {
+            layers: `carta_nautica:${layerName}`,
+            format: 'image/png',
+            transparent: true,
+            version: '1.1.1',
+            uppercase: true,
+            attribution: `Marinha do Brasil / DHN (${title})`,
+            maxNativeZoom: 16,
+            maxZoom: 20
+        });
+    }
+
+    // Mosaico com as principais Cartas Náuticas da jurisdição do CHN-4 (Belém, Macapá, Santarém, Maranhão)
+    const mosaicoCartasChn4Wms = L.tileLayer.wms(geoserverWmsUrl, {
+        layers: 'carta_nautica:carta_320,carta_nautica:carta_321,carta_nautica:carta_303,carta_nautica:carta_304,carta_nautica:carta_4011,carta_nautica:carta_4020A,carta_nautica:carta_411,carta_nautica:carta_221,carta_nautica:carta_232',
+        format: 'image/png',
+        transparent: true,
+        version: '1.1.1',
+        uppercase: true,
+        attribution: 'Marinha do Brasil / DHN (Mosaico de Cartas Náuticas CHN-4)',
+        maxNativeZoom: 16,
+        maxZoom: 20
+    });
+
+    const carta320Wms = createDHNChartWMS('carta_320', 'Carta 320 - Porto de Belém');
+    const carta321Wms = createDHNChartWMS('carta_321', 'Carta 321 - Porto de Vila do Conde');
+    const carta303Wms = createDHNChartWMS('carta_303', 'Carta 303 - Baía do Guajará / Mosqueiro');
+    const carta304Wms = createDHNChartWMS('carta_304', 'Carta 304 - Mosqueiro a Vila do Conde');
+    const carta4011Wms = createDHNChartWMS('carta_4011', 'Carta 4011 - Macapá à Ilha Salvador');
+    const carta4020AWms = createDHNChartWMS('carta_4020A', 'Carta 4020A - Porto de Santarém');
+    const carta411Wms = createDHNChartWMS('carta_411', 'Carta 411 - Baía de São Marcos / Maranhão');
+    const carta221Wms = createDHNChartWMS('carta_221', 'Carta 221 - Barra Norte do Rio Amazonas');
+    const carta232Wms = createDHNChartWMS('carta_232', 'Carta 232 - Barra Sul do Rio Amazonas');
+
     const dhnEncLimitsWms = L.tileLayer.wms(geoserverWmsUrl, {
         layers: 'carta_nautica:limites_enc',
         format: 'image/png',
@@ -185,6 +220,9 @@ document.addEventListener('DOMContentLoaded', () => {
         version: '1.1.1'
     });
 
+    // Ativar mosaico oficial das cartas náuticas por padrão no mapa
+    mosaicoCartasChn4Wms.addTo(map);
+
     const baseLayers = {
         "Satélite Google": googleSatLayer,
         "Satélite Esri Imagery": satLayer,
@@ -192,12 +230,22 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const overlays = {
+        "🗺️ Mosaico Cartas Náuticas CHN-4 (IDEM-DHN)": mosaicoCartasChn4Wms,
+        "⚓ Carta 320 — Porto de Belém (DHN)": carta320Wms,
+        "⚓ Carta 321 — Porto de Vila do Conde (DHN)": carta321Wms,
+        "⚓ Carta 303 — Cabo Maguari a Mosqueiro (DHN)": carta303Wms,
+        "⚓ Carta 304 — Mosqueiro a Vila do Conde (DHN)": carta304Wms,
+        "⚓ Carta 4011 — Macapá à Ilha Salvador (DHN)": carta4011Wms,
+        "⚓ Carta 4020A — Porto de Santarém (DHN)": carta4020AWms,
+        "⚓ Carta 411 — Baía de São Marcos (DHN)": carta411Wms,
+        "⚓ Carta 221 — Barra Norte do Rio Amazonas (DHN)": carta221Wms,
+        "⚓ Carta 232 — Barra Sul do Rio Amazonas (DHN)": carta232Wms,
         "🏙️ Nomes de Cidades (Google)": googleLabelsLayer,
-        "🗺️ Cartas Náuticas DHN (GeoTIFF .tif)": dhnGeoTiffGroup,
-        "⚓ WMS DHN: Limites de Cartas Eletrônicas (ENC)": dhnEncLimitsWms,
-        "🌊 WMS DHN: Limite da Zona Econômica Exclusiva (ZEE)": zeeWms,
-        "⚓ WMS DHN: Mar Territorial (12 Milhas)": marTerritorialWms,
-        "📏 WMS DHN: Linha de Base Marítima": linhaBaseWms
+        "🗺️ Cartas Náuticas Locais (GeoTIFF .tif)": dhnGeoTiffGroup,
+        "📐 Limites das Cartas Eletrônicas ENC (DHN)": dhnEncLimitsWms,
+        "🌊 Limite da Zona Econômica Exclusiva ZEE (DHN)": zeeWms,
+        "📏 Mar Territorial 12 Milhas (DHN)": marTerritorialWms,
+        "📏 Linha de Base Marítima (DHN)": linhaBaseWms
     };
 
     L.control.layers(baseLayers, overlays, { position: 'topright' }).addTo(map);
