@@ -147,36 +147,54 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const nauticalGroup = L.layerGroup([esriOceanLayer, openSeaMapLayer]);
+    // Por padrão: apenas o Satélite do Google sem rótulos e sem camadas IDEM ativadas
     googleSatLayer.addTo(map);
-    dhnGeoTiffGroup.addTo(map);
 
     // IDEM GeoServer WMS Layers (Marinha do Brasil / DHN)
     const geoserverWmsUrl = 'https://idem.marinha.mil.br/geoserver/wms';
 
+    function attachWmsResilience(layer) {
+        layer.on('tileerror', function(error) {
+            if (error.tile && !error.tile._retried) {
+                error.tile._retried = true;
+                setTimeout(() => {
+                    if (error.tile && error.tile.src) {
+                        const cleanSrc = error.tile.src.split('&_retry=')[0];
+                        error.tile.src = cleanSrc + '&_retry=' + Date.now();
+                    }
+                }, 800);
+            }
+        });
+        return layer;
+    }
+
     function createDHNChartWMS(layerName, title) {
-        return L.tileLayer.wms(geoserverWmsUrl, {
+        const layer = L.tileLayer.wms(geoserverWmsUrl, {
             layers: `carta_nautica:${layerName}`,
             format: 'image/png',
             transparent: true,
             version: '1.1.1',
             uppercase: true,
-            attribution: `Marinha do Brasil / DHN (${title})`,
-            maxNativeZoom: 16,
-            maxZoom: 20
+            tileSize: 256,
+            keepBuffer: 4,
+            updateWhenIdle: false,
+            attribution: `Marinha do Brasil / DHN (${title})`
         });
+        return attachWmsResilience(layer);
     }
 
     // Mosaico com as principais Cartas Náuticas da jurisdição do CHN-4 (Belém, Macapá, Santarém, Maranhão)
-    const mosaicoCartasChn4Wms = L.tileLayer.wms(geoserverWmsUrl, {
+    const mosaicoCartasChn4Wms = attachWmsResilience(L.tileLayer.wms(geoserverWmsUrl, {
         layers: 'carta_nautica:carta_320,carta_nautica:carta_321,carta_nautica:carta_303,carta_nautica:carta_304,carta_nautica:carta_4011,carta_nautica:carta_4020A,carta_nautica:carta_411,carta_nautica:carta_221,carta_nautica:carta_232',
         format: 'image/png',
         transparent: true,
         version: '1.1.1',
         uppercase: true,
-        attribution: 'Marinha do Brasil / DHN (Mosaico de Cartas Náuticas CHN-4)',
-        maxNativeZoom: 16,
-        maxZoom: 20
-    });
+        tileSize: 256,
+        keepBuffer: 4,
+        updateWhenIdle: false,
+        attribution: 'Marinha do Brasil / DHN (Mosaico de Cartas Náuticas CHN-4)'
+    }));
 
     const carta320Wms = createDHNChartWMS('carta_320', 'Carta 320 - Porto de Belém');
     const carta321Wms = createDHNChartWMS('carta_321', 'Carta 321 - Porto de Vila do Conde');
@@ -188,40 +206,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const carta221Wms = createDHNChartWMS('carta_221', 'Carta 221 - Barra Norte do Rio Amazonas');
     const carta232Wms = createDHNChartWMS('carta_232', 'Carta 232 - Barra Sul do Rio Amazonas');
 
-    const dhnEncLimitsWms = L.tileLayer.wms(geoserverWmsUrl, {
+    const dhnEncLimitsWms = attachWmsResilience(L.tileLayer.wms(geoserverWmsUrl, {
         layers: 'carta_nautica:limites_enc',
         format: 'image/png',
         transparent: true,
         attribution: 'Marinha do Brasil / DHN / IDEM',
         version: '1.1.1'
-    });
+    }));
 
-    const zeeWms = L.tileLayer.wms(geoserverWmsUrl, {
+    const zeeWms = attachWmsResilience(L.tileLayer.wms(geoserverWmsUrl, {
         layers: 'leplac:ZONA_ECONOMICA_EXCLUSIVA',
         format: 'image/png',
         transparent: true,
         attribution: 'Marinha do Brasil / LEPLAC',
         version: '1.1.1'
-    });
+    }));
 
-    const marTerritorialWms = L.tileLayer.wms(geoserverWmsUrl, {
+    const marTerritorialWms = attachWmsResilience(L.tileLayer.wms(geoserverWmsUrl, {
         layers: 'leplac:BR-12M-Line',
         format: 'image/png',
         transparent: true,
         attribution: 'Marinha do Brasil / DHN',
         version: '1.1.1'
-    });
+    }));
 
-    const linhaBaseWms = L.tileLayer.wms(geoserverWmsUrl, {
+    const linhaBaseWms = attachWmsResilience(L.tileLayer.wms(geoserverWmsUrl, {
         layers: 'leplac:BaseLine_Complete_Line',
         format: 'image/png',
         transparent: true,
         attribution: 'Marinha do Brasil / DHN',
         version: '1.1.1'
-    });
-
-    // Ativar mosaico oficial das cartas náuticas por padrão no mapa
-    mosaicoCartasChn4Wms.addTo(map);
+    }));
 
     const baseLayers = {
         "Satélite Google": googleSatLayer,
@@ -249,6 +264,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     L.control.layers(baseLayers, overlays, { position: 'topright' }).addTo(map);
+
+    // Forçar redesenho WMS e recarregamento automático se a camada for ativada
+    map.on('overlayadd', (e) => {
+        if (e.layer && typeof e.layer.redraw === 'function') {
+            e.layer.redraw();
+        }
+    });
 
     const activeNameSpan = document.getElementById('activeLayerName');
     if (activeNameSpan) activeNameSpan.textContent = "Satélite Google";
