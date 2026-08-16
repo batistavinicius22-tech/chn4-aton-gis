@@ -150,6 +150,41 @@ document.addEventListener('DOMContentLoaded', () => {
     googleSatLayer.addTo(map);
     dhnGeoTiffGroup.addTo(map);
 
+    // IDEM GeoServer WMS Layers (Marinha do Brasil / DHN)
+    const geoserverWmsUrl = 'https://idem.marinha.mil.br/geoserver/wms';
+
+    const dhnEncLimitsWms = L.tileLayer.wms(geoserverWmsUrl, {
+        layers: 'carta_nautica:limites_enc',
+        format: 'image/png',
+        transparent: true,
+        attribution: 'Marinha do Brasil / DHN / IDEM',
+        version: '1.1.1'
+    });
+
+    const zeeWms = L.tileLayer.wms(geoserverWmsUrl, {
+        layers: 'leplac:ZONA_ECONOMICA_EXCLUSIVA',
+        format: 'image/png',
+        transparent: true,
+        attribution: 'Marinha do Brasil / LEPLAC',
+        version: '1.1.1'
+    });
+
+    const marTerritorialWms = L.tileLayer.wms(geoserverWmsUrl, {
+        layers: 'leplac:BR-12M-Line',
+        format: 'image/png',
+        transparent: true,
+        attribution: 'Marinha do Brasil / DHN',
+        version: '1.1.1'
+    });
+
+    const linhaBaseWms = L.tileLayer.wms(geoserverWmsUrl, {
+        layers: 'leplac:BaseLine_Complete_Line',
+        format: 'image/png',
+        transparent: true,
+        attribution: 'Marinha do Brasil / DHN',
+        version: '1.1.1'
+    });
+
     const baseLayers = {
         "Satélite Google": googleSatLayer,
         "Satélite Esri Imagery": satLayer,
@@ -158,7 +193,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const overlays = {
         "🏙️ Nomes de Cidades (Google)": googleLabelsLayer,
-        "🗺️ Cartas Náuticas DHN (GeoTIFF .tif)": dhnGeoTiffGroup
+        "🗺️ Cartas Náuticas DHN (GeoTIFF .tif)": dhnGeoTiffGroup,
+        "⚓ WMS DHN: Limites de Cartas Eletrônicas (ENC)": dhnEncLimitsWms,
+        "🌊 WMS DHN: Limite da Zona Econômica Exclusiva (ZEE)": zeeWms,
+        "⚓ WMS DHN: Mar Territorial (12 Milhas)": marTerritorialWms,
+        "📏 WMS DHN: Linha de Base Marítima": linhaBaseWms
     };
 
     L.control.layers(baseLayers, overlays, { position: 'topright' }).addTo(map);
