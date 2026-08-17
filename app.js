@@ -1053,18 +1053,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const isOp = isOperational(signal.status);
             const respClass = (signal.responsavel === 'CPAP') ? 'resp-cpap' : (signal.responsavel === 'CPMA') ? 'resp-cpma' : (signal.responsavel === 'Extra-MB') ? 'resp-extra' : 'resp-chn4';
 
+            const fullType = getFullTypeName(signal.type);
             const popupHtml = `
-                <div style="font-family: var(--font-sans); padding: 4px;">
+                <div style="font-family: var(--font-sans); padding: 4px 6px; min-width: 210px;">
                     <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 4px;">
                         <span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${signal.status}</span>
                         <span class="responsavel-badge ${respClass}"><i class="fa-solid fa-building-user"></i> ${signal.responsavel || 'CHN-4'}</span>
                     </div>
-                    <h3 style="font-family: var(--font-tech); margin: 6px 0 2px 0; font-size: 1.05rem;">${signal.code} - ${signal.name}</h3>
-                    <p style="margin: 0; font-size: 0.8rem; color: #475569;"><strong>Carac:</strong> ${signal.characteristic}</p>
-                    <p style="margin: 2px 0 8px 0; font-size: 0.8rem; color: #475569;"><strong>Pos:</strong> ${toDMS(signal.lat, true)} ${toDMS(signal.lng, false)}</p>
+                    <h3 style="font-family: var(--font-tech); margin: 4px 0 2px 0; font-size: 1.05rem; color: #0f172a;">${signal.code} - ${signal.name}</h3>
+                    <p style="margin: 3px 0; font-size: 0.82rem; color: #334155;"><strong>Tipo:</strong> ${fullType}</p>
+                    <p style="margin: 3px 0; font-size: 0.82rem; color: #334155;"><strong>Carac:</strong> ${signal.characteristic}</p>
+                    <p style="margin: 3px 0 8px 0; font-size: 0.82rem; color: #334155;"><strong>Pos:</strong> ${toDMS(signal.lat, true)} ${toDMS(signal.lng, false)}</p>
                     <div style="display: flex; gap: 6px;">
-                        <button onclick="window.openSignalDetail('${signal.code}')" style="background: #1e3a66; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">Ficha DH2</button>
-                        <button onclick="window.addSignalToRoute('${signal.code}')" style="background: #d97706; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">+ Add Derrota</button>
+                        <button type="button" onclick="window.openSignalDetail('${signal.code}')" style="background: #1e3a66; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <i class="fa-solid fa-file-lines"></i> Ficha DH2
+                        </button>
                     </div>
                 </div>
             `;
@@ -1078,21 +1081,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function getTypeBadge(type) {
-        const t = (type || '').toUpperCase();
-        if (t.includes('FAROLETE')) return { cls: 'type-farolete', icon: 'fa-tower-observation', label: type };
-        if (t.includes('FAROL'))    return { cls: 'type-farol',     icon: 'fa-tower-observation', label: type };
-        if (t.includes('BZ') || (t.includes('BOIA') && !t.includes('CEGA')) || (t.includes('BÓIA') && !t.includes('CEGA')))
-                                    return { cls: 'type-boia',      icon: 'fa-anchor',            label: type };
-        if (t.includes('BC') || t.includes('CEGA'))
-                                    return { cls: 'type-boia',      icon: 'fa-anchor',            label: type };
-        if (t.includes('BALIZA'))   return { cls: 'type-baliza',    icon: 'fa-sign-hanging',      label: type };
-        if (t.includes('RACON') || t.includes('RADAR'))
-                                    return { cls: 'type-racon',     icon: 'fa-satellite-dish',    label: type };
-        if (t.includes('CARDINAL')) return { cls: 'type-cardinal',  icon: 'fa-diamond',           label: type };
-        if (t.includes('LUZ') || t.includes('PORTO'))
-                                    return { cls: 'type-luz-porto', icon: 'fa-lightbulb',         label: type };
-        return { cls: 'type-other', icon: 'fa-circle-dot', label: type };
+    function getFullTypeName(type) {
+        const t = (type || '').toUpperCase().trim();
+        if (t.includes('FAROLETE') || t === 'FTE') return 'Farolete';
+        if (t.includes('FAROL') || t === 'FAR') return 'Farol';
+        if (t.includes('BC') || t.includes('BOIA CEGA') || t.includes('BÓIA CEGA')) return 'Bóia Cega';
+        if (t.includes('BZ') || t.includes('BL') || t.includes('BOIA LUMINOSA') || t.includes('BÓIA LUMINOSA')) return 'Bóia Luminosa';
+        if (t.includes('BOIA') || t.includes('BÓIA')) return 'Bóia';
+        if (t.includes('BALIZA') || t === 'BAL') return 'Baliza';
+        if (t.includes('RACON') || t.includes('RADAR')) return 'Respondedor Radar (Racon)';
+        if (t.includes('CARDINAL')) return 'Sinal Cardinal';
+        if (t.includes('LUZ') || t.includes('PORTO')) return 'Luz / Lanterna';
+        return type || 'Sinal Náutico';
     }
 
     function renderSignalList() {
@@ -1115,26 +1115,25 @@ document.addEventListener('DOMContentLoaded', () => {
             card.id = `card-${s.code}`;
 
             const respClass = (s.responsavel === 'CPAP') ? 'resp-cpap' : (s.responsavel === 'CPMA') ? 'resp-cpma' : (s.responsavel === 'Extra-MB') ? 'resp-extra' : 'resp-chn4';
-            const tb = getTypeBadge(s.type);
+            const fullType = getFullTypeName(s.type);
 
             card.innerHTML = `
                 <div class="signal-card-head">
                     <div class="signal-code-title">
-                        <i class="fa-solid ${s.type.toLowerCase().includes('boia') || s.type.toLowerCase().includes('bz') ? 'fa-anchor' : 'fa-tower-observation'}" style="color:${isOp ? 'var(--status-op)' : 'var(--status-av)'}"></i>
+                        <i class="fa-solid ${s.type.toLowerCase().includes('boia') || s.type.toLowerCase().includes('bz') || s.type.toLowerCase().includes('bc') ? 'fa-anchor' : 'fa-tower-observation'}" style="color:${isOp ? 'var(--status-op)' : 'var(--status-av)'}"></i>
                         <h4>${s.code}</h4>
                     </div>
                     <div style="display: flex; gap: 4px; align-items: center;">
                         <span class="responsavel-badge ${respClass}">${s.responsavel || 'CHN-4'}</span>
                         <span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${s.status}</span>
-                        <button type="button" class="btn-card-delete" onclick="event.stopPropagation(); window.deleteSignalFromCard('${s.code}', '${s.name.replace(/'/g, "\\'")}'))" title="Excluir Sinal Náutico">
+                        <button type="button" class="btn-card-delete" onclick="event.stopPropagation(); window.deleteSignalFromCard('${s.code}', '${s.name.replace(/'/g, "\\'")}')" title="Excluir Sinal Náutico">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
                     </div>
                 </div>
                 <div class="signal-card-body">
                     <strong>${s.name}</strong>
-                    <span class="signal-type-badge ${tb.cls}"><i class="fa-solid ${tb.icon}"></i> ${tb.label}</span>
-                    <div class="signal-char"><i class="fa-solid fa-lightbulb"></i> ${s.characteristic}</div>
+                    <div class="signal-char"><i class="fa-solid fa-lightbulb"></i> ${fullType} — ${s.characteristic}</div>
                 </div>
                 <div class="signal-meta">
                     <span>${toDMS(s.lat, true)} | ${toDMS(s.lng, false)}</span>
@@ -1221,13 +1220,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         selectedSignal = signal;
         const modal = document.getElementById('modalSignalDetail');
+        if (!modal) return;
 
         document.getElementById('modalSignalBadge').textContent = `DH2: ${signal.code}`;
         document.getElementById('modalSignalName').textContent = signal.name;
 
         // View Mode Specifications
         document.getElementById('modalSpecCode').textContent = signal.code;
-        document.getElementById('modalSpecType').textContent = signal.type;
+        document.getElementById('modalSpecType').textContent = getFullTypeName(signal.type);
         document.getElementById('modalSpecPosDec').textContent = `${signal.lat.toFixed(5)}, ${signal.lng.toFixed(5)}`;
         document.getElementById('modalSpecPosGms').textContent = `${toDMS(signal.lat, true)} | ${toDMS(signal.lng, false)}`;
         document.getElementById('modalSpecChar').textContent = signal.characteristic;
@@ -1253,6 +1253,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderHistoryTimeline(signal.history);
         modal.classList.add('active');
     }
+    window.openSignalDetail = openSignalDetail;
 
     function renderSignalPhoto(signal) {
         const placeholder = document.getElementById('photoPlaceholder');
@@ -1706,6 +1707,30 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
     // =========================================================================
     // 12. CONTROLES DE INTERFACE & FILTROS
     // =========================================================================
+    // Alternância de Abas da Barra Lateral (Sinais, Derrota, IE & Stats)
+    document.querySelectorAll('.sidebar-tabs .tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const tabId = btn.getAttribute('data-tab');
+            if (!tabId) return;
+
+            document.querySelectorAll('.sidebar-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.app-sidebar .tab-content').forEach(c => c.classList.remove('active'));
+
+            btn.classList.add('active');
+            const targetContent = document.getElementById(tabId);
+            if (targetContent) {
+                targetContent.classList.add('active');
+            }
+
+            if (tabId === 'tab-ie') {
+                updateIE();
+            } else if (tabId === 'tab-route') {
+                updateRoute();
+            }
+        });
+    });
+
     const searchInput = document.getElementById('searchInput');
     searchInput?.addEventListener('input', (e) => {
         currentSearch = e.target.value;
