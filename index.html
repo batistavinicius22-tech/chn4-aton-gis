@@ -364,8 +364,12 @@
                             <strong id="statAvCount">0</strong>
                         </div>
                         <div class="stat-row">
-                            <span><i class="fa-solid fa-anchor text-cyan"></i> Bóias CHN-4 (BZ / BC):</span>
+                            <span><i class="fa-solid fa-anchor text-cyan"></i> Bóias CHN-4 (BL / BC):</span>
                             <strong id="statBoiaCount">0</strong>
+                        </div>
+                        <div class="stat-row">
+                            <span><i class="fa-solid fa-sign-hanging text-cyan"></i> Balizas CHN-4 (BZ):</span>
+                            <strong id="statBalizaCount">0</strong>
                         </div>
                         <div class="stat-row">
                             <span><i class="fa-solid fa-tower-observation text-cyan"></i> Faróis e Faroletes CHN-4:</span>
@@ -550,6 +554,24 @@
                                         <td id="modalSpecIeIndividual" style="color: var(--status-op); font-weight: 700;">100.0% (Mensal) | 100.0% (Anual)</td>
                                     </tr>
                                 </table>
+
+                                <!-- Direct Editable Computation Date Card -->
+                                <div class="computation-date-card" style="background: var(--navy-950); border: 1px solid var(--accent-gold); border-radius: var(--radius-sm); padding: 10px 12px; margin-top: 12px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                        <label for="directOccurrenceDateInput" style="font-family: var(--font-tech); font-weight: 700; font-size: 0.78rem; color: var(--accent-gold-light); margin: 0;">
+                                            <i class="fa-solid fa-calendar-check"></i> DATA INICIAL DE CÔMPUTO (NORMAM-601):
+                                        </label>
+                                        <span id="savedIndicatorBadge" style="font-size: 0.7rem; color: var(--status-op); font-weight: 700; display: none;">
+                                            <i class="fa-solid fa-check"></i> Salvo & Recalculado!
+                                        </span>
+                                    </div>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <input type="datetime-local" id="directOccurrenceDateInput" class="form-control" style="font-size: 0.82rem; padding: 6px 10px; border-color: var(--accent-gold); background: var(--navy-900);">
+                                    </div>
+                                    <small class="help-text" style="color: var(--text-secondary); font-size: 0.72rem; display: block; margin-top: 4px;">
+                                        <i class="fa-solid fa-bolt text-gold"></i> Altere esta data a qualquer momento para recalcular instantaneamente os dias de inoperância ($A$) e o Índice de Eficácia (IE).
+                                    </small>
+                                </div>
                             </div>
 
                             <!-- Edit View Mode -->
@@ -643,6 +665,14 @@
                         <div class="update-panel">
                             <h4><i class="fa-solid fa-pen-to-square"></i> Registrar Ocorrência / Atualizar Status</h4>
                             
+                            <!-- Reminder Alert Banner -->
+                            <div class="reminder-box" style="background: rgba(245, 158, 11, 0.12); border-left: 3px solid var(--accent-gold); padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; font-size: 0.78rem; color: var(--accent-gold-light); display: flex; align-items: flex-start; gap: 8px;">
+                                <i class="fa-solid fa-bell" style="font-size: 0.95rem; margin-top: 2px; color: var(--accent-gold);"></i>
+                                <div>
+                                    <strong>Lembrete NORMAM-601:</strong> Lembre-se de conferir/ajustar a <em>Data Inicial de Cômputo</em> abaixo caso a alteração operacional tenha ocorrido em data anterior (conforme Aviso-Rádio Náutico).
+                                </div>
+                            </div>
+
                             <form id="formUpdateStatus">
                                 <div class="form-group">
                                     <label for="selectNewStatus">Novo Status Operacional / Ocorrência:</label>
@@ -664,7 +694,7 @@
                                     <label for="inputOccurrenceDate">
                                         <i class="fa-solid fa-calendar-day text-gold"></i> Data Inicial de Cômputo (NORMAM-601):
                                     </label>
-                                    <input type="datetime-local" id="inputOccurrenceDate" class="form-control" required>
+                                    <input type="datetime-local" id="inputOccurrenceDate" class="form-control">
                                     <small class="help-text text-muted">Data/hora oficial em que o sinal passou a apresentar alteração ou foi efetivamente restabelecido.</small>
                                 </div>
 

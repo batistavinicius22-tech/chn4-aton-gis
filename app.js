@@ -726,10 +726,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================================
     function getTypeCategory(type) {
         const t = (type || '').toUpperCase();
-        if (t.includes('FAROLETE')) return 'FAROLETE';
-        if (t.includes('FAROL')) return 'FAROL';
-        if (t.includes('BOIA') || t.includes('BÓIA') || t.includes('BZ') || t.includes('BC')) return 'BOIA';
-        if (t.includes('BALIZA')) return 'BALIZA';
+        if (t.includes('FAROLETE') || t === 'FTE') return 'FAROLETE';
+        if (t.includes('FAROL') || t === 'FAR') return 'FAROL';
+        if (t.includes('BALIZA') || t === 'BAL' || t.includes('BZ')) return 'BALIZA';
+        if (t.includes('BOIA') || t.includes('BÓIA') || t.includes('BL') || t.includes('BC')) return 'BOIA';
         return 'OTHER';
     }
 
@@ -758,9 +758,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 chn4AvCount++;
             }
 
-            // Inspecionar histórico de ocorrências do sinal para computar dias de alteração (NORMAM-601)
+            // Inspecionar histórico e data inicial de cômputo da ocorrência (NORMAM-601)
+            let inoperableStart = null;
+            if (signal.occurrenceStartDate || signal.inoperableSince) {
+                const directDt = new Date(signal.occurrenceStartDate || signal.inoperableSince);
+                if (!isNaN(directDt.getTime())) inoperableStart = directDt;
+            }
+
             if (signal.history && Array.isArray(signal.history) && signal.history.length > 0) {
-                let inoperableStart = null;
                 signal.history.forEach(h => {
                     const hDate = new Date(h.startDate || h.date);
                     if (!isNaN(hDate.getTime())) {
@@ -789,21 +794,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 });
+            }
 
-                // Se o sinal continua inoperante no momento:
-                if (!isOp && inoperableStart) {
-                    // Período no ano
-                    const startAno = inoperableStart < startOfCurrentYear ? startOfCurrentYear : inoperableStart;
-                    if (now > startAno) {
-                        const diffDaysAno = (now - startAno) / (1000 * 60 * 60 * 24);
-                        if (diffDaysAno >= 1) A_anual += diffDaysAno;
-                    }
-                    // Período no mês
-                    const startMes = inoperableStart < startOfCurrentMonth ? startOfCurrentMonth : inoperableStart;
-                    if (now > startMes) {
-                        const diffDaysMes = (now - startMes) / (1000 * 60 * 60 * 24);
-                        if (diffDaysMes >= 1) A_mensal += diffDaysMes;
-                    }
+            // Se o sinal continua inoperante no momento:
+            if (!isOp && inoperableStart) {
+                // Período no ano
+                const startAno = inoperableStart < startOfCurrentYear ? startOfCurrentYear : inoperableStart;
+                if (now > startAno) {
+                    const diffDaysAno = (now - startAno) / (1000 * 60 * 60 * 24);
+                    if (diffDaysAno >= 1) A_anual += diffDaysAno;
+                }
+                // Período no mês
+                const startMes = inoperableStart < startOfCurrentMonth ? startOfCurrentMonth : inoperableStart;
+                if (now > startMes) {
+                    const diffDaysMes = (now - startMes) / (1000 * 60 * 60 * 24);
+                    if (diffDaysMes >= 1) A_mensal += diffDaysMes;
                 }
             }
         });
@@ -867,10 +872,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (statAvCount) statAvCount.textContent = chn4AvCount;
 
         const boiaCount = chn4Signals.filter(s => getTypeCategory(s.type) === 'BOIA').length;
+        const balizaCount = chn4Signals.filter(s => getTypeCategory(s.type) === 'BALIZA').length;
         const farolCount = chn4Signals.filter(s => getTypeCategory(s.type) === 'FAROL' || getTypeCategory(s.type) === 'FAROLETE').length;
         const statBoiaEl = document.getElementById('statBoiaCount');
+        const statBalizaEl = document.getElementById('statBalizaCount');
         const statFarolEl = document.getElementById('statFarolCount');
         if (statBoiaEl) statBoiaEl.textContent = boiaCount;
+        if (statBalizaEl) statBalizaEl.textContent = balizaCount;
         if (statFarolEl) statFarolEl.textContent = farolCount;
 
         if (circleGauge) {
@@ -983,10 +991,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================================
     // 8. RENDERIZAÇÃO E FILTRAGEM DE MARCADORES E LISTA (COM RESPONSÁVEL)
     // =========================================================================
+    function getSignalIconClass(type) {
+        const cat = getTypeCategory(type);
+        if (cat === 'BOIA') return 'fa-anchor';
+        if (cat === 'BALIZA') return 'fa-sign-hanging';
+        return 'fa-tower-observation';
+    }
+
     function createCustomIcon(signal) {
         const isOp = isOperational(signal.status);
         const statusClass = isOp ? 'status-op' : 'status-av';
-        const iconType = signal.type.toLowerCase().includes('bóia') || signal.type.toLowerCase().includes('boia') || signal.type.toLowerCase().includes('bz') ? 'fa-anchor' : 'fa-tower-observation';
+        const iconType = getSignalIconClass(signal.type);
 
         return L.divIcon({
             className: 'custom-aton-marker-wrapper',
@@ -1199,10 +1214,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const t = (type || '').toUpperCase().trim();
         if (t.includes('FAROLETE') || t === 'FTE') return 'Farolete';
         if (t.includes('FAROL') || t === 'FAR') return 'Farol';
+        if (t.includes('BALIZA') || t === 'BAL' || t.includes('BZ')) return 'Baliza';
         if (t.includes('BC') || t.includes('BOIA CEGA') || t.includes('BÓIA CEGA')) return 'Bóia Cega';
-        if (t.includes('BZ') || t.includes('BL') || t.includes('BOIA LUMINOSA') || t.includes('BÓIA LUMINOSA')) return 'Bóia Luminosa';
+        if (t.includes('BL') || t.includes('BOIA LUMINOSA') || t.includes('BÓIA LUMINOSA')) return 'Bóia Luminosa';
         if (t.includes('BOIA') || t.includes('BÓIA')) return 'Bóia';
-        if (t.includes('BALIZA') || t === 'BAL') return 'Baliza';
         if (t.includes('RACON') || t.includes('RADAR')) return 'Respondedor Radar (Racon)';
         if (t.includes('CARDINAL')) return 'Sinal Cardinal';
         if (t.includes('LUZ') || t.includes('PORTO')) return 'Luz / Lanterna';
@@ -1234,7 +1249,7 @@ document.addEventListener('DOMContentLoaded', () => {
             card.innerHTML = `
                 <div class="signal-card-head">
                     <div class="signal-code-title">
-                        <i class="fa-solid ${s.type.toLowerCase().includes('boia') || s.type.toLowerCase().includes('bz') || s.type.toLowerCase().includes('bc') ? 'fa-anchor' : 'fa-tower-observation'}" style="color:${isOp ? 'var(--status-op)' : 'var(--status-av)'}"></i>
+                        <i class="fa-solid ${getSignalIconClass(s.type)}" style="color:${isOp ? 'var(--status-op)' : 'var(--status-av)'}"></i>
                         <h4>${s.code}</h4>
                     </div>
                     <div style="display: flex; gap: 4px; align-items: center;">
@@ -1432,10 +1447,70 @@ document.addEventListener('DOMContentLoaded', () => {
         const btnAvradio = document.getElementById('btnGenerateAvradioModal');
         if (btnAvradio) btnAvradio.style.display = isOp ? 'none' : 'inline-flex';
 
+        // Initialize Direct Occurrence Date Input in Ficha DH2
+        const directInput = document.getElementById('directOccurrenceDateInput');
+        if (directInput) {
+            let currentCompDate = signal.occurrenceStartDate || signal.inoperableSince;
+            if (!currentCompDate && signal.history && signal.history.length > 0) {
+                const inopHistory = signal.history.slice().reverse().find(h => !isOperational(h.status));
+                if (inopHistory) {
+                    currentCompDate = inopHistory.startDate || inopHistory.date;
+                } else {
+                    const lastEntry = signal.history[signal.history.length - 1];
+                    currentCompDate = lastEntry.startDate || lastEntry.date;
+                }
+            }
+            if (!currentCompDate) {
+                const now = new Date();
+                const pad = (n) => String(n).padStart(2, '0');
+                currentCompDate = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+            } else {
+                currentCompDate = currentCompDate.replace(' ', 'T').slice(0, 16);
+            }
+            directInput.value = currentCompDate;
+        }
+
         renderHistoryTimeline(signal.history);
         modal.classList.add('active');
     }
     window.openSignalDetail = openSignalDetail;
+
+    // Direct Occurrence Date Change Listener (Instant Save & Recalculate IE)
+    document.getElementById('directOccurrenceDateInput')?.addEventListener('change', (e) => {
+        if (!selectedSignal) return;
+        const newVal = e.target.value;
+        if (!newVal) return;
+
+        const formattedDate = newVal.replace('T', ' ');
+        selectedSignal.occurrenceStartDate = formattedDate;
+        selectedSignal.inoperableSince = formattedDate;
+
+        if (!selectedSignal.history) selectedSignal.history = [];
+        if (selectedSignal.history.length > 0) {
+            selectedSignal.history[selectedSignal.history.length - 1].startDate = formattedDate;
+        } else {
+            selectedSignal.history.push({
+                date: formattedDate,
+                startDate: formattedDate,
+                status: selectedSignal.status,
+                note: 'Data inicial de cômputo definida pelo operador.'
+            });
+        }
+
+        saveSignalToBackend(selectedSignal);
+        saveLocalCache();
+        updateIE();
+
+        // Refresh technical specs table in open modal
+        openSignalDetail(selectedSignal.code);
+
+        const savedBadge = document.getElementById('savedIndicatorBadge');
+        if (savedBadge) {
+            savedBadge.style.display = 'inline-flex';
+            setTimeout(() => { savedBadge.style.display = 'none'; }, 3000);
+        }
+        showToast(`Data inicial do sinal ${selectedSignal.code} atualizada! IE recalculado.`, 'success');
+    });
 
     function renderSignalPhoto(signal) {
         const placeholder = document.getElementById('photoPlaceholder');
