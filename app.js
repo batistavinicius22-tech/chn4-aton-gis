@@ -722,6 +722,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================================
     // 7. ÍNDICE DE EFICÁCIA (IE) & SIMULADOR
     // =========================================================================
+    // 7. ÍNDICE DE EFICÁCIA (IE) NORMAM-601/DHN (Art. 2.48 e 2.49)
+    // =========================================================================
     function getTypeCategory(type) {
         const t = (type || '').toUpperCase();
         if (t.includes('FAROLETE')) return 'FAROLETE';
@@ -732,46 +734,158 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateIE() {
-        const total = signalsData.length;
-        const opCount = signalsData.filter(s => isOperational(s.status)).length;
-        const avCount = total - opCount;
-        const iePercent = total > 0 ? ((opCount / total) * 100).toFixed(1) : "0.0";
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1; // 1 a 12 (ex: 8 = Agosto)
+        const monthNames = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
-        const headerVal = document.getElementById('headerIeValue');
-        if (headerVal) {
-            headerVal.textContent = `${iePercent}%`;
-            headerVal.style.color = parseFloat(iePercent) >= 95 ? 'var(--status-op)' : (parseFloat(iePercent) >= 80 ? 'var(--accent-gold)' : 'var(--status-av)');
+        // 1. Filtrar estritamente sinais sob jurisdição e responsabilidade do CHN-4
+        const chn4Signals = signalsData.filter(s => (s.responsavel || 'CHN-4') === 'CHN-4');
+        const B = chn4Signals.length; // Total de sinais do balizamento CHN-4
+        const D = currentMonth; // Mês considerado no ano (1 a 12)
+
+        // 2. Calcular o somatório dos dias de alteração (A) no mês e no ano
+        let A_mensal = 0;
+        let A_anual = 0;
+        let chn4AvCount = 0;
+
+        const startOfCurrentMonth = new Date(currentYear, currentMonth - 1, 1, 0, 0, 0);
+        const startOfCurrentYear = new Date(currentYear, 0, 1, 0, 0, 0);
+
+        chn4Signals.forEach(signal => {
+            const isOp = isOperational(signal.status);
+            if (!isOp) {
+                chn4AvCount++;
+            }
+
+            // Inspecionar histórico de ocorrências do sinal para computar dias de alteração (NORMAM-601)
+            if (signal.history && Array.isArray(signal.history) && signal.history.length > 0) {
+                let inoperableStart = null;
+                signal.history.forEach(h => {
+                    const hDate = new Date(h.startDate || h.date);
+                    if (!isNaN(hDate.getTime())) {
+                        if (!isOperational(h.status)) {
+                            if (!inoperableStart || hDate < inoperableStart) {
+                                inoperableStart = hDate;
+                            }
+                        } else {
+                            // Restabelecido: contabilizar período ocorrido neste ano/mês
+                            if (inoperableStart) {
+                                const inoperableEnd = hDate;
+                                // Período no ano
+                                const startAno = inoperableStart < startOfCurrentYear ? startOfCurrentYear : inoperableStart;
+                                if (inoperableEnd > startOfCurrentYear && startAno < inoperableEnd) {
+                                    const diffDaysAno = (inoperableEnd - startAno) / (1000 * 60 * 60 * 24);
+                                    if (diffDaysAno >= 1) A_anual += diffDaysAno;
+                                }
+                                // Período no mês
+                                const startMes = inoperableStart < startOfCurrentMonth ? startOfCurrentMonth : inoperableStart;
+                                if (inoperableEnd > startOfCurrentMonth && startMes < inoperableEnd) {
+                                    const diffDaysMes = (inoperableEnd - startMes) / (1000 * 60 * 60 * 24);
+                                    if (diffDaysMes >= 1) A_mensal += diffDaysMes;
+                                }
+                                inoperableStart = null;
+                            }
+                        }
+                    }
+                });
+
+                // Se o sinal continua inoperante no momento:
+                if (!isOp && inoperableStart) {
+                    // Período no ano
+                    const startAno = inoperableStart < startOfCurrentYear ? startOfCurrentYear : inoperableStart;
+                    if (now > startAno) {
+                        const diffDaysAno = (now - startAno) / (1000 * 60 * 60 * 24);
+                        if (diffDaysAno >= 1) A_anual += diffDaysAno;
+                    }
+                    // Período no mês
+                    const startMes = inoperableStart < startOfCurrentMonth ? startOfCurrentMonth : inoperableStart;
+                    if (now > startMes) {
+                        const diffDaysMes = (now - startMes) / (1000 * 60 * 60 * 24);
+                        if (diffDaysMes >= 1) A_mensal += diffDaysMes;
+                    }
+                }
+            }
+        });
+
+        // Arredondamento para números inteiros ou 1 casa decimal de dias
+        const aMensalRounded = Math.round(A_mensal * 10) / 10;
+        const aAnualRounded = Math.round(A_anual * 10) / 10;
+
+        // 3. Fórmulas NORMAM-601:
+        // IE mensal = [1 - (A / (B * 30))] * 100
+        // IE anual  = [1 - (A / (B * 30 * D))] * 100
+        let ieMensalVal = 100.0;
+        let ieAnualVal = 100.0;
+
+        if (B > 0) {
+            const factorMensal = B * 30;
+            const factorAnual = B * 30 * D;
+            ieMensalVal = Math.max(0, Math.min(100, (1 - (aMensalRounded / factorMensal)) * 100));
+            ieAnualVal = Math.max(0, Math.min(100, (1 - (aAnualRounded / factorAnual)) * 100));
         }
 
+        const ieMensalStr = ieMensalVal.toFixed(1);
+        const ieAnualStr = ieAnualVal.toFixed(1);
+
+        // Header pill
+        const headerVal = document.getElementById('headerIeValue');
+        if (headerVal) {
+            headerVal.textContent = `${ieMensalStr}%`;
+            headerVal.style.color = parseFloat(ieMensalStr) >= 95 ? 'var(--status-op)' : (parseFloat(ieMensalStr) >= 80 ? 'var(--accent-gold)' : 'var(--status-av)');
+        }
+
+        // Tab IE DOM Elements
         const iePercentDisplay = document.getElementById('iePercentDisplay');
+        const ieAnualDisplay = document.getElementById('ieAnualDisplay');
+        const ieGaugeValue = document.getElementById('ieGaugeValue');
         const circleGauge = document.getElementById('ieCircleGauge');
-        const formulaOpVal = document.getElementById('formulaOpVal');
-        const formulaTotalVal = document.getElementById('formulaTotalVal');
+        const ieMensalSubtitle = document.getElementById('ieMensalSubtitle');
+        const ieAnualSubtitle = document.getElementById('ieAnualSubtitle');
+
+        if (iePercentDisplay) iePercentDisplay.textContent = `${ieMensalStr}%`;
+        if (ieAnualDisplay) ieAnualDisplay.textContent = `${ieAnualStr}%`;
+        if (ieGaugeValue) ieGaugeValue.textContent = `${ieMensalStr}%`;
+        if (ieMensalSubtitle) ieMensalSubtitle.textContent = `Mês ${D} (${monthNames[D]})`;
+        if (ieAnualSubtitle) ieAnualSubtitle.textContent = `Acumulado ${currentYear} (Até Mês ${D})`;
+
+        const paramBVal = document.getElementById('paramBVal');
+        const paramDVal = document.getElementById('paramDVal');
+        const paramAMensalVal = document.getElementById('paramAMensalVal');
+        const paramAAnualVal = document.getElementById('paramAAnualVal');
+
+        if (paramBVal) paramBVal.textContent = `${B} sinais`;
+        if (paramDVal) paramDVal.textContent = `Mês ${D} (${monthNames[D]})`;
+        if (paramAMensalVal) paramAMensalVal.textContent = `${aMensalRounded} dias`;
+        if (paramAAnualVal) paramAAnualVal.textContent = `${aAnualRounded} dias`;
+
         const statOpCount = document.getElementById('statOpCount');
         const statAvCount = document.getElementById('statAvCount');
+        const chn4OpCount = B - chn4AvCount;
 
-        if (iePercentDisplay) iePercentDisplay.textContent = `${iePercent}%`;
-        if (formulaOpVal) formulaOpVal.textContent = opCount;
-        if (formulaTotalVal) formulaTotalVal.textContent = total;
-        if (statOpCount) statOpCount.textContent = opCount;
-        if (statAvCount) statAvCount.textContent = avCount;
+        if (statOpCount) statOpCount.textContent = chn4OpCount;
+        if (statAvCount) statAvCount.textContent = chn4AvCount;
 
-        const boiaCount = signalsData.filter(s => getTypeCategory(s.type) === 'BOIA').length;
-        const farolCount = signalsData.filter(s => getTypeCategory(s.type) === 'FAROL' || getTypeCategory(s.type) === 'FAROLETE').length;
+        const boiaCount = chn4Signals.filter(s => getTypeCategory(s.type) === 'BOIA').length;
+        const farolCount = chn4Signals.filter(s => getTypeCategory(s.type) === 'FAROL' || getTypeCategory(s.type) === 'FAROLETE').length;
         const statBoiaEl = document.getElementById('statBoiaCount');
         const statFarolEl = document.getElementById('statFarolCount');
         if (statBoiaEl) statBoiaEl.textContent = boiaCount;
         if (statFarolEl) statFarolEl.textContent = farolCount;
 
         if (circleGauge) {
-            const deg = (parseFloat(iePercent) / 100) * 360;
-            const color = parseFloat(iePercent) >= 95 ? 'var(--status-op)' : (parseFloat(iePercent) >= 80 ? 'var(--accent-gold)' : 'var(--status-av)');
+            const deg = (parseFloat(ieMensalStr) / 100) * 360;
+            const color = parseFloat(ieMensalStr) >= 95 ? 'var(--status-op)' : (parseFloat(ieMensalStr) >= 80 ? 'var(--accent-gold)' : 'var(--status-av)');
             circleGauge.style.background = `conic-gradient(${color} 0deg ${deg}deg, var(--navy-700) ${deg}deg 360deg)`;
         }
 
+        // Global count badges for Tab 1
+        const total = signalsData.length;
+        const totalOp = signalsData.filter(s => isOperational(s.status)).length;
+        const totalAv = total - totalOp;
         if (document.getElementById('countAll')) document.getElementById('countAll').textContent = total;
-        if (document.getElementById('countOp')) document.getElementById('countOp').textContent = opCount;
-        if (document.getElementById('countAv')) document.getElementById('countAv').textContent = avCount;
+        if (document.getElementById('countOp')) document.getElementById('countOp').textContent = totalOp;
+        if (document.getElementById('countAv')) document.getElementById('countAv').textContent = totalAv;
     }
 
     function openSimulator() {
@@ -1241,11 +1355,79 @@ document.addEventListener('DOMContentLoaded', () => {
         const isOp = isOperational(signal.status);
         document.getElementById('modalSpecStatus').innerHTML = `<span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${signal.status}</span>`;
 
+        // Individual Signal IE (NORMAM-601 Art 2.49 a/b)
+        const now = new Date();
+        const curYear = now.getFullYear();
+        const curMonth = now.getMonth() + 1;
+        const daysInCurrentMonth = new Date(curYear, curMonth, 0).getDate();
+
+        let sigA_mes = 0;
+        let sigA_ano = 0;
+        const startOfCurMonth = new Date(curYear, curMonth - 1, 1, 0, 0, 0);
+        const startOfCurYear = new Date(curYear, 0, 1, 0, 0, 0);
+
+        if (signal.history && Array.isArray(signal.history)) {
+            let inopStart = null;
+            signal.history.forEach(h => {
+                const hDate = new Date(h.startDate || h.date);
+                if (!isNaN(hDate.getTime())) {
+                    if (!isOperational(h.status)) {
+                        if (!inopStart || hDate < inopStart) inopStart = hDate;
+                    } else {
+                        if (inopStart) {
+                            const inopEnd = hDate;
+                            const startAno = inopStart < startOfCurYear ? startOfCurYear : inopStart;
+                            if (inopEnd > startOfCurYear && startAno < inopEnd) {
+                                const dAno = (inopEnd - startAno) / (1000 * 60 * 60 * 24);
+                                if (dAno >= 1) sigA_ano += dAno;
+                            }
+                            const startMes = inopStart < startOfCurMonth ? startOfCurMonth : inopStart;
+                            if (inopEnd > startOfCurMonth && startMes < inopEnd) {
+                                const dMes = (inopEnd - startMes) / (1000 * 60 * 60 * 24);
+                                if (dMes >= 1) sigA_mes += dMes;
+                            }
+                            inopStart = null;
+                        }
+                    }
+                }
+            });
+
+            if (!isOp && inopStart) {
+                const startAno = inopStart < startOfCurYear ? startOfCurYear : inopStart;
+                if (now > startAno) {
+                    const dAno = (now - startAno) / (1000 * 60 * 60 * 24);
+                    if (dAno >= 1) sigA_ano += dAno;
+                }
+                const startMes = inopStart < startOfCurMonth ? startOfCurMonth : inopStart;
+                if (now > startMes) {
+                    const dMes = (now - startMes) / (1000 * 60 * 60 * 24);
+                    if (dMes >= 1) sigA_mes += dMes;
+                }
+            }
+        }
+
+        const sigIeMes = Math.max(0, Math.min(100, (1 - (sigA_mes / daysInCurrentMonth)) * 100)).toFixed(1);
+        const sigIeAno = Math.max(0, Math.min(100, (1 - (sigA_ano / (30 * curMonth))) * 100)).toFixed(1);
+
+        const individualIeEl = document.getElementById('modalSpecIeIndividual');
+        if (individualIeEl) {
+            individualIeEl.textContent = `${sigIeMes}% (Mensal) | ${sigIeAno}% (Anual)`;
+            individualIeEl.style.color = parseFloat(sigIeMes) >= 95 ? 'var(--status-op)' : (parseFloat(sigIeMes) >= 80 ? 'var(--accent-gold)' : 'var(--status-av)');
+        }
+
         toggleEditSpecMode(false);
         renderSignalPhoto(signal);
 
         document.getElementById('selectNewStatus').value = isOp ? 'OPERACIONAL' : signal.status;
         document.getElementById('textOccurrenceReason').value = '';
+
+        const inputOccDate = document.getElementById('inputOccurrenceDate');
+        if (inputOccDate) {
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            const localIso = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+            inputOccDate.value = localIso;
+        }
 
         const btnAvradio = document.getElementById('btnGenerateAvradioModal');
         if (btnAvradio) btnAvradio.style.display = isOp ? 'none' : 'inline-flex';
@@ -1469,8 +1651,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const isOp = isOperational(h.status);
             const item = document.createElement('div');
             item.className = `timeline-item ${isOp ? 'status-op' : 'status-av'}`;
+            const startLabel = h.startDate ? ` <span style="font-size: 0.72rem; color: var(--accent-gold);">(Início: ${h.startDate})</span>` : '';
             item.innerHTML = `
-                <div class="timeline-date">${h.date} — <strong>${h.status}</strong></div>
+                <div class="timeline-date">${h.date}${startLabel} — <strong>${h.status}</strong></div>
                 <div class="timeline-reason">${h.note}</div>
             `;
             container.appendChild(item);
@@ -1483,6 +1666,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const newStatus = document.getElementById('selectNewStatus').value;
         const reason = document.getElementById('textOccurrenceReason').value.trim();
+        const occurrenceDateVal = document.getElementById('inputOccurrenceDate')?.value;
 
         if (!reason) {
             showToast('O campo de formalização da ocorrência é obrigatório!', 'danger');
@@ -1491,11 +1675,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const now = new Date();
         const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        const initialDateStr = occurrenceDateVal ? occurrenceDateVal.replace('T', ' ') : dateStr;
 
         selectedSignal.status = newStatus;
         if (!selectedSignal.history) selectedSignal.history = [];
         selectedSignal.history.push({
             date: dateStr,
+            startDate: initialDateStr,
             status: newStatus,
             note: reason
         });

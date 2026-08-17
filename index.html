@@ -299,46 +299,77 @@
             <div class="tab-content" id="tab-ie">
                 <div class="card ie-card">
                     <div class="card-header">
-                        <h3><i class="fa-solid fa-chart-pie"></i> Índice de Eficácia (IE) CHN-4</h3>
+                        <div>
+                            <span class="badge badge-navy" style="font-size: 0.68rem; margin-bottom: 4px; display: inline-block;">NORMAM-601/DHN (Art. 2.48 e 2.49)</span>
+                            <h3 style="font-size: 1.05rem;"><i class="fa-solid fa-chart-pie"></i> Índice de Eficácia (IE) CHN-4</h3>
+                        </div>
                     </div>
 
-                    <!-- Large IE Gauge -->
-                    <div class="gauge-container">
+                    <!-- Dual IE Cards (Mensal e Anual NORMAM-601) -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0;">
+                        <!-- IE Mensal -->
+                        <div style="background: var(--navy-950); border: 1px solid var(--navy-700); border-radius: var(--radius-sm); padding: 12px; text-align: center;">
+                            <div style="font-family: var(--font-tech); font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">IE Mensal (CHN-4)</div>
+                            <div id="iePercentDisplay" style="font-family: var(--font-tech); font-size: 1.8rem; font-weight: 700; color: var(--status-op); margin: 4px 0;">100.0%</div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary);" id="ieMensalSubtitle">Mês 8 (Agosto)</div>
+                        </div>
+
+                        <!-- IE Anual -->
+                        <div style="background: var(--navy-950); border: 1px solid var(--navy-700); border-radius: var(--radius-sm); padding: 12px; text-align: center;">
+                            <div style="font-family: var(--font-tech); font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">IE Anual (CHN-4)</div>
+                            <div id="ieAnualDisplay" style="font-family: var(--font-tech); font-size: 1.8rem; font-weight: 700; color: var(--status-op); margin: 4px 0;">100.0%</div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary);" id="ieAnualSubtitle">Acumulado 2026 (Até Mês 8)</div>
+                        </div>
+                    </div>
+
+                    <!-- Large Circular Gauge -->
+                    <div class="gauge-container" style="margin: 10px 0;">
                         <div class="gauge-circle" id="ieCircleGauge">
                             <div class="gauge-inner">
-                                <span class="gauge-percent" id="iePercentDisplay">--%</span>
-                                <span class="gauge-subtitle">IE GLOBAL</span>
+                                <span class="gauge-percent" id="ieGaugeValue">100%</span>
+                                <span class="gauge-subtitle">IE MENSAL CHN-4</span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="ie-formula-box">
-                        $$\text{IE (\%)} = \left( \frac{\text{Sinais Operacionais}}{\text{Total de Sinais}} \right) \times 100$$
-                        <div class="formula-values">
-                            <span id="formulaOpVal">0</span> / <span id="formulaTotalVal">0</span> Sinais Operacionais
+                    <!-- NORMAM-601 Formulas & Parameters Box -->
+                    <div class="ie-formula-box" style="text-align: left; padding: 12px;">
+                        <div style="font-family: var(--font-tech); font-weight: 700; font-size: 0.8rem; color: var(--accent-gold); margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-calculator"></i> FÓRMULAS NORMAM-601 / DHN:
+                        </div>
+                        <div style="font-size: 0.78rem; line-height: 1.5; color: var(--text-primary); margin-bottom: 8px;">
+                            • <strong>IE Mensal:</strong> $$IE = \left[1 - \left(\frac{A}{B \times 30}\right)\right] \times 100$$<br>
+                            • <strong>IE Anual:</strong> $$IE = \left[1 - \left(\frac{A}{B \times 30 \times D}\right)\right] \times 100$$
+                        </div>
+                        <div style="border-top: 1px dashed var(--navy-700); padding-top: 6px; font-size: 0.75rem; color: var(--text-secondary); display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                            <div><strong>B (Sinais CHN-4):</strong> <span id="paramBVal" style="color: var(--accent-gold-light); font-weight: 700;">0</span></div>
+                            <div><strong>D (Mês Atual):</strong> <span id="paramDVal" style="color: var(--accent-gold-light); font-weight: 700;">8</span></div>
+                            <div><strong>A (Dias Mês):</strong> <span id="paramAMensalVal" style="color: var(--status-op); font-weight: 700;">0 dias</span></div>
+                            <div><strong>A (Dias Ano):</strong> <span id="paramAAnualVal" style="color: var(--status-op); font-weight: 700;">0 dias</span></div>
                         </div>
                     </div>
 
+                    <!-- Breakdown & Standards -->
                     <div class="stat-breakdown">
                         <div class="stat-row">
-                            <span><i class="fa-solid fa-circle-check text-success"></i> Sinais Operacionais:</span>
+                            <span><i class="fa-solid fa-shield-halved text-gold"></i> Meta Brasil (NORMAM-601):</span>
+                            <strong class="text-gold">≥ 95.0%</strong>
+                        </div>
+                        <div class="stat-row">
+                            <span><i class="fa-solid fa-circle-check text-success"></i> Sinais CHN-4 Operacionais:</span>
                             <strong id="statOpCount">0</strong>
                         </div>
                         <div class="stat-row">
-                            <span><i class="fa-solid fa-circle-exclamation text-danger"></i> Sinais Avariados / Apagados:</span>
+                            <span><i class="fa-solid fa-circle-exclamation text-danger"></i> Sinais CHN-4 Avariados no Mês:</span>
                             <strong id="statAvCount">0</strong>
                         </div>
                         <div class="stat-row">
-                            <span><i class="fa-solid fa-anchor text-gold"></i> Bóias (BZ / BC):</span>
+                            <span><i class="fa-solid fa-anchor text-cyan"></i> Bóias CHN-4 (BZ / BC):</span>
                             <strong id="statBoiaCount">0</strong>
                         </div>
                         <div class="stat-row">
-                            <span><i class="fa-solid fa-tower-observation text-cyan"></i> Faróis & Faroletes:</span>
+                            <span><i class="fa-solid fa-tower-observation text-cyan"></i> Faróis e Faroletes CHN-4:</span>
                             <strong id="statFarolCount">0</strong>
-                        </div>
-                        <div class="stat-row">
-                            <span><i class="fa-solid fa-shield-halved"></i> Meta IALA (Recomendado):</span>
-                            <strong class="text-gold">≥ 95.0%</strong>
                         </div>
                     </div>
 
@@ -514,6 +545,10 @@
                                         <th>Estado Atual:</th>
                                         <td id="modalSpecStatus">--</td>
                                     </tr>
+                                    <tr>
+                                        <th>IE Individual (NORMAM-601):</th>
+                                        <td id="modalSpecIeIndividual" style="color: var(--status-op); font-weight: 700;">100.0% (Mensal) | 100.0% (Anual)</td>
+                                    </tr>
                                 </table>
                             </div>
 
@@ -612,7 +647,7 @@
                                 <div class="form-group">
                                     <label for="selectNewStatus">Novo Status Operacional / Ocorrência:</label>
                                     <select id="selectNewStatus" class="form-control">
-                                        <option value="OPERACIONAL">🟢 Operacional</option>
+                                        <option value="OPERACIONAL">🟢 Operacional (Restabelecido)</option>
                                         <option value="Avariado - Apagado">🔴 Avariado - Apagado</option>
                                         <option value="Avariado - À deriva / Fora de posição">🔴 Avariado - À deriva / Fora de posição</option>
                                         <option value="Avariado - Destruído">🔴 Avariado - Destruído</option>
@@ -623,6 +658,14 @@
                                         <option value="Inoperante">🔴 Inoperante</option>
                                         <option value="Avariado - Característica Irregular">🔴 Avariado - Característica Irregular</option>
                                     </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="inputOccurrenceDate">
+                                        <i class="fa-solid fa-calendar-day text-gold"></i> Data Inicial de Cômputo (NORMAM-601):
+                                    </label>
+                                    <input type="datetime-local" id="inputOccurrenceDate" class="form-control" required>
+                                    <small class="help-text text-muted">Data/hora oficial em que o sinal passou a apresentar alteração ou foi efetivamente restabelecido.</small>
                                 </div>
 
                                 <div class="form-group">
