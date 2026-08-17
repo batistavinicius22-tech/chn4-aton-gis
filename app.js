@@ -1343,33 +1343,6 @@ document.addEventListener('DOMContentLoaded', () => {
           .catch(err => console.warn('API REST fallback:', err));
     }
 
-    function openSignalDetail(code) {
-        const signal = signalsData.find(s => s.code === code);
-        if (!signal) return;
-
-        selectedSignal = signal;
-        const modal = document.getElementById('modalSignalDetail');
-        if (!modal) return;
-
-        document.getElementById('modalSignalBadge').textContent = `DH2: ${signal.code}`;
-        document.getElementById('modalSignalName').textContent = signal.name;
-
-        // View Mode Specifications
-        document.getElementById('modalSpecCode').textContent = signal.code;
-        document.getElementById('modalSpecType').textContent = getFullTypeName(signal.type);
-        document.getElementById('modalSpecPosDec').textContent = `${signal.lat.toFixed(5)}, ${signal.lng.toFixed(5)}`;
-        document.getElementById('modalSpecPosGms').textContent = `${toDMS(signal.lat, true)} | ${toDMS(signal.lng, false)}`;
-        document.getElementById('modalSpecChar').textContent = signal.characteristic;
-        document.getElementById('modalSpecRange').textContent = `${signal.rangeNM} NM`;
-        document.getElementById('modalSpecAltitude').textContent = `${signal.altitudeM} m`;
-        document.getElementById('modalSpecJurisdiction').textContent = signal.jurisdiction || 'CHN-4';
-        
-        const specRespEl = document.getElementById('modalSpecResponsavel');
-        if (specRespEl) specRespEl.textContent = signal.responsavel || 'CHN-4';
-
-        const isOp = isOperational(signal.status);
-        document.getElementById('modalSpecStatus').innerHTML = `<span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${signal.status}</span>`;
-
     function updateIndividualSignalIEDisplay(signal) {
         if (!signal) return;
         const isOp = isOperational(signal.status);
