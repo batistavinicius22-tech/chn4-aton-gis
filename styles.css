@@ -196,17 +196,32 @@ html, body {
     background: transparent;
     border: none;
     color: var(--text-muted);
-    padding: 10px 4px;
+    padding: 8px 2px;
     font-family: var(--font-tech);
-    font-size: 0.82rem;
+    font-size: 0.7rem;
     font-weight: 600;
     cursor: pointer;
     border-bottom: 3px solid transparent;
     transition: all 0.2s ease;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 3px;
+    min-width: 0;
+}
+
+.tab-btn i {
+    font-size: 1.05rem;
+}
+
+.tab-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .tab-btn:hover {
@@ -434,6 +449,30 @@ html, body {
     font-weight: 600;
     color: var(--accent-cyan);
 }
+
+/* Signal Type Badges */
+.signal-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-family: var(--font-tech);
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-top: 4px;
+}
+
+.type-farol      { background: rgba(251,191,36,0.18); border: 1px solid #f59e0b; color: #fbbf24; }
+.type-farolete   { background: rgba(251,146,60,0.18); border: 1px solid #f97316; color: #fb923c; }
+.type-boia       { background: rgba(56,189,248,0.15); border: 1px solid #38bdf8; color: #7dd3fc; }
+.type-baliza     { background: rgba(167,139,250,0.18); border: 1px solid #a78bfa; color: #c4b5fd; }
+.type-racon      { background: rgba(52,211,153,0.15); border: 1px solid #34d399; color: #6ee7b7; }
+.type-cardinal   { background: rgba(251,113,133,0.15); border: 1px solid #fb7185; color: #fda4af; }
+.type-luz-porto  { background: rgba(99,102,241,0.18); border: 1px solid #818cf8; color: #a5b4fc; }
+.type-other      { background: rgba(148,163,184,0.12); border: 1px solid #64748b; color: #94a3b8; }
 
 /* Status Badges */
 .badge {

@@ -1078,6 +1078,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function getTypeBadge(type) {
+        const t = (type || '').toUpperCase();
+        if (t.includes('FAROLETE')) return { cls: 'type-farolete', icon: 'fa-tower-observation', label: type };
+        if (t.includes('FAROL'))    return { cls: 'type-farol',     icon: 'fa-tower-observation', label: type };
+        if (t.includes('BZ') || (t.includes('BOIA') && !t.includes('CEGA')) || (t.includes('BÓIA') && !t.includes('CEGA')))
+                                    return { cls: 'type-boia',      icon: 'fa-anchor',            label: type };
+        if (t.includes('BC') || t.includes('CEGA'))
+                                    return { cls: 'type-boia',      icon: 'fa-anchor',            label: type };
+        if (t.includes('BALIZA'))   return { cls: 'type-baliza',    icon: 'fa-sign-hanging',      label: type };
+        if (t.includes('RACON') || t.includes('RADAR'))
+                                    return { cls: 'type-racon',     icon: 'fa-satellite-dish',    label: type };
+        if (t.includes('CARDINAL')) return { cls: 'type-cardinal',  icon: 'fa-diamond',           label: type };
+        if (t.includes('LUZ') || t.includes('PORTO'))
+                                    return { cls: 'type-luz-porto', icon: 'fa-lightbulb',         label: type };
+        return { cls: 'type-other', icon: 'fa-circle-dot', label: type };
+    }
+
     function renderSignalList() {
         const container = document.getElementById('signalList');
         if (!container) return;
@@ -1096,8 +1113,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.className = `signal-card ${isOp ? 'status-op' : 'status-av'}`;
             card.id = `card-${s.code}`;
-            
+
             const respClass = (s.responsavel === 'CPAP') ? 'resp-cpap' : (s.responsavel === 'CPMA') ? 'resp-cpma' : (s.responsavel === 'Extra-MB') ? 'resp-extra' : 'resp-chn4';
+            const tb = getTypeBadge(s.type);
 
             card.innerHTML = `
                 <div class="signal-card-head">
@@ -1108,13 +1126,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="display: flex; gap: 4px; align-items: center;">
                         <span class="responsavel-badge ${respClass}">${s.responsavel || 'CHN-4'}</span>
                         <span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${s.status}</span>
-                        <button type="button" class="btn-card-delete" onclick="event.stopPropagation(); window.deleteSignalFromCard('${s.code}', '${s.name.replace(/'/g, "\\'")}')" title="Excluir Sinal Náutico">
+                        <button type="button" class="btn-card-delete" onclick="event.stopPropagation(); window.deleteSignalFromCard('${s.code}', '${s.name.replace(/'/g, "\\'")}'))" title="Excluir Sinal Náutico">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
                     </div>
                 </div>
                 <div class="signal-card-body">
                     <strong>${s.name}</strong>
+                    <span class="signal-type-badge ${tb.cls}"><i class="fa-solid ${tb.icon}"></i> ${tb.label}</span>
                     <div class="signal-char"><i class="fa-solid fa-lightbulb"></i> ${s.characteristic}</div>
                 </div>
                 <div class="signal-meta">
