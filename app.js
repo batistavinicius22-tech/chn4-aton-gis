@@ -1370,7 +1370,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const isOp = isOperational(signal.status);
         document.getElementById('modalSpecStatus').innerHTML = `<span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${signal.status}</span>`;
 
-        // Individual Signal IE (NORMAM-601 Art 2.49 a/b)
+    function updateIndividualSignalIEDisplay(signal) {
+        if (!signal) return;
+        const isOp = isOperational(signal.status);
         const now = new Date();
         const curYear = now.getFullYear();
         const curMonth = now.getMonth() + 1;
@@ -1381,43 +1383,48 @@ document.addEventListener('DOMContentLoaded', () => {
         const startOfCurMonth = new Date(curYear, curMonth - 1, 1, 0, 0, 0);
         const startOfCurYear = new Date(curYear, 0, 1, 0, 0, 0);
 
-        if (signal.history && Array.isArray(signal.history)) {
-            let inopStart = null;
+        let inoperableStart = null;
+        if (signal.occurrenceStartDate || signal.inoperableSince) {
+            const dt = new Date(signal.occurrenceStartDate || signal.inoperableSince);
+            if (!isNaN(dt.getTime())) inoperableStart = dt;
+        }
+
+        if (signal.history && Array.isArray(signal.history) && signal.history.length > 0) {
             signal.history.forEach(h => {
                 const hDate = new Date(h.startDate || h.date);
                 if (!isNaN(hDate.getTime())) {
                     if (!isOperational(h.status)) {
-                        if (!inopStart || hDate < inopStart) inopStart = hDate;
+                        if (!inoperableStart || hDate < inoperableStart) inoperableStart = hDate;
                     } else {
-                        if (inopStart) {
-                            const inopEnd = hDate;
-                            const startAno = inopStart < startOfCurYear ? startOfCurYear : inopStart;
-                            if (inopEnd > startOfCurYear && startAno < inopEnd) {
-                                const dAno = (inopEnd - startAno) / (1000 * 60 * 60 * 24);
+                        if (inoperableStart) {
+                            const inoperableEnd = hDate;
+                            const startAno = inoperableStart < startOfCurYear ? startOfCurYear : inoperableStart;
+                            if (inoperableEnd > startOfCurYear && startAno < inoperableEnd) {
+                                const dAno = (inoperableEnd - startAno) / (1000 * 60 * 60 * 24);
                                 if (dAno >= 1) sigA_ano += dAno;
                             }
-                            const startMes = inopStart < startOfCurMonth ? startOfCurMonth : inopStart;
-                            if (inopEnd > startOfCurMonth && startMes < inopEnd) {
-                                const dMes = (inopEnd - startMes) / (1000 * 60 * 60 * 24);
+                            const startMes = inoperableStart < startOfCurMonth ? startOfCurMonth : inoperableStart;
+                            if (inoperableEnd > startOfCurMonth && startMes < inoperableEnd) {
+                                const dMes = (inoperableEnd - startMes) / (1000 * 60 * 60 * 24);
                                 if (dMes >= 1) sigA_mes += dMes;
                             }
-                            inopStart = null;
+                            inoperableStart = null;
                         }
                     }
                 }
             });
+        }
 
-            if (!isOp && inopStart) {
-                const startAno = inopStart < startOfCurYear ? startOfCurYear : inopStart;
-                if (now > startAno) {
-                    const dAno = (now - startAno) / (1000 * 60 * 60 * 24);
-                    if (dAno >= 1) sigA_ano += dAno;
-                }
-                const startMes = inopStart < startOfCurMonth ? startOfCurMonth : inopStart;
-                if (now > startMes) {
-                    const dMes = (now - startMes) / (1000 * 60 * 60 * 24);
-                    if (dMes >= 1) sigA_mes += dMes;
-                }
+        if (!isOp && inoperableStart) {
+            const startAno = inoperableStart < startOfCurYear ? startOfCurYear : inoperableStart;
+            if (now > startAno) {
+                const dAno = (now - startAno) / (1000 * 60 * 60 * 24);
+                if (dAno >= 1) sigA_ano += dAno;
+            }
+            const startMes = inoperableStart < startOfCurMonth ? startOfCurMonth : inoperableStart;
+            if (now > startMes) {
+                const dMes = (now - startMes) / (1000 * 60 * 60 * 24);
+                if (dMes >= 1) sigA_mes += dMes;
             }
         }
 
@@ -1429,20 +1436,43 @@ document.addEventListener('DOMContentLoaded', () => {
             individualIeEl.textContent = `${sigIeMes}% (Mensal) | ${sigIeAno}% (Anual)`;
             individualIeEl.style.color = parseFloat(sigIeMes) >= 95 ? 'var(--status-op)' : (parseFloat(sigIeMes) >= 80 ? 'var(--accent-gold)' : 'var(--status-av)');
         }
+    }
+
+    function openSignalDetail(code) {
+        const signal = signalsData.find(s => s.code === code);
+        if (!signal) return;
+
+        selectedSignal = signal;
+        const modal = document.getElementById('modalSignalDetail');
+        if (!modal) return;
+
+        document.getElementById('modalSignalBadge').textContent = `DH2: ${signal.code}`;
+        document.getElementById('modalSignalName').textContent = signal.name;
+
+        // View Mode Specifications
+        document.getElementById('modalSpecCode').textContent = signal.code;
+        document.getElementById('modalSpecType').textContent = getFullTypeName(signal.type);
+        document.getElementById('modalSpecPosDec').textContent = `${signal.lat.toFixed(5)}, ${signal.lng.toFixed(5)}`;
+        document.getElementById('modalSpecPosGms').textContent = `${toDMS(signal.lat, true)} | ${toDMS(signal.lng, false)}`;
+        document.getElementById('modalSpecChar').textContent = signal.characteristic;
+        document.getElementById('modalSpecRange').textContent = `${signal.rangeNM} NM`;
+        document.getElementById('modalSpecAltitude').textContent = `${signal.altitudeM} m`;
+        document.getElementById('modalSpecJurisdiction').textContent = signal.jurisdiction || 'CHN-4';
+        
+        const specRespEl = document.getElementById('modalSpecResponsavel');
+        if (specRespEl) specRespEl.textContent = signal.responsavel || 'CHN-4';
+
+        const isOp = isOperational(signal.status);
+        document.getElementById('modalSpecStatus').innerHTML = `<span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${signal.status}</span>`;
+
+        // Update Individual IE display
+        updateIndividualSignalIEDisplay(signal);
 
         toggleEditSpecMode(false);
         renderSignalPhoto(signal);
 
         document.getElementById('selectNewStatus').value = isOp ? 'OPERACIONAL' : signal.status;
         document.getElementById('textOccurrenceReason').value = '';
-
-        const inputOccDate = document.getElementById('inputOccurrenceDate');
-        if (inputOccDate) {
-            const now = new Date();
-            const pad = (n) => String(n).padStart(2, '0');
-            const localIso = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
-            inputOccDate.value = localIso;
-        }
 
         const btnAvradio = document.getElementById('btnGenerateAvradioModal');
         if (btnAvradio) btnAvradio.style.display = isOp ? 'none' : 'inline-flex';
@@ -1475,11 +1505,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     window.openSignalDetail = openSignalDetail;
 
-    // Direct Occurrence Date Change Listener (Instant Save & Recalculate IE)
-    document.getElementById('directOccurrenceDateInput')?.addEventListener('change', (e) => {
+    // Save Computation Date Button Click Handler (Dedicated Button)
+    document.getElementById('btnSaveComputationDate')?.addEventListener('click', () => {
         if (!selectedSignal) return;
-        const newVal = e.target.value;
-        if (!newVal) return;
+        const directInput = document.getElementById('directOccurrenceDateInput');
+        const newVal = directInput?.value;
+        if (!newVal) {
+            showToast('Por favor, selecione uma data válida!', 'warning');
+            return;
+        }
 
         const formattedDate = newVal.replace('T', ' ');
         selectedSignal.occurrenceStartDate = formattedDate;
@@ -1493,23 +1527,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 date: formattedDate,
                 startDate: formattedDate,
                 status: selectedSignal.status,
-                note: 'Data inicial de cômputo definida pelo operador.'
+                note: 'Data inicial de cômputo ajustada.'
             });
         }
 
+        // 1. Gravar no banco de dados e cache local
         saveSignalToBackend(selectedSignal);
         saveLocalCache();
+
+        // 2. Recalcular IE geral (CHN-4)
         updateIE();
 
-        // Refresh technical specs table in open modal
-        openSignalDetail(selectedSignal.code);
+        // 3. Atualizar exibição de IE individual e histórico
+        updateIndividualSignalIEDisplay(selectedSignal);
+        renderHistoryTimeline(selectedSignal.history);
 
         const savedBadge = document.getElementById('savedIndicatorBadge');
         if (savedBadge) {
-            savedBadge.style.display = 'inline-flex';
-            setTimeout(() => { savedBadge.style.display = 'none'; }, 3000);
+            savedBadge.style.display = 'block';
+            setTimeout(() => { savedBadge.style.display = 'none'; }, 3500);
         }
-        showToast(`Data inicial do sinal ${selectedSignal.code} atualizada! IE recalculado.`, 'success');
+        showToast(`Data inicial do sinal ${selectedSignal.code} gravada com sucesso! Novo IE recalculado.`, 'success');
     });
 
     function renderSignalPhoto(signal) {
@@ -1741,7 +1779,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const newStatus = document.getElementById('selectNewStatus').value;
         const reason = document.getElementById('textOccurrenceReason').value.trim();
-        const occurrenceDateVal = document.getElementById('inputOccurrenceDate')?.value;
+        const directDateVal = document.getElementById('directOccurrenceDateInput')?.value;
 
         if (!reason) {
             showToast('O campo de formalização da ocorrência é obrigatório!', 'danger');
@@ -1750,7 +1788,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const now = new Date();
         const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-        const initialDateStr = occurrenceDateVal ? occurrenceDateVal.replace('T', ' ') : dateStr;
+        const initialDateStr = directDateVal ? directDateVal.replace('T', ' ') : dateStr;
 
         selectedSignal.status = newStatus;
         if (!selectedSignal.history) selectedSignal.history = [];
