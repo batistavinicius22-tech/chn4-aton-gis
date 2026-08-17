@@ -733,6 +733,93 @@ document.addEventListener('DOMContentLoaded', () => {
         return 'OTHER';
     }
 
+    function computeSignalInoperableDays(signal, currentYear, currentMonth) {
+        const isOp = isOperational(signal.status);
+        const now = new Date();
+        const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+        const startOfCurrentMonth = new Date(currentYear, currentMonth - 1, 1, 0, 0, 0);
+        const startOfCurrentYear = new Date(currentYear, 0, 1, 0, 0, 0);
+
+        let inopStart = null;
+        if (signal.occurrenceStartDate || signal.inoperableSince) {
+            const dt = new Date(signal.occurrenceStartDate || signal.inoperableSince);
+            if (!isNaN(dt.getTime())) inopStart = dt;
+        }
+
+        let a_mes = 0;
+        let a_ano = 0;
+
+        if (!isOp) {
+            if (!inopStart) inopStart = startOfCurrentMonth;
+
+            // 1. CÔMPUTO NO MÊS CONSIDERADO (NORMAM-601 Art 2.48 / 2.49)
+            // Se o sinal apagou/avariou antes do início do mês atual (ex: 2025 ou meses anteriores) e segue inoperante:
+            if (inopStart <= startOfCurrentMonth) {
+                a_mes = 30; // 100% dos dias do mês inoperante
+            } else {
+                // Falhou durante o mês atual:
+                const diffMes = (now - inopStart) / (1000 * 60 * 60 * 24);
+                if (diffMes >= 1) {
+                    a_mes = Math.min(30, diffMes);
+                }
+            }
+
+            // 2. CÔMPUTO NO ANO CONSIDERADO (Até mês D)
+            // Se o sinal apagou em ano anterior (ex: 2025) e segue inoperante em 2026:
+            if (inopStart <= startOfCurrentYear) {
+                a_ano = 30 * currentMonth; // 100% de todos os D meses transcorridos
+            } else {
+                // Falhou durante o ano corrente (2026):
+                const inopYear = inopStart.getFullYear();
+                const inopMonth = inopStart.getMonth() + 1;
+
+                if (inopYear === currentYear) {
+                    const fullMonthsInop = Math.max(0, currentMonth - inopMonth);
+                    const daysInStartMonth = new Date(currentYear, inopMonth, 0).getDate();
+                    const daysRemainingInStartMonth = Math.max(0, daysInStartMonth - inopStart.getDate() + 1);
+                    const totalEstimatedDays = (fullMonthsInop * 30) + Math.min(30, daysRemainingInStartMonth);
+                    a_ano = Math.min(30 * currentMonth, totalEstimatedDays);
+                } else {
+                    a_ano = 30 * currentMonth;
+                }
+            }
+        }
+
+        // Histórico de ocorrências passadas (já restabelecidas neste ano/mês)
+        if (signal.history && Array.isArray(signal.history) && signal.history.length > 0) {
+            let histInopStart = null;
+            signal.history.forEach(h => {
+                const hDate = new Date(h.startDate || h.date);
+                if (!isNaN(hDate.getTime())) {
+                    if (!isOperational(h.status)) {
+                        if (!histInopStart || hDate < histInopStart) histInopStart = hDate;
+                    } else if (histInopStart) {
+                        const inopEnd = hDate;
+                        // Contabilizar período já sanado no ano
+                        const startAno = histInopStart < startOfCurrentYear ? startOfCurrentYear : histInopStart;
+                        if (inopEnd > startOfCurrentYear && startAno < inopEnd) {
+                            const dAno = (inopEnd - startAno) / (1000 * 60 * 60 * 24);
+                            if (dAno >= 1 && isOp) a_ano += dAno;
+                        }
+                        // Contabilizar período já sanado no mês
+                        const startMes = histInopStart < startOfCurrentMonth ? startOfCurrentMonth : histInopStart;
+                        if (inopEnd > startOfCurrentMonth && startMes < inopEnd) {
+                            const dMes = (inopEnd - startMes) / (1000 * 60 * 60 * 24);
+                            if (dMes >= 1 && isOp) a_mes += dMes;
+                        }
+                        histInopStart = null;
+                    }
+                }
+            });
+        }
+
+        return {
+            a_mes: Math.min(30, a_mes),
+            a_ano: Math.min(30 * currentMonth, a_ano),
+            daysInMonth
+        };
+    }
+
     function updateIE() {
         const now = new Date();
         const currentYear = now.getFullYear();
@@ -749,68 +836,15 @@ document.addEventListener('DOMContentLoaded', () => {
         let A_anual = 0;
         let chn4AvCount = 0;
 
-        const startOfCurrentMonth = new Date(currentYear, currentMonth - 1, 1, 0, 0, 0);
-        const startOfCurrentYear = new Date(currentYear, 0, 1, 0, 0, 0);
-
         chn4Signals.forEach(signal => {
             const isOp = isOperational(signal.status);
             if (!isOp) {
                 chn4AvCount++;
             }
 
-            // Inspecionar histórico e data inicial de cômputo da ocorrência (NORMAM-601)
-            let inoperableStart = null;
-            if (signal.occurrenceStartDate || signal.inoperableSince) {
-                const directDt = new Date(signal.occurrenceStartDate || signal.inoperableSince);
-                if (!isNaN(directDt.getTime())) inoperableStart = directDt;
-            }
-
-            if (signal.history && Array.isArray(signal.history) && signal.history.length > 0) {
-                signal.history.forEach(h => {
-                    const hDate = new Date(h.startDate || h.date);
-                    if (!isNaN(hDate.getTime())) {
-                        if (!isOperational(h.status)) {
-                            if (!inoperableStart || hDate < inoperableStart) {
-                                inoperableStart = hDate;
-                            }
-                        } else {
-                            // Restabelecido: contabilizar período ocorrido neste ano/mês
-                            if (inoperableStart) {
-                                const inoperableEnd = hDate;
-                                // Período no ano
-                                const startAno = inoperableStart < startOfCurrentYear ? startOfCurrentYear : inoperableStart;
-                                if (inoperableEnd > startOfCurrentYear && startAno < inoperableEnd) {
-                                    const diffDaysAno = (inoperableEnd - startAno) / (1000 * 60 * 60 * 24);
-                                    if (diffDaysAno >= 1) A_anual += diffDaysAno;
-                                }
-                                // Período no mês
-                                const startMes = inoperableStart < startOfCurrentMonth ? startOfCurrentMonth : inoperableStart;
-                                if (inoperableEnd > startOfCurrentMonth && startMes < inoperableEnd) {
-                                    const diffDaysMes = (inoperableEnd - startMes) / (1000 * 60 * 60 * 24);
-                                    if (diffDaysMes >= 1) A_mensal += diffDaysMes;
-                                }
-                                inoperableStart = null;
-                            }
-                        }
-                    }
-                });
-            }
-
-            // Se o sinal continua inoperante no momento:
-            if (!isOp && inoperableStart) {
-                // Período no ano
-                const startAno = inoperableStart < startOfCurrentYear ? startOfCurrentYear : inoperableStart;
-                if (now > startAno) {
-                    const diffDaysAno = (now - startAno) / (1000 * 60 * 60 * 24);
-                    if (diffDaysAno >= 1) A_anual += diffDaysAno;
-                }
-                // Período no mês
-                const startMes = inoperableStart < startOfCurrentMonth ? startOfCurrentMonth : inoperableStart;
-                if (now > startMes) {
-                    const diffDaysMes = (now - startMes) / (1000 * 60 * 60 * 24);
-                    if (diffDaysMes >= 1) A_mensal += diffDaysMes;
-                }
-            }
+            const inopData = computeSignalInoperableDays(signal, currentYear, currentMonth);
+            A_mensal += inopData.a_mes;
+            A_anual += inopData.a_ano;
         });
 
         // Arredondamento para números inteiros ou 1 casa decimal de dias
@@ -830,14 +864,14 @@ document.addEventListener('DOMContentLoaded', () => {
             ieAnualVal = Math.max(0, Math.min(100, (1 - (aAnualRounded / factorAnual)) * 100));
         }
 
-        const ieMensalStr = ieMensalVal.toFixed(1);
-        const ieAnualStr = ieAnualVal.toFixed(1);
+        const ieMensalStr = ieMensalVal.toFixed(2).replace('.', ',');
+        const ieAnualStr = ieAnualVal.toFixed(2).replace('.', ',');
 
         // Header pill
         const headerVal = document.getElementById('headerIeValue');
         if (headerVal) {
             headerVal.textContent = `${ieMensalStr}%`;
-            headerVal.style.color = parseFloat(ieMensalStr) >= 95 ? 'var(--status-op)' : (parseFloat(ieMensalStr) >= 80 ? 'var(--accent-gold)' : 'var(--status-av)');
+            headerVal.style.color = ieMensalVal >= 95 ? 'var(--status-op)' : (ieMensalVal >= 80 ? 'var(--accent-gold)' : 'var(--status-av)');
         }
 
         // Tab IE DOM Elements
@@ -940,11 +974,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const projectedIE = total > 0 ? (projectedOp / total) * 100 : 0;
         const deltaIE = projectedIE - currentIE;
 
-        document.getElementById('simCurrentIe').textContent = `${currentIE.toFixed(1)}%`;
+        document.getElementById('simCurrentIe').textContent = `${currentIE.toFixed(2).replace('.', ',')}%`;
         document.getElementById('simCurrentRatio').textContent = `${currentOp} / ${total} operacionais`;
-        document.getElementById('simProjectedIe').textContent = `${projectedIE.toFixed(1)}%`;
+        document.getElementById('simProjectedIe').textContent = `${projectedIE.toFixed(2).replace('.', ',')}%`;
         document.getElementById('simProjectedRatio').textContent = `${projectedOp} / ${total} operacionais`;
-        document.getElementById('simDeltaIe').textContent = `+${deltaIE.toFixed(1)}%`;
+        document.getElementById('simDeltaIe').textContent = `+${deltaIE.toFixed(2).replace('.', ',')}%`;
         document.getElementById('simCountRepaired').textContent = countSimRepaired;
     }
 
@@ -1345,69 +1379,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateIndividualSignalIEDisplay(signal) {
         if (!signal) return;
-        const isOp = isOperational(signal.status);
         const now = new Date();
         const curYear = now.getFullYear();
         const curMonth = now.getMonth() + 1;
-        const daysInCurrentMonth = new Date(curYear, curMonth, 0).getDate();
 
-        let sigA_mes = 0;
-        let sigA_ano = 0;
-        const startOfCurMonth = new Date(curYear, curMonth - 1, 1, 0, 0, 0);
-        const startOfCurYear = new Date(curYear, 0, 1, 0, 0, 0);
+        const inopData = computeSignalInoperableDays(signal, curYear, curMonth);
+        const sigA_mes = inopData.a_mes;
+        const sigA_ano = inopData.a_ano;
 
-        let inoperableStart = null;
-        if (signal.occurrenceStartDate || signal.inoperableSince) {
-            const dt = new Date(signal.occurrenceStartDate || signal.inoperableSince);
-            if (!isNaN(dt.getTime())) inoperableStart = dt;
-        }
+        // IE Individual NORMAM-601 Art. 2.49
+        // Mensal: IE = [1 - (A / 30)] * 100
+        // Anual:  IE = [1 - (A / (30 * D))] * 100
+        const sigIeMesVal = Math.max(0, Math.min(100, (1 - (sigA_mes / 30)) * 100));
+        const sigIeAnoVal = Math.max(0, Math.min(100, (1 - (sigA_ano / (30 * curMonth))) * 100));
 
-        if (signal.history && Array.isArray(signal.history) && signal.history.length > 0) {
-            signal.history.forEach(h => {
-                const hDate = new Date(h.startDate || h.date);
-                if (!isNaN(hDate.getTime())) {
-                    if (!isOperational(h.status)) {
-                        if (!inoperableStart || hDate < inoperableStart) inoperableStart = hDate;
-                    } else {
-                        if (inoperableStart) {
-                            const inoperableEnd = hDate;
-                            const startAno = inoperableStart < startOfCurYear ? startOfCurYear : inoperableStart;
-                            if (inoperableEnd > startOfCurYear && startAno < inoperableEnd) {
-                                const dAno = (inoperableEnd - startAno) / (1000 * 60 * 60 * 24);
-                                if (dAno >= 1) sigA_ano += dAno;
-                            }
-                            const startMes = inoperableStart < startOfCurMonth ? startOfCurMonth : inoperableStart;
-                            if (inoperableEnd > startOfCurMonth && startMes < inoperableEnd) {
-                                const dMes = (inoperableEnd - startMes) / (1000 * 60 * 60 * 24);
-                                if (dMes >= 1) sigA_mes += dMes;
-                            }
-                            inoperableStart = null;
-                        }
-                    }
-                }
-            });
-        }
-
-        if (!isOp && inoperableStart) {
-            const startAno = inoperableStart < startOfCurYear ? startOfCurYear : inoperableStart;
-            if (now > startAno) {
-                const dAno = (now - startAno) / (1000 * 60 * 60 * 24);
-                if (dAno >= 1) sigA_ano += dAno;
-            }
-            const startMes = inoperableStart < startOfCurMonth ? startOfCurMonth : inoperableStart;
-            if (now > startMes) {
-                const dMes = (now - startMes) / (1000 * 60 * 60 * 24);
-                if (dMes >= 1) sigA_mes += dMes;
-            }
-        }
-
-        const sigIeMes = Math.max(0, Math.min(100, (1 - (sigA_mes / daysInCurrentMonth)) * 100)).toFixed(1);
-        const sigIeAno = Math.max(0, Math.min(100, (1 - (sigA_ano / (30 * curMonth))) * 100)).toFixed(1);
+        const sigIeMes = sigIeMesVal.toFixed(2).replace('.', ',');
+        const sigIeAno = sigIeAnoVal.toFixed(2).replace('.', ',');
 
         const individualIeEl = document.getElementById('modalSpecIeIndividual');
         if (individualIeEl) {
             individualIeEl.textContent = `${sigIeMes}% (Mensal) | ${sigIeAno}% (Anual)`;
-            individualIeEl.style.color = parseFloat(sigIeMes) >= 95 ? 'var(--status-op)' : (parseFloat(sigIeMes) >= 80 ? 'var(--accent-gold)' : 'var(--status-av)');
+            individualIeEl.style.color = sigIeMesVal >= 95 ? 'var(--status-op)' : (sigIeMesVal >= 80 ? 'var(--accent-gold)' : 'var(--status-av)');
         }
     }
 
