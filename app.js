@@ -1342,10 +1342,13 @@ document.addEventListener('DOMContentLoaded', () => {
             altitudeM: typeof signal.altitudeM === 'number' ? signal.altitudeM : parseFloat(signal.altitudeM) || 0,
             jurisdiction: String(signal.jurisdiction || 'CHN-4').trim(),
             responsavel: String(signal.responsavel || 'CHN-4').trim(),
+            occurrenceStartDate: signal.occurrenceStartDate ? String(signal.occurrenceStartDate).trim() : (signal.inoperableSince ? String(signal.inoperableSince).trim() : null),
+            inoperableSince: signal.inoperableSince ? String(signal.inoperableSince).trim() : (signal.occurrenceStartDate ? String(signal.occurrenceStartDate).trim() : null),
             image: signal.image || null,
             photoDate: signal.photoDate || null,
             history: Array.isArray(signal.history) ? signal.history.map(h => ({
                 date: String(h.date || ''),
+                startDate: h.startDate ? String(h.startDate).trim() : null,
                 status: String(h.status || ''),
                 note: String(h.note || '')
             })) : []
@@ -1361,6 +1364,10 @@ document.addEventListener('DOMContentLoaded', () => {
             signalsData[idx] = clean;
         } else {
             signalsData.push(clean);
+        }
+
+        if (selectedSignal && selectedSignal.code === clean.code) {
+            selectedSignal = clean;
         }
 
         if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
