@@ -2076,6 +2076,26 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('editLng').value = selectedSignal.lng;
             document.getElementById('editJurisdiction').value = selectedSignal.jurisdiction || 'CHN-4';
             
+            // Populate Nautical DDM fields
+            const latDDM = decimalToDDM(selectedSignal.lat, true);
+            const lngDDM = decimalToDDM(selectedSignal.lng, false);
+            if (document.getElementById('editLatDeg')) document.getElementById('editLatDeg').value = latDDM.deg;
+            if (document.getElementById('editLatMin')) document.getElementById('editLatMin').value = latDDM.min;
+            if (document.getElementById('editLatHem')) document.getElementById('editLatHem').value = latDDM.hem;
+            if (document.getElementById('editLngDeg')) document.getElementById('editLngDeg').value = lngDDM.deg;
+            if (document.getElementById('editLngMin')) document.getElementById('editLngMin').value = lngDDM.min;
+            if (document.getElementById('editLngHem')) document.getElementById('editLngHem').value = lngDDM.hem;
+
+            // Default coordinate mode to Nautical
+            document.getElementById('btnEditCoordModeGMS')?.classList.add('active');
+            document.getElementById('btnEditCoordModeDecimal')?.classList.remove('active');
+            if (document.getElementById('panelEditCoordGMS')) document.getElementById('panelEditCoordGMS').style.display = 'block';
+            if (document.getElementById('panelEditCoordDecimal')) document.getElementById('panelEditCoordDecimal').style.display = 'none';
+            if (document.getElementById('editLatDeg')) document.getElementById('editLatDeg').required = true;
+            if (document.getElementById('editLngDeg')) document.getElementById('editLngDeg').required = true;
+            if (document.getElementById('editLat')) document.getElementById('editLat').required = false;
+            if (document.getElementById('editLng')) document.getElementById('editLng').required = false;
+
             const editRespEl = document.getElementById('editResponsavel');
             if (editRespEl) editRespEl.value = selectedSignal.responsavel || 'CHN-4';
         } else {
@@ -2103,8 +2123,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const newChar = document.getElementById('editCharacteristic').value.trim();
         const newRange = parseFloat(document.getElementById('editRange').value) || 0;
         const newAlt = parseFloat(document.getElementById('editAltitude').value) || 0;
-        const newLat = parseFloat(document.getElementById('editLat').value) || selectedSignal.lat;
-        const newLng = parseFloat(document.getElementById('editLng').value) || selectedSignal.lng;
+        
+        let newLat = parseFloat(document.getElementById('editLat')?.value);
+        let newLng = parseFloat(document.getElementById('editLng')?.value);
+
+        const isGmsActive = document.getElementById('btnEditCoordModeGMS')?.classList.contains('active');
+        if (isGmsActive) {
+            const latDeg = document.getElementById('editLatDeg')?.value;
+            const latMin = document.getElementById('editLatMin')?.value;
+            const latHem = document.getElementById('editLatHem')?.value;
+            const lngDeg = document.getElementById('editLngDeg')?.value;
+            const lngMin = document.getElementById('editLngMin')?.value;
+            const lngHem = document.getElementById('editLngHem')?.value;
+
+            if (latDeg !== '' && latMin !== '') {
+                newLat = ddmToDecimal(latDeg, latMin, latHem);
+            }
+            if (lngDeg !== '' && lngMin !== '') {
+                newLng = ddmToDecimal(lngDeg, lngMin, lngHem);
+            }
+        }
+
+        if (isNaN(newLat)) newLat = selectedSignal.lat;
+        if (isNaN(newLng)) newLng = selectedSignal.lng;
+
         const newJur = document.getElementById('editJurisdiction').value.trim();
         const newResp = document.getElementById('editResponsavel')?.value || selectedSignal.responsavel || 'CHN-4';
 
@@ -2878,7 +2920,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
     }
 
     // =========================================================================
-    // NÁUTICO (GG° MM.mm' S/N e GGG° MM.mm' W/E) <-> DECIMAL (DD) COORDINATE CONVERTERS
+    // NÁUTICO (GG° MM.mm' S/N e GGG° MM.mm' E/W) <-> DECIMAL (DD) COORDINATE CONVERTERS
     // =========================================================================
     function ddmToDecimal(deg, min, hem) {
         const d = Math.abs(parseFloat(deg) || 0);
@@ -3012,6 +3054,117 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
 
             if (modalAdd) modalAdd.classList.add('active');
             showToast(`Posição capturada: ${formatNauticalCoord(lat, true)} | ${formatNauticalCoord(lng, false)}`, 'success');
+        });
+    });
+
+    // =========================================================================
+    // EDIT FICHA TÉCNICA COORDINATE MODE & SYNC HANDLERS
+    // =========================================================================
+    document.getElementById('btnEditCoordModeGMS')?.addEventListener('click', () => {
+        document.getElementById('btnEditCoordModeGMS')?.classList.add('active');
+        document.getElementById('btnEditCoordModeDecimal')?.classList.remove('active');
+        const panelGms = document.getElementById('panelEditCoordGMS');
+        const panelDec = document.getElementById('panelEditCoordDecimal');
+        if (panelGms) panelGms.style.display = 'block';
+        if (panelDec) panelDec.style.display = 'none';
+        const editLatDeg = document.getElementById('editLatDeg');
+        const editLngDeg = document.getElementById('editLngDeg');
+        if (editLatDeg) editLatDeg.required = true;
+        if (editLngDeg) editLngDeg.required = true;
+        const editLat = document.getElementById('editLat');
+        const editLng = document.getElementById('editLng');
+        if (editLat) editLat.required = false;
+        if (editLng) editLng.required = false;
+    });
+
+    document.getElementById('btnEditCoordModeDecimal')?.addEventListener('click', () => {
+        document.getElementById('btnEditCoordModeDecimal')?.classList.add('active');
+        document.getElementById('btnEditCoordModeGMS')?.classList.remove('active');
+        const panelGms = document.getElementById('panelEditCoordGMS');
+        const panelDec = document.getElementById('panelEditCoordDecimal');
+        if (panelDec) panelDec.style.display = 'block';
+        if (panelGms) panelGms.style.display = 'none';
+        const editLat = document.getElementById('editLat');
+        const editLng = document.getElementById('editLng');
+        if (editLat) editLat.required = true;
+        if (editLng) editLng.required = true;
+        const editLatDeg = document.getElementById('editLatDeg');
+        const editLngDeg = document.getElementById('editLngDeg');
+        if (editLatDeg) editLatDeg.required = false;
+        if (editLngDeg) editLngDeg.required = false;
+    });
+
+    function syncEditGmsToDecimal() {
+        const latDeg = document.getElementById('editLatDeg')?.value;
+        const latMin = document.getElementById('editLatMin')?.value;
+        const latHem = document.getElementById('editLatHem')?.value;
+
+        if (latDeg !== '' && latMin !== '') {
+            const latDec = ddmToDecimal(latDeg, latMin, latHem);
+            const editLatEl = document.getElementById('editLat');
+            if (editLatEl) editLatEl.value = latDec.toFixed(7);
+        }
+
+        const lngDeg = document.getElementById('editLngDeg')?.value;
+        const lngMin = document.getElementById('editLngMin')?.value;
+        const lngHem = document.getElementById('editLngHem')?.value;
+
+        if (lngDeg !== '' && lngMin !== '') {
+            const lngDec = ddmToDecimal(lngDeg, lngMin, lngHem);
+            const editLngEl = document.getElementById('editLng');
+            if (editLngEl) editLngEl.value = lngDec.toFixed(7);
+        }
+    }
+
+    function syncEditDecimalToGms() {
+        const latVal = document.getElementById('editLat')?.value;
+        if (latVal !== '') {
+            const ddm = decimalToDDM(latVal, true);
+            if (document.getElementById('editLatDeg')) document.getElementById('editLatDeg').value = ddm.deg;
+            if (document.getElementById('editLatMin')) document.getElementById('editLatMin').value = ddm.min;
+            if (document.getElementById('editLatHem')) document.getElementById('editLatHem').value = ddm.hem;
+        }
+
+        const lngVal = document.getElementById('editLng')?.value;
+        if (lngVal !== '') {
+            const ddm = decimalToDDM(lngVal, false);
+            if (document.getElementById('editLngDeg')) document.getElementById('editLngDeg').value = ddm.deg;
+            if (document.getElementById('editLngMin')) document.getElementById('editLngMin').value = ddm.min;
+            if (document.getElementById('editLngHem')) document.getElementById('editLngHem').value = ddm.hem;
+        }
+    }
+
+    ['editLatDeg', 'editLatMin', 'editLatHem', 'editLngDeg', 'editLngMin', 'editLngHem'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', syncEditGmsToDecimal);
+        document.getElementById(id)?.addEventListener('change', syncEditGmsToDecimal);
+    });
+
+    ['editLat', 'editLng'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', syncEditDecimalToGms);
+        document.getElementById(id)?.addEventListener('change', syncEditDecimalToGms);
+    });
+
+    // Map Click Point Capture Listener for Edit Form
+    document.getElementById('btnPickPointOnMapEdit')?.addEventListener('click', () => {
+        const modalDetail = document.getElementById('modalSignalDetail');
+        if (modalDetail) modalDetail.classList.remove('active');
+        showToast('Clique no mapa na nova posição do sinal náutico...', 'info');
+        map.getContainer().style.cursor = 'crosshair';
+
+        map.once('click', (e) => {
+            map.getContainer().style.cursor = '';
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+
+            const editLatEl = document.getElementById('editLat');
+            const editLngEl = document.getElementById('editLng');
+            if (editLatEl) editLatEl.value = lat.toFixed(7);
+            if (editLngEl) editLngEl.value = lng.toFixed(7);
+
+            syncEditDecimalToGms();
+
+            if (modalDetail) modalDetail.classList.add('active');
+            showToast(`Nova posição capturada: ${formatNauticalCoord(lat, true)} | ${formatNauticalCoord(lng, false)}`, 'success');
         });
     });
 
