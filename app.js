@@ -386,8 +386,70 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =========================================================================
-    // 4. BANCO DE DADOS CENTRAL COMPARTILHADO (API REST / SIGNALS.JSON / FIRESTORE / LOCALSTORAGE)
+    // 4. BANCO DE DADOS CENTRAL MULTICAMADA (FIRESTORE / REST / INDEXEDDB / LOCALSTORAGE)
     // =========================================================================
+    const IDB_NAME = 'chn4_aton_gis_db';
+    const IDB_VERSION = 1;
+    const IDB_STORE = 'signals_store';
+
+    function openIndexedDB() {
+        return new Promise((resolve) => {
+            if (!window.indexedDB) return resolve(null);
+            try {
+                const req = window.indexedDB.open(IDB_NAME, IDB_VERSION);
+                req.onupgradeneeded = (e) => {
+                    const dbInstance = e.target.result;
+                    if (!dbInstance.objectStoreNames.contains(IDB_STORE)) {
+                        dbInstance.createObjectStore(IDB_STORE, { keyPath: 'id' });
+                    }
+                };
+                req.onsuccess = (e) => resolve(e.target.result);
+                req.onerror = (e) => {
+                    console.warn('IndexedDB unavailable:', e);
+                    resolve(null);
+                };
+            } catch (err) {
+                console.warn('Erro ao abrir IndexedDB:', err);
+                resolve(null);
+            }
+        });
+    }
+
+    async function saveIndexedDB(signals) {
+        try {
+            const idb = await openIndexedDB();
+            if (!idb) return;
+            const tx = idb.transaction(IDB_STORE, 'readwrite');
+            const store = tx.objectStore(IDB_STORE);
+            store.put({ id: 'current_signals', timestamp: Date.now(), data: signals });
+        } catch (e) {
+            console.warn('Erro ao salvar no IndexedDB:', e);
+        }
+    }
+
+    async function loadIndexedDB() {
+        try {
+            const idb = await openIndexedDB();
+            if (!idb) return null;
+            return new Promise((resolve) => {
+                const tx = idb.transaction(IDB_STORE, 'readonly');
+                const store = tx.objectStore(IDB_STORE);
+                const req = store.get('current_signals');
+                req.onsuccess = () => {
+                    if (req.result && Array.isArray(req.result.data) && req.result.data.length > 0) {
+                        resolve(req.result.data);
+                    } else {
+                        resolve(null);
+                    }
+                };
+                req.onerror = () => resolve(null);
+            });
+        } catch (e) {
+            console.warn('Erro ao ler IndexedDB:', e);
+            return null;
+        }
+    }
+
     function saveLocalCache() {
         try {
             const payload = {
@@ -396,8 +458,9 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             localStorage.setItem('chn4_aton_signals_cache', JSON.stringify(payload));
         } catch (e) {
-            console.warn('Erro ao salvar no localStorage:', e);
+            console.warn('Aviso localStorage:', e);
         }
+        saveIndexedDB(signalsData);
     }
 
     function loadLocalCache() {
@@ -413,6 +476,43 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('Erro ao ler localStorage:', e);
         }
         return null;
+    }
+
+    // Client-side image resizer/compressor to ensure crystal-clear display under Firestore (<1MB) & storage limits
+    function optimizeImage(file, maxWidth = 1280, maxHeight = 1280, quality = 0.82) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > maxWidth || height > maxHeight) {
+                        if (width / height > maxWidth / maxHeight) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        } else {
+                            width = Math.round((width * maxHeight) / height);
+                            height = maxHeight;
+                        }
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                    resolve(dataUrl);
+                };
+                img.onerror = () => reject(new Error('Falha ao processar arquivo de imagem'));
+                img.src = e.target.result;
+            };
+            reader.onerror = () => reject(new Error('Falha ao ler arquivo'));
+            reader.readAsDataURL(file);
+        });
     }
 
     async function loadSignalsFromBackend() {
@@ -451,12 +551,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Fallback para cache local no navegador
+        // Fallback para IndexedDB e cache local no navegador
         if (!loadedSignals) {
-            const cached = loadLocalCache();
-            if (cached && cached.length > 0) {
-                loadedSignals = cached;
-                console.log(`✅ Carregados ${cached.length} sinais do cache local do navegador.`);
+            const idbSignals = await loadIndexedDB();
+            if (idbSignals && idbSignals.length > 0) {
+                loadedSignals = idbSignals;
+                console.log(`✅ Carregados ${idbSignals.length} sinais do IndexedDB com fotos persistidas.`);
+            } else {
+                const cached = loadLocalCache();
+                if (cached && cached.length > 0) {
+                    loadedSignals = cached;
+                    console.log(`✅ Carregados ${cached.length} sinais do cache local do navegador.`);
+                }
             }
         }
 
@@ -1370,18 +1476,24 @@ document.addEventListener('DOMContentLoaded', () => {
             selectedSignal = clean;
         }
 
+        // 1. Sempre salva localmente no Cache / IndexedDB
+        saveLocalCache();
+
+        // 2. Persiste no Firebase Cloud Firestore na nuvem (se ativo)
         if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
             db.collection("signals").doc(clean.code).set(clean, { merge: true })
-                .then(() => console.log(`🔥 Firestore: Sinal ${clean.code} salvo na nuvem com sucesso!`))
+                .then(() => console.log(`🔥 Firestore: Sinal ${clean.code} (com foto/dados) salvo na nuvem com sucesso!`))
                 .catch(err => console.error("Erro ao salvar no Firestore:", err));
         }
 
+        // 3. Persiste na API REST local (se o servidor node/python estiver rodando)
         fetch(`/api/signals/${encodeURIComponent(clean.code)}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(clean)
-        }).then(r => console.log(`💾 REST API: Sinal ${clean.code} salvo localmente!`))
-          .catch(err => console.warn('API REST fallback:', err));
+        }).then(r => {
+            if (r.ok) console.log(`💾 REST API: Sinal ${clean.code} gravado em signals.json!`);
+        }).catch(err => console.warn('API REST fallback:', err));
     }
 
     function updateIndividualSignalIEDisplay(signal) {
@@ -1730,33 +1842,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Attach/Upload Signal Photo Listener
     const inputPhotoFile = document.getElementById('inputPhotoFile');
-    document.getElementById('btnTriggerPhotoUpload').addEventListener('click', () => inputPhotoFile.click());
+    document.getElementById('btnTriggerPhotoUpload')?.addEventListener('click', () => inputPhotoFile?.click());
 
-    inputPhotoFile.addEventListener('change', async (e) => {
+    inputPhotoFile?.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file || !selectedSignal) return;
 
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-            selectedSignal.image = event.target.result;
+        showToast('Processando e otimizando foto para o banco de dados...', 'info');
+
+        try {
+            const optimizedBase64 = await optimizeImage(file, 1280, 1280, 0.82);
+            selectedSignal.image = optimizedBase64;
             const now = new Date();
-            selectedSignal.photoDate = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+            selectedSignal.photoDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
 
-            // Persist to REST API
-            try {
-                await fetch(`/api/signals/${encodeURIComponent(selectedSignal.code)}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(selectedSignal)
-                });
-            } catch (err) {
-                console.warn('API REST upload photo fallback:', err);
-            }
+            // Salva na memória, Firestore, LocalStorage, IndexedDB e REST API
+            saveSignalToBackend(selectedSignal);
 
+            // Atualiza a interface gráfica imediatamente
             renderSignalPhoto(selectedSignal);
-            showToast('Foto do sinal salva no banco de dados!', 'success');
-        };
-        reader.readAsDataURL(file);
+            showToast(`Foto do sinal ${selectedSignal.code} salva permanentemente no banco de dados e na nuvem!`, 'success');
+        } catch (err) {
+            console.error('Erro ao processar imagem:', err);
+            showToast('Erro ao processar a imagem anexada.', 'danger');
+        } finally {
+            inputPhotoFile.value = '';
+        }
     });
 
     function renderHistoryTimeline(history) {
@@ -2292,7 +2403,10 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
 
                     if (selectedSignal) {
                         const updated = signalsData.find(s => s.code === selectedSignal.code);
-                        if (updated) selectedSignal = updated;
+                        if (updated) {
+                            selectedSignal = updated;
+                            renderSignalPhoto(selectedSignal);
+                        }
                     }
                     console.log(`🔥 Cloud Firestore: ${signalsData.length} sinais sincronizados em tempo real.`);
                 } else {
@@ -2344,7 +2458,10 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                         
                         if (selectedSignal) {
                             const updated = signalsData.find(s => s.code === selectedSignal.code);
-                            if (updated) selectedSignal = updated;
+                            if (updated) {
+                                selectedSignal = updated;
+                                renderSignalPhoto(selectedSignal);
+                            }
                         }
 
                         showToast('📢 Atualização remota recebida! Base sincronizada.', 'info');
