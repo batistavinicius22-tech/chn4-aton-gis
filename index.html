@@ -314,11 +314,11 @@
                             <div style="font-size: 0.7rem; color: var(--text-secondary);" id="ieMensalSubtitle">Mês 8 (Agosto)</div>
                         </div>
 
-                        <!-- IE Anual -->
+                        <!-- IE Anual (12 Últimos Meses) -->
                         <div style="background: var(--navy-950); border: 1px solid var(--navy-700); border-radius: var(--radius-sm); padding: 12px; text-align: center;">
-                            <div style="font-family: var(--font-tech); font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">IE Anual (CHN-4)</div>
+                            <div style="font-family: var(--font-tech); font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">IE Anual (12 Últimos Meses)</div>
                             <div id="ieAnualDisplay" style="font-family: var(--font-tech); font-size: 1.8rem; font-weight: 700; color: var(--status-op); margin: 4px 0;">100.0%</div>
-                            <div style="font-size: 0.7rem; color: var(--text-secondary);" id="ieAnualSubtitle">Acumulado 2026 (Até Mês 8)</div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary);" id="ieAnualSubtitle">Janela de 12 Meses Móveis</div>
                         </div>
                     </div>
 
@@ -338,14 +338,14 @@
                             <i class="fa-solid fa-calculator"></i> FÓRMULAS NORMAM-601 / DHN:
                         </div>
                         <div style="font-size: 0.78rem; line-height: 1.5; color: var(--text-primary); margin-bottom: 8px;">
-                            • <strong>IE Mensal:</strong> $$IE = \left[1 - \left(\frac{A}{B \times 30}\right)\right] \times 100$$<br>
-                            • <strong>IE Anual:</strong> $$IE = \left[1 - \left(\frac{A}{B \times 30 \times D}\right)\right] \times 100$$
+                            • <strong>IE Mensal (Mês Corrente):</strong> $$IE = \left[1 - \left(\frac{A_{mês}}{B \times 30}\right)\right] \times 100$$<br>
+                            • <strong>IE Anual (12 Meses Móveis):</strong> $$IE = \left[1 - \left(\frac{A_{12m}}{B \times 360}\right)\right] \times 100$$
                         </div>
                         <div style="border-top: 1px dashed var(--navy-700); padding-top: 6px; font-size: 0.75rem; color: var(--text-secondary); display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
                             <div><strong>B (Sinais CHN-4):</strong> <span id="paramBVal" style="color: var(--accent-gold-light); font-weight: 700;">0</span></div>
-                            <div><strong>D (Mês Atual):</strong> <span id="paramDVal" style="color: var(--accent-gold-light); font-weight: 700;">8</span></div>
-                            <div><strong>A (Dias Mês):</strong> <span id="paramAMensalVal" style="color: var(--status-op); font-weight: 700;">0 dias</span></div>
-                            <div><strong>A (Dias Ano):</strong> <span id="paramAAnualVal" style="color: var(--status-op); font-weight: 700;">0 dias</span></div>
+                            <div><strong>Período Anual:</strong> <span id="paramDVal" style="color: var(--accent-gold-light); font-weight: 700;">12 meses</span></div>
+                            <div><strong>A (Inop. Mês):</strong> <span id="paramAMensalVal" style="color: var(--status-op); font-weight: 700;">0 dias</span></div>
+                            <div><strong>A (Inop. 12 Meses):</strong> <span id="paramAAnualVal" style="color: var(--status-op); font-weight: 700;">0 dias</span></div>
                         </div>
                     </div>
 
