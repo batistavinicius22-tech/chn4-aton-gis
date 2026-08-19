@@ -345,14 +345,24 @@ document.addEventListener('DOMContentLoaded', () => {
         return Math.round(bearing);
     }
 
+    function formatNauticalCoord(val, isLat) {
+        const num = parseFloat(val);
+        if (isNaN(num)) return '--';
+        const isNegative = num < 0;
+        const abs = Math.abs(num);
+        const deg = Math.floor(abs);
+        const min = (abs - deg) * 60;
+        
+        const degPad = isLat ? 2 : 3;
+        const degStr = String(deg).padStart(degPad, '0');
+        const minStr = min.toFixed(2).padStart(5, '0');
+        const dir = isLat ? (isNegative ? 'S' : 'N') : (isNegative ? 'W' : 'E');
+        
+        return `${degStr}° ${minStr}' ${dir}`;
+    }
+
     function toDMS(deg, isLat) {
-        const absolute = Math.abs(deg);
-        const degrees = Math.floor(absolute);
-        const minutesNotTruncated = (absolute - degrees) * 60;
-        const minutes = Math.floor(minutesNotTruncated);
-        const seconds = ((minutesNotTruncated - minutes) * 60).toFixed(1);
-        const dir = isLat ? (deg >= 0 ? 'N' : 'S') : (deg >= 0 ? 'E' : 'W');
-        return `${degrees}° ${minutes}' ${seconds}" ${dir}`;
+        return formatNauticalCoord(deg, isLat);
     }
 
     function getFormattedTimestampZ() {
@@ -1332,7 +1342,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h3 style="font-family: var(--font-tech); margin: 4px 0 2px 0; font-size: 1.05rem; color: #0f172a;">${signal.code} - ${signal.name}</h3>
                     <p style="margin: 3px 0; font-size: 0.82rem; color: #334155;"><strong>Tipo:</strong> ${fullType}</p>
                     <p style="margin: 3px 0; font-size: 0.82rem; color: #334155;"><strong>Carac:</strong> ${signal.characteristic}</p>
-                    <p style="margin: 3px 0 8px 0; font-size: 0.82rem; color: #334155;"><strong>Pos:</strong> ${toDMS(signal.lat, true)} ${toDMS(signal.lng, false)}</p>
+                    <p style="margin: 3px 0 8px 0; font-size: 0.82rem; color: #334155;"><strong>Posição:</strong> <span style="font-weight: 600; color: #0f172a;">${formatNauticalCoord(signal.lat, true)} | ${formatNauticalCoord(signal.lng, false)}</span></p>
                     <div style="display: flex; gap: 6px;">
                         <button type="button" onclick="window.openSignalDetail('${signal.code}')" style="background: #1e3a66; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px;">
                             <i class="fa-solid fa-file-lines"></i> Ficha DH2
@@ -1656,6 +1666,53 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // =========================================================================
+    // LIGHTBOX ZOOM & PAN SYSTEM
+    // =========================================================================
+    let lightboxZoom = 1;
+    let lightboxPanX = 0;
+    let lightboxPanY = 0;
+    let isLightboxPanning = false;
+    let lightboxStartX = 0;
+    let lightboxStartY = 0;
+
+    function updateLightboxTransform(smooth = true) {
+        const img = document.getElementById('lightboxImg');
+        const container = document.getElementById('lightboxImgContainer');
+        const badge = document.getElementById('lightboxZoomLevel');
+        if (!img) return;
+
+        if (badge) badge.textContent = `${Math.round(lightboxZoom * 100)}%`;
+        img.style.transition = smooth ? 'transform 0.12s cubic-bezier(0.16, 1, 0.3, 1)' : 'none';
+        img.style.transform = `translate(${lightboxPanX}px, ${lightboxPanY}px) scale(${lightboxZoom})`;
+
+        if (container) {
+            if (lightboxZoom > 1.05) {
+                container.classList.add('can-pan');
+            } else {
+                container.classList.remove('can-pan', 'panning');
+                lightboxPanX = 0;
+                lightboxPanY = 0;
+            }
+        }
+    }
+
+    function setLightboxZoom(newZoom, smooth = true) {
+        lightboxZoom = Math.max(0.6, Math.min(newZoom, 6.0));
+        if (lightboxZoom <= 1.05) {
+            lightboxPanX = 0;
+            lightboxPanY = 0;
+        }
+        updateLightboxTransform(smooth);
+    }
+
+    function resetLightboxZoom() {
+        lightboxZoom = 1;
+        lightboxPanX = 0;
+        lightboxPanY = 0;
+        updateLightboxTransform(true);
+    }
+
     function openPhotoLightbox() {
         if (!selectedSignal || !selectedSignal.image) return;
         
@@ -1667,6 +1724,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const btnDownload = document.getElementById('lightboxBtnDownload');
 
         if (!modal || !img) return;
+
+        resetLightboxZoom();
 
         img.src = selectedSignal.image;
         if (badge) badge.textContent = `DH2: ${selectedSignal.code || '--'}`;
@@ -1681,6 +1740,65 @@ document.addEventListener('DOMContentLoaded', () => {
 
         modal.classList.add('active');
     }
+
+    // Zoom Controls Events
+    document.getElementById('btnLightboxZoomIn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setLightboxZoom(lightboxZoom + 0.35);
+    });
+
+    document.getElementById('btnLightboxZoomOut')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setLightboxZoom(lightboxZoom - 0.35);
+    });
+
+    document.getElementById('btnLightboxResetZoom')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        resetLightboxZoom();
+    });
+
+    // Wheel Zoom on Lightbox Body / Container
+    const lightboxBodyEl = document.getElementById('lightboxBody');
+    lightboxBodyEl?.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.25 : -0.25;
+        setLightboxZoom(lightboxZoom + delta, false);
+    }, { passive: false });
+
+    // Double Click to Toggle 2x Zoom
+    const lightboxImgEl = document.getElementById('lightboxImg');
+    lightboxImgEl?.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        if (lightboxZoom > 1.2) {
+            resetLightboxZoom();
+        } else {
+            setLightboxZoom(2.2);
+        }
+    });
+
+    // Drag to Pan when Zoomed
+    const lightboxImgContainerEl = document.getElementById('lightboxImgContainer');
+    lightboxImgContainerEl?.addEventListener('mousedown', (e) => {
+        if (lightboxZoom <= 1.05) return;
+        isLightboxPanning = true;
+        lightboxStartX = e.clientX - lightboxPanX;
+        lightboxStartY = e.clientY - lightboxPanY;
+        lightboxImgContainerEl.classList.add('panning');
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isLightboxPanning) return;
+        lightboxPanX = e.clientX - lightboxStartX;
+        lightboxPanY = e.clientY - lightboxStartY;
+        updateLightboxTransform(false);
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (isLightboxPanning) {
+            isLightboxPanning = false;
+            document.getElementById('lightboxImgContainer')?.classList.remove('panning');
+        }
+    });
 
     // Bind click to expand photo in DH2
     document.getElementById('signalImgDisplay')?.addEventListener('click', openPhotoLightbox);
@@ -2305,11 +2423,25 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
     document.getElementById('formAddSignal')?.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const lat = parseFloat(document.getElementById('addLat').value);
-        const lng = parseFloat(document.getElementById('addLng').value);
+        let lat = parseFloat(document.getElementById('addLat')?.value);
+        let lng = parseFloat(document.getElementById('addLng')?.value);
 
         if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
-            showToast('Informe as coordenadas válidas.', 'danger');
+            const latDeg = document.getElementById('addLatDeg')?.value;
+            const latMin = document.getElementById('addLatMin')?.value;
+            const latHem = document.getElementById('addLatHem')?.value;
+            const lngDeg = document.getElementById('addLngDeg')?.value;
+            const lngMin = document.getElementById('addLngMin')?.value;
+            const lngHem = document.getElementById('addLngHem')?.value;
+
+            if (latDeg !== '' && latMin !== '' && lngDeg !== '' && lngMin !== '') {
+                lat = ddmToDecimal(latDeg, latMin, latHem);
+                lng = ddmToDecimal(lngDeg, lngMin, lngHem);
+            }
+        }
+
+        if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
+            showToast('Informe as coordenadas de posição válidas.', 'danger');
             return;
         }
 
@@ -2481,33 +2613,53 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
     }
 
     // =========================================================================
-    // GMS (GG° MM' SS") <-> DECIMAL (DD) COORDINATE CONVERTERS
+    // NÁUTICO (GG° MM.mm' S/N e GGG° MM.mm' W/E) <-> DECIMAL (DD) COORDINATE CONVERTERS
     // =========================================================================
-    function gmsToDecimal(deg, min, sec, hem) {
+    function ddmToDecimal(deg, min, hem) {
         const d = Math.abs(parseFloat(deg) || 0);
         const m = Math.abs(parseFloat(min) || 0);
-        const s = Math.abs(parseFloat(sec) || 0);
-        let dec = d + (m / 60) + (s / 3600);
+        let dec = d + (m / 60);
         if (hem === 'S' || hem === 'W') dec = -dec;
         return dec;
     }
 
-    function decimalToGMS(dec, isLat) {
+    function decimalToDDM(dec, isLat) {
         const num = parseFloat(dec);
-        if (isNaN(num)) return { deg: '', min: '', sec: '', hem: isLat ? 'S' : 'W' };
-        const hem = num < 0 ? (isLat ? 'S' : 'W') : (isLat ? 'N' : 'E');
+        if (isNaN(num)) return { deg: '', min: '', hem: isLat ? 'S' : 'W' };
+        const isNegative = num < 0;
+        const hem = isNegative ? (isLat ? 'S' : 'W') : (isLat ? 'N' : 'E');
         const abs = Math.abs(num);
         const deg = Math.floor(abs);
-        const remMin = (abs - deg) * 60;
-        const min = Math.floor(remMin);
-        const sec = (remMin - min) * 60;
+        const min = (abs - deg) * 60;
+        const degPad = isLat ? 2 : 3;
+        const degStr = String(deg).padStart(degPad, '0');
+        const minStr = min.toFixed(2).padStart(5, '0');
         return {
-            deg: deg,
-            min: min,
-            sec: parseFloat(sec.toFixed(6)),
-            hem: hem
+            deg: degStr,
+            min: minStr,
+            hem: hem,
+            formatted: `${degStr}° ${minStr}' ${hem}`
         };
     }
+
+    // Aliases for compatibility
+    const gmsToDecimal = ddmToDecimal;
+    const decimalToGMS = decimalToDDM;
+
+    document.getElementById('btnCoordModeGMS')?.addEventListener('click', () => {
+        document.getElementById('btnCoordModeGMS')?.classList.add('active');
+        document.getElementById('btnCoordModeDecimal')?.classList.remove('active');
+        document.getElementById('panelCoordGMS').style.display = 'block';
+        document.getElementById('panelCoordDecimal').style.display = 'none';
+        const addLatDeg = document.getElementById('addLatDeg');
+        const addLngDeg = document.getElementById('addLngDeg');
+        if (addLatDeg) addLatDeg.required = true;
+        if (addLngDeg) addLngDeg.required = true;
+        const addLat = document.getElementById('addLat');
+        const addLng = document.getElementById('addLng');
+        if (addLat) addLat.required = false;
+        if (addLng) addLng.required = false;
+    });
 
     document.getElementById('btnCoordModeDecimal')?.addEventListener('click', () => {
         document.getElementById('btnCoordModeDecimal')?.classList.add('active');
@@ -2518,38 +2670,29 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         const addLng = document.getElementById('addLng');
         if (addLat) addLat.required = true;
         if (addLng) addLng.required = true;
-    });
-
-    document.getElementById('btnCoordModeGMS')?.addEventListener('click', () => {
-        document.getElementById('btnCoordModeGMS')?.classList.add('active');
-        document.getElementById('btnCoordModeDecimal')?.classList.remove('active');
-        document.getElementById('panelCoordGMS').style.display = 'block';
-        document.getElementById('panelCoordDecimal').style.display = 'none';
-        const addLat = document.getElementById('addLat');
-        const addLng = document.getElementById('addLng');
-        if (addLat) addLat.required = false;
-        if (addLng) addLng.required = false;
+        const addLatDeg = document.getElementById('addLatDeg');
+        const addLngDeg = document.getElementById('addLngDeg');
+        if (addLatDeg) addLatDeg.required = false;
+        if (addLngDeg) addLngDeg.required = false;
     });
 
     function syncGmsToDecimal() {
         const latDeg = document.getElementById('addLatDeg')?.value;
         const latMin = document.getElementById('addLatMin')?.value;
-        const latSec = document.getElementById('addLatSec')?.value;
         const latHem = document.getElementById('addLatHem')?.value;
 
-        if (latDeg !== '' || latMin !== '' || latSec !== '') {
-            const latDec = gmsToDecimal(latDeg, latMin, latSec, latHem);
+        if (latDeg !== '' && latMin !== '') {
+            const latDec = ddmToDecimal(latDeg, latMin, latHem);
             const addLatEl = document.getElementById('addLat');
             if (addLatEl) addLatEl.value = latDec.toFixed(7);
         }
 
         const lngDeg = document.getElementById('addLngDeg')?.value;
         const lngMin = document.getElementById('addLngMin')?.value;
-        const lngSec = document.getElementById('addLngSec')?.value;
         const lngHem = document.getElementById('addLngHem')?.value;
 
-        if (lngDeg !== '' || lngMin !== '' || lngSec !== '') {
-            const lngDec = gmsToDecimal(lngDeg, lngMin, lngSec, lngHem);
+        if (lngDeg !== '' && lngMin !== '') {
+            const lngDec = ddmToDecimal(lngDeg, lngMin, lngHem);
             const addLngEl = document.getElementById('addLng');
             if (addLngEl) addLngEl.value = lngDec.toFixed(7);
         }
@@ -2558,24 +2701,22 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
     function syncDecimalToGms() {
         const latVal = document.getElementById('addLat')?.value;
         if (latVal !== '') {
-            const gms = decimalToGMS(latVal, true);
-            if (document.getElementById('addLatDeg')) document.getElementById('addLatDeg').value = gms.deg;
-            if (document.getElementById('addLatMin')) document.getElementById('addLatMin').value = gms.min;
-            if (document.getElementById('addLatSec')) document.getElementById('addLatSec').value = gms.sec;
-            if (document.getElementById('addLatHem')) document.getElementById('addLatHem').value = gms.hem;
+            const ddm = decimalToDDM(latVal, true);
+            if (document.getElementById('addLatDeg')) document.getElementById('addLatDeg').value = ddm.deg;
+            if (document.getElementById('addLatMin')) document.getElementById('addLatMin').value = ddm.min;
+            if (document.getElementById('addLatHem')) document.getElementById('addLatHem').value = ddm.hem;
         }
 
         const lngVal = document.getElementById('addLng')?.value;
         if (lngVal !== '') {
-            const gms = decimalToGMS(lngVal, false);
-            if (document.getElementById('addLngDeg')) document.getElementById('addLngDeg').value = gms.deg;
-            if (document.getElementById('addLngMin')) document.getElementById('addLngMin').value = gms.min;
-            if (document.getElementById('addLngSec')) document.getElementById('addLngSec').value = gms.sec;
-            if (document.getElementById('addLngHem')) document.getElementById('addLngHem').value = gms.hem;
+            const ddm = decimalToDDM(lngVal, false);
+            if (document.getElementById('addLngDeg')) document.getElementById('addLngDeg').value = ddm.deg;
+            if (document.getElementById('addLngMin')) document.getElementById('addLngMin').value = ddm.min;
+            if (document.getElementById('addLngHem')) document.getElementById('addLngHem').value = ddm.hem;
         }
     }
 
-    ['addLatDeg', 'addLatMin', 'addLatSec', 'addLatHem', 'addLngDeg', 'addLngMin', 'addLngSec', 'addLngHem'].forEach(id => {
+    ['addLatDeg', 'addLatMin', 'addLatHem', 'addLngDeg', 'addLngMin', 'addLngHem'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', syncGmsToDecimal);
         document.getElementById(id)?.addEventListener('change', syncGmsToDecimal);
     });
@@ -2583,6 +2724,30 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
     ['addLat', 'addLng'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', syncDecimalToGms);
         document.getElementById(id)?.addEventListener('change', syncDecimalToGms);
+    });
+
+    // Map Click Point Capture Listener
+    document.getElementById('btnPickPointOnMap')?.addEventListener('click', () => {
+        const modalAdd = document.getElementById('modalAddSignal');
+        if (modalAdd) modalAdd.classList.remove('active');
+        showToast('Clique no mapa na posição exata do novo sinal náutico...', 'info');
+        map.getContainer().style.cursor = 'crosshair';
+
+        map.once('click', (e) => {
+            map.getContainer().style.cursor = '';
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+
+            const addLatEl = document.getElementById('addLat');
+            const addLngEl = document.getElementById('addLng');
+            if (addLatEl) addLatEl.value = lat.toFixed(7);
+            if (addLngEl) addLngEl.value = lng.toFixed(7);
+
+            syncDecimalToGms();
+
+            if (modalAdd) modalAdd.classList.add('active');
+            showToast(`Posição capturada: ${formatNauticalCoord(lat, true)} | ${formatNauticalCoord(lng, false)}`, 'success');
+        });
     });
 
     // =========================================================================

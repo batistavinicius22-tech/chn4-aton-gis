@@ -387,101 +387,6 @@
 
     </div>
 
-    <!-- MODAL DE CADASTRO MANUAL DE NOVO SINAL -->
-    <div class="modal-backdrop" id="modalAddSignal">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <div class="modal-title-wrapper">
-                        <span class="badge badge-navy">NOVO REGISTRO ATON</span>
-                        <h2>Cadastrar Novo Sinal Náutico</h2>
-                    </div>
-                    <button class="modal-close" data-close="modalAddSignal">&times;</button>
-                </div>
-
-                <form id="formAddSignal">
-                    <div class="modal-body">
-                        <div class="form-grid-2">
-                            <div class="form-group">
-                                <label for="addCode">Código DH2 / Identificação:</label>
-                                <input type="text" id="addCode" class="form-control" placeholder="ex: PA-30 ou CHN-010" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="addName">Nome do Sinal Náutico:</label>
-                                <input type="text" id="addName" class="form-control" placeholder="ex: Farolete de Jurupari" required>
-                            </div>
-                        </div>
-
-                        <div class="form-grid-2">
-                            <div class="form-group">
-                                <label for="addType">Tipo de Sinal:</label>
-                                <select id="addType" class="form-control" required>
-                                    <option value="Farol">Farol</option>
-                                    <option value="Farolete">Farolete</option>
-                                    <option value="BZ (Bóia Luminosa)">Bóia Luminosa (BZ)</option>
-                                    <option value="BC (Bóia Cega)">Bóia Cega (BC)</option>
-                                    <option value="Baliza">Baliza</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="addStatus">Status Operacional Inicial:</label>
-                                <select id="addStatus" class="form-control" required>
-                                    <option value="OPERACIONAL">🟢 Operacional</option>
-                                    <option value="APAGADO">🔴 Avariado - Apagado</option>
-                                    <option value="A DERIVA">🔴 Avariado - À Deriva / Fora de Posição</option>
-                                    <option value="DESTRUÍDO">🔴 Avariado - Estrutura Danificada</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-grid-2">
-                            <div class="form-group">
-                                <label for="addLat">Latitude Decimal:</label>
-                                <input type="number" id="addLat" class="form-control" step="0.000001" placeholder="-1.350000" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="addLng">Longitude Decimal:</label>
-                                <input type="number" id="addLng" class="form-control" step="0.000001" placeholder="-48.500000" required>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <button type="button" class="btn btn-outline btn-sm btn-block" id="btnPickPointOnMap">
-                                <i class="fa-solid fa-crosshairs"></i> Ou Clique no Mapa p/ Capturar Posição
-                            </button>
-                        </div>
-
-                        <div class="form-grid-3">
-                            <div class="form-group">
-                                <label for="addCharacteristic">Característica:</label>
-                                <input type="text" id="addCharacteristic" class="form-control" placeholder="Lp. V. 4s 5m 6NM" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="addRange">Alcance (NM):</label>
-                                <input type="number" id="addRange" class="form-control" step="0.1" value="6" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="addAltitude">Altitude (m):</label>
-                                <input type="number" id="addAltitude" class="form-control" step="0.1" value="5" required>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="addJurisdiction">Jurisdição / Organização Responsável:</label>
-                            <input type="text" id="addJurisdiction" class="form-control" value="CHN-4 / 4º Distrito Naval" required>
-                        </div>
-                    </div>
-
-                    <div class="modal-footer">
-                        <button type="submit" class="btn btn-primary btn-block">
-                            <i class="fa-solid fa-floppy-disk"></i> Salvar Novo Sinal Náutico
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
     <!-- MODAL 1: DETALHES DO SINAL (DH2) + EDICAO & FOTO -->
     <div class="modal-backdrop" id="modalSignalDetail">
         <div class="modal-dialog modal-lg">
@@ -518,12 +423,12 @@
                                         <td id="modalSpecType">--</td>
                                     </tr>
                                     <tr>
-                                        <th>Posição Decimal:</th>
-                                        <td id="modalSpecPosDec">--</td>
+                                        <th>Posição Náutica:</th>
+                                        <td id="modalSpecPosGms" class="text-highlight" style="font-size: 0.92rem; font-weight: 700;">--</td>
                                     </tr>
                                     <tr>
-                                        <th>Posição GMS:</th>
-                                        <td id="modalSpecPosGms">--</td>
+                                        <th>Posição Decimal:</th>
+                                        <td id="modalSpecPosDec" style="color: var(--text-secondary); font-size: 0.82rem;">--</td>
                                     </tr>
                                     <tr>
                                         <th>Característica Luminosa:</th>
@@ -899,60 +804,56 @@
                                 <div class="form-section">
                                     <h4 class="form-section-title"><i class="fa-solid fa-map-pin"></i> Posição & Dados Técnicos</h4>
                                     <div class="form-group">
-                                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                             <label style="margin: 0;"><i class="fa-solid fa-compass"></i> Coordenadas da Posição *</label>
-                                             <div class="coord-mode-toggle">
-                                                 <button type="button" id="btnCoordModeDecimal" class="coord-mode-btn active">Decimal (DD)</button>
-                                                 <button type="button" id="btnCoordModeGMS" class="coord-mode-btn">GMS (GG° MM' SS")</button>
-                                             </div>
-                                         </div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                            <label style="margin: 0; font-weight: 700; color: var(--accent-gold-light);"><i class="fa-solid fa-compass text-gold"></i> Coordenadas da Posição *</label>
+                                            <div class="coord-mode-toggle">
+                                                <button type="button" id="btnCoordModeGMS" class="coord-mode-btn active">Náutico (GG° MM.mm' S/N)</button>
+                                                <button type="button" id="btnCoordModeDecimal" class="coord-mode-btn">Decimal (DD)</button>
+                                            </div>
+                                        </div>
 
-                                         <!-- Mode 1: Decimal (DD.dddd) -->
-                                         <div id="panelCoordDecimal">
-                                             <div class="coords-input-row">
-                                                 <input type="number" id="addLat" class="form-control" placeholder="Latitude (ex: -1.371333)" step="any" required>
-                                                 <input type="number" id="addLng" class="form-control" placeholder="Longitude (ex: -48.490500)" step="any" required>
-                                             </div>
-                                         </div>
+                                        <!-- Mode 1: Náutico (GG° MM.mm' S/N e GGG° MM.mm' W/E) -->
+                                        <div id="panelCoordGMS">
+                                            <div class="gms-input-block mb-2">
+                                                <span class="gms-label" style="font-weight: 600; min-width: 170px;">Latitude (GG° MM.mm' S/N):</span>
+                                                <div class="gms-fields">
+                                                    <input type="number" id="addLatDeg" min="0" max="90" placeholder="00" class="form-control gms-field" style="width: 60px; text-align: center;" required>
+                                                    <span class="unit">°</span>
+                                                    <input type="number" id="addLatMin" min="0" max="59.99" step="0.01" placeholder="00.00" class="form-control gms-field gms-min" style="width: 85px; text-align: center;" required>
+                                                    <span class="unit">'</span>
+                                                    <select id="addLatHem" class="form-control gms-hem" style="width: 90px;">
+                                                        <option value="S" selected>S (Sul)</option>
+                                                        <option value="N">N (Norte)</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="gms-input-block">
+                                                <span class="gms-label" style="font-weight: 600; min-width: 170px;">Longitude (GGG° MM.mm' W/E):</span>
+                                                <div class="gms-fields">
+                                                    <input type="number" id="addLngDeg" min="0" max="180" placeholder="000" class="form-control gms-field" style="width: 70px; text-align: center;" required>
+                                                    <span class="unit">°</span>
+                                                    <input type="number" id="addLngMin" min="0" max="59.99" step="0.01" placeholder="00.00" class="form-control gms-field gms-min" style="width: 85px; text-align: center;" required>
+                                                    <span class="unit">'</span>
+                                                    <select id="addLngHem" class="form-control gms-hem" style="width: 95px;">
+                                                        <option value="W" selected>W (Oeste)</option>
+                                                        <option value="E">E (Leste)</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                         <!-- Mode 2: GMS (GG° MM' SS.ssss" N/S E/W) -->
-                                         <div id="panelCoordGMS" style="display: none;">
-                                             <div class="gms-input-block mb-1">
-                                                 <span class="gms-label">Latitude (GMS):</span>
-                                                 <div class="gms-fields">
-                                                     <input type="number" id="addLatDeg" min="0" max="90" placeholder="GG" class="form-control gms-field">
-                                                     <span class="unit">°</span>
-                                                     <input type="number" id="addLatMin" min="0" max="59" placeholder="MM" class="form-control gms-field">
-                                                     <span class="unit">'</span>
-                                                     <input type="number" id="addLatSec" min="0" step="any" placeholder="SS.ssss" class="form-control gms-field gms-sec">
-                                                     <span class="unit">"</span>
-                                                     <select id="addLatHem" class="form-control gms-hem">
-                                                         <option value="S">S (Sul)</option>
-                                                         <option value="N">N (Norte)</option>
-                                                     </select>
-                                                 </div>
-                                             </div>
-                                             <div class="gms-input-block">
-                                                 <span class="gms-label">Longitude (GMS):</span>
-                                                 <div class="gms-fields">
-                                                     <input type="number" id="addLngDeg" min="0" max="180" placeholder="GG" class="form-control gms-field">
-                                                     <span class="unit">°</span>
-                                                     <input type="number" id="addLngMin" min="0" max="59" placeholder="MM" class="form-control gms-field">
-                                                     <span class="unit">'</span>
-                                                     <input type="number" id="addLngSec" min="0" step="any" placeholder="SS.ssss" class="form-control gms-field gms-sec">
-                                                     <span class="unit">"</span>
-                                                     <select id="addLngHem" class="form-control gms-hem">
-                                                         <option value="W">W (Oeste)</option>
-                                                         <option value="E">E (Leste)</option>
-                                                     </select>
-                                                 </div>
-                                             </div>
-                                         </div>
+                                        <!-- Mode 2: Decimal (DD.dddd) -->
+                                        <div id="panelCoordDecimal" style="display: none;">
+                                            <div class="coords-input-row">
+                                                <input type="number" id="addLat" class="form-control" placeholder="Latitude Decimal (ex: -1.371333)" step="any">
+                                                <input type="number" id="addLng" class="form-control" placeholder="Longitude Decimal (ex: -48.490500)" step="any">
+                                            </div>
+                                        </div>
 
-                                         <button type="button" class="btn btn-outline btn-sm mt-2 w-full" id="btnPickPointOnMap">
-                                             <i class="fa-solid fa-crosshairs"></i> Capturar Posição Clicando no Mapa
-                                         </button>
-                                     </div>
+                                        <button type="button" class="btn btn-outline btn-sm mt-2 w-full" id="btnPickPointOnMap">
+                                            <i class="fa-solid fa-crosshairs"></i> Capturar Posição Clicando no Mapa
+                                        </button>
+                                    </div>
                                     <div class="form-group">
                                         <label for="addCharacteristic">Característica do Sinal</label>
                                         <input type="text" id="addCharacteristic" class="form-control" placeholder="Ex: Lp. V. 4s 6m 8NM">
@@ -1072,7 +973,7 @@
         </div>
     </div>
 
-    <!-- MODAL LIGHTBOX: VISUALIZAÇÃO EXPANDIDA DE FOTO EXCLUSIVA -->
+    <!-- MODAL LIGHTBOX: VISUALIZAÇÃO EXPANDIDA DE FOTO COM ZOOM & PAN -->
     <div class="modal-backdrop modal-lightbox-backdrop" id="modalPhotoLightbox">
         <div class="lightbox-dialog">
             <div class="lightbox-header">
@@ -1081,6 +982,20 @@
                     <h3 id="lightboxSignalName" style="margin:0; font-size:1.1rem; color:var(--text-primary);">Foto do Sinal Náutico</h3>
                 </div>
                 <div class="lightbox-actions">
+                    <!-- Zoom Controls -->
+                    <div class="lightbox-zoom-controls">
+                        <button type="button" class="btn btn-outline btn-sm lightbox-tool-btn" id="btnLightboxZoomOut" title="Reduzir Zoom (Scroll para baixo)">
+                            <i class="fa-solid fa-magnifying-glass-minus"></i>
+                        </button>
+                        <span class="lightbox-zoom-badge" id="lightboxZoomLevel" title="Nível de Zoom Atual">100%</span>
+                        <button type="button" class="btn btn-outline btn-sm lightbox-tool-btn" id="btnLightboxZoomIn" title="Aumentar Zoom (Scroll para cima)">
+                            <i class="fa-solid fa-magnifying-glass-plus"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline btn-sm lightbox-tool-btn" id="btnLightboxResetZoom" title="Ajustar / Resetar Zoom (100%)">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
+                    </div>
+
                     <span class="lightbox-date" id="lightboxPhotoDate"><i class="fa-solid fa-calendar-day"></i> --</span>
                     <a id="lightboxBtnDownload" href="#" download="foto_sinal.jpg" class="btn btn-outline btn-sm" title="Baixar foto">
                         <i class="fa-solid fa-download"></i> Baixar Foto
@@ -1089,12 +1004,15 @@
                 </div>
             </div>
             <div class="lightbox-body" id="lightboxBody">
-                <div class="lightbox-img-container">
-                    <img id="lightboxImg" src="" alt="Visualização em alta resolução do sinal">
+                <div class="lightbox-img-container" id="lightboxImgContainer">
+                    <img id="lightboxImg" src="" alt="Visualização em alta resolução do sinal" draggable="false">
                 </div>
             </div>
             <div class="lightbox-footer">
-                <span class="lightbox-hint"><i class="fa-solid fa-circle-info text-gold"></i> Pressione <kbd>ESC</kbd> ou clique fora da imagem para fechar a visualização expandida.</span>
+                <span class="lightbox-hint">
+                    <i class="fa-solid fa-circle-info text-gold"></i> 
+                    <strong>Zoom & Navegação:</strong> Gire o <strong>Scroll do mouse</strong> ou use os botões <strong>(+) (-)</strong>. Clique e arraste para mover a imagem ampliada. Clique duplo para zoom 2x. Pressione <kbd>ESC</kbd> para fechar.
+                </span>
             </div>
         </div>
     </div>
