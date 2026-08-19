@@ -1496,26 +1496,163 @@ html, body {
     box-sizing: border-box;
 }
 
-.btn-photo-expand {
-    background: rgba(234, 179, 8, 0.12);
-    border: 1px solid rgba(234, 179, 8, 0.4);
-    color: var(--accent-gold-light);
-    border-radius: 4px;
-    padding: 3px 9px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    transition: all 0.2s ease;
+.photo-counter-badge, .lightbox-counter-badge {
+    font-family: var(--font-tech);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, #1e3a8a 0%, #0284c7 100%);
+    padding: 3px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
-.btn-photo-expand:hover {
+/* DH2 Photo Navigation Arrows */
+.photo-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    background: rgba(4, 9, 20, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: all 0.2s ease;
+    opacity: 0.85;
+}
+
+.photo-nav-btn:hover {
     background: var(--accent-gold);
     color: #040914;
     border-color: var(--accent-gold);
-    box-shadow: 0 0 10px rgba(234, 179, 8, 0.4);
+    opacity: 1;
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 0 12px rgba(234, 179, 8, 0.5);
+}
+
+.photo-nav-prev { left: 8px; }
+.photo-nav-next { right: 8px; }
+
+/* DH2 Thumbnail Strip */
+.photo-thumb-strip {
+    display: flex;
+    gap: 6px;
+    padding: 6px 10px;
+    background: rgba(2, 6, 17, 0.95);
+    border-top: 1px solid var(--navy-800);
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.photo-thumb-item {
+    width: 42px;
+    height: 42px;
+    border-radius: 4px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    object-fit: cover;
+    opacity: 0.6;
+    transition: all 0.18s ease;
+    flex-shrink: 0;
+    background: #0f172a;
+}
+
+.photo-thumb-item:hover {
+    opacity: 0.9;
+    transform: scale(1.05);
+}
+
+.photo-thumb-item.active {
+    opacity: 1;
+    border-color: var(--accent-gold);
+    box-shadow: 0 0 8px rgba(234, 179, 8, 0.6);
+}
+
+/* Lightbox Nav Arrows (Floating) */
+.lightbox-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 25;
+    background: rgba(4, 9, 20, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #fff;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+}
+
+.lightbox-nav-btn:hover {
+    background: var(--accent-gold);
+    color: #040914;
+    border-color: var(--accent-gold);
+    transform: translateY(-50%) scale(1.12);
+    box-shadow: 0 0 18px rgba(234, 179, 8, 0.6);
+}
+
+.lightbox-nav-prev { left: 24px; }
+.lightbox-nav-next { right: 24px; }
+
+/* Lightbox Thumbnail Strip at Bottom */
+.lightbox-thumb-strip {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(2, 6, 17, 0.9);
+    border-top: 1px solid var(--navy-800);
+    overflow-x: auto;
+    scrollbar-width: thin;
+    max-height: 64px;
+}
+
+.lightbox-thumb-item {
+    width: 48px;
+    height: 48px;
+    border-radius: 4px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    object-fit: cover;
+    opacity: 0.55;
+    transition: all 0.18s ease;
+    flex-shrink: 0;
+    background: #0f172a;
+}
+
+.lightbox-thumb-item:hover {
+    opacity: 0.85;
+    transform: scale(1.06);
+}
+
+.lightbox-thumb-item.active {
+    opacity: 1;
+    border-color: var(--accent-gold);
+    box-shadow: 0 0 10px rgba(234, 179, 8, 0.7);
+    transform: scale(1.08);
+}
+
+.btn-xs {
+    padding: 2px 7px !important;
+    font-size: 0.72rem !important;
+    line-height: 1.2 !important;
 }
 
 /* Lightbox Modal System */

@@ -1460,8 +1460,13 @@ document.addEventListener('DOMContentLoaded', () => {
             responsavel: String(signal.responsavel || 'CHN-4').trim(),
             occurrenceStartDate: signal.occurrenceStartDate ? String(signal.occurrenceStartDate).trim() : (signal.inoperableSince ? String(signal.inoperableSince).trim() : null),
             inoperableSince: signal.inoperableSince ? String(signal.inoperableSince).trim() : (signal.occurrenceStartDate ? String(signal.occurrenceStartDate).trim() : null),
-            image: signal.image || null,
-            photoDate: signal.photoDate || null,
+            image: signal.image || (Array.isArray(signal.images) && signal.images.length > 0 ? signal.images[0].url : null),
+            photoDate: signal.photoDate || (Array.isArray(signal.images) && signal.images.length > 0 ? signal.images[0].date : null),
+            images: Array.isArray(signal.images) ? signal.images.map(img => ({
+                id: String(img.id || ''),
+                url: String(img.url || ''),
+                date: String(img.date || '')
+            })) : (signal.image ? [{ id: 'img_0', url: String(signal.image), date: String(signal.photoDate || 'Sem data') }] : []),
             history: Array.isArray(signal.history) ? signal.history.map(h => ({
                 date: String(h.date || ''),
                 startDate: h.startDate ? String(h.startDate).trim() : null,
@@ -1563,6 +1568,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateIndividualSignalIEDisplay(signal);
 
         toggleEditSpecMode(false);
+        currentPhotoIndex = 0;
         renderSignalPhoto(signal);
 
         document.getElementById('selectNewStatus').value = isOp ? 'OPERACIONAL' : signal.status;
@@ -1644,31 +1650,10 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Data inicial do sinal ${selectedSignal.code} gravada com sucesso! Novo IE recalculado.`, 'success');
     });
 
-    function renderSignalPhoto(signal) {
-        const placeholder = document.getElementById('photoPlaceholder');
-        const imgWrapper = document.getElementById('photoImgWrapper');
-        const imgDisplay = document.getElementById('signalImgDisplay');
-        const infoBox = document.getElementById('photoInfoBox');
-        const dateDisplay = document.getElementById('photoDateDisplay');
-
-        if (signal.image) {
-            placeholder.style.display = 'none';
-            if (imgWrapper) imgWrapper.style.display = 'flex';
-            imgDisplay.style.display = 'block';
-            imgDisplay.src = signal.image;
-            infoBox.style.display = 'flex';
-            dateDisplay.innerHTML = `<i class="fa-solid fa-calendar-day"></i> Foto tirada em: ${signal.photoDate || 'Sem data'}`;
-        } else {
-            placeholder.style.display = 'flex';
-            if (imgWrapper) imgWrapper.style.display = 'none';
-            imgDisplay.style.display = 'none';
-            infoBox.style.display = 'none';
-        }
-    }
-
     // =========================================================================
-    // LIGHTBOX ZOOM & PAN SYSTEM
+    // MULTI-PHOTO GALLERY & LIGHTBOX SYSTEM
     // =========================================================================
+    let currentPhotoIndex = 0;
     let lightboxZoom = 1;
     let lightboxPanX = 0;
     let lightboxPanY = 0;
@@ -1676,6 +1661,178 @@ document.addEventListener('DOMContentLoaded', () => {
     let lightboxStartX = 0;
     let lightboxStartY = 0;
 
+    function getSignalImages(signal) {
+        if (!signal) return [];
+        if (Array.isArray(signal.images) && signal.images.length > 0) {
+            return signal.images;
+        }
+        if (signal.image) {
+            const dateStr = signal.photoDate || 'Sem data';
+            signal.images = [{ id: 'img_0', url: signal.image, date: dateStr }];
+            return signal.images;
+        }
+        signal.images = [];
+        return signal.images;
+    }
+
+    function renderSignalPhoto(signal) {
+        const placeholder = document.getElementById('photoPlaceholder');
+        const imgWrapper = document.getElementById('photoImgWrapper');
+        const imgDisplay = document.getElementById('signalImgDisplay');
+        const infoBox = document.getElementById('photoInfoBox');
+        const dateDisplay = document.getElementById('photoDateDisplay');
+        const counterBadge = document.getElementById('photoCounterBadge');
+        const prevBtn = document.getElementById('btnPhotoPrev');
+        const nextBtn = document.getElementById('btnPhotoNext');
+        const thumbStrip = document.getElementById('photoThumbStrip');
+
+        if (!signal) return;
+        const images = getSignalImages(signal);
+
+        if (currentPhotoIndex >= images.length) {
+            currentPhotoIndex = Math.max(0, images.length - 1);
+        }
+
+        if (images.length > 0) {
+            const curImg = images[currentPhotoIndex];
+            if (placeholder) placeholder.style.display = 'none';
+            if (imgWrapper) imgWrapper.style.display = 'flex';
+            if (imgDisplay) {
+                imgDisplay.style.display = 'block';
+                imgDisplay.src = curImg.url;
+            }
+            if (infoBox) infoBox.style.display = 'flex';
+            if (dateDisplay) {
+                dateDisplay.innerHTML = `<i class="fa-solid fa-calendar-day"></i> Foto: ${curImg.date || 'Sem data'}`;
+            }
+
+            if (counterBadge) {
+                counterBadge.style.display = images.length > 1 ? 'inline-block' : 'none';
+                counterBadge.textContent = `${currentPhotoIndex + 1} / ${images.length}`;
+            }
+
+            if (prevBtn) prevBtn.style.display = images.length > 1 ? 'flex' : 'none';
+            if (nextBtn) nextBtn.style.display = images.length > 1 ? 'flex' : 'none';
+
+            // Render thumbnails in DH2
+            if (thumbStrip) {
+                if (images.length > 1) {
+                    thumbStrip.style.display = 'flex';
+                    thumbStrip.innerHTML = images.map((img, idx) => `
+                        <img src="${img.url}" class="photo-thumb-item ${idx === currentPhotoIndex ? 'active' : ''}" 
+                             onclick="window.selectSignalPhotoIndex(${idx})" alt="Miniatura ${idx + 1}" title="Foto ${idx + 1} (${img.date || ''})">
+                    `).join('');
+                } else {
+                    thumbStrip.style.display = 'none';
+                    thumbStrip.innerHTML = '';
+                }
+            }
+        } else {
+            if (placeholder) placeholder.style.display = 'flex';
+            if (imgWrapper) imgWrapper.style.display = 'none';
+            if (imgDisplay) imgDisplay.style.display = 'none';
+            if (infoBox) infoBox.style.display = 'none';
+            if (counterBadge) counterBadge.style.display = 'none';
+            if (prevBtn) prevBtn.style.display = 'none';
+            if (nextBtn) nextBtn.style.display = 'none';
+            if (thumbStrip) {
+                thumbStrip.style.display = 'none';
+                thumbStrip.innerHTML = '';
+            }
+        }
+    }
+
+    window.selectSignalPhotoIndex = (index) => {
+        if (!selectedSignal) return;
+        const images = getSignalImages(selectedSignal);
+        if (index >= 0 && index < images.length) {
+            currentPhotoIndex = index;
+            renderSignalPhoto(selectedSignal);
+            if (document.getElementById('modalPhotoLightbox')?.classList.contains('active')) {
+                updateLightboxPhotoView();
+            }
+        }
+    };
+
+    window.navigateSignalPhoto = (direction) => {
+        if (!selectedSignal) return;
+        const images = getSignalImages(selectedSignal);
+        if (images.length <= 1) return;
+        currentPhotoIndex = (currentPhotoIndex + direction + images.length) % images.length;
+        renderSignalPhoto(selectedSignal);
+        if (document.getElementById('modalPhotoLightbox')?.classList.contains('active')) {
+            updateLightboxPhotoView();
+        }
+    };
+
+    // Navigation buttons in DH2 Card
+    document.getElementById('btnPhotoPrev')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.navigateSignalPhoto(-1);
+    });
+
+    document.getElementById('btnPhotoNext')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.navigateSignalPhoto(1);
+    });
+
+    // Delete photo function
+    async function deleteCurrentSignalPhoto() {
+        if (!selectedSignal) return;
+        const images = getSignalImages(selectedSignal);
+        if (images.length === 0) return;
+
+        const currentNum = currentPhotoIndex + 1;
+        const totalNum = images.length;
+        if (!confirm(`Deseja realmente EXCLUIR a foto (${currentNum} de ${totalNum}) do sinal náutico [${selectedSignal.code}]?`)) {
+            return;
+        }
+
+        // Remove photo at current index
+        images.splice(currentPhotoIndex, 1);
+        selectedSignal.images = images;
+
+        if (images.length > 0) {
+            if (currentPhotoIndex >= images.length) {
+                currentPhotoIndex = images.length - 1;
+            }
+            selectedSignal.image = images[0].url;
+            selectedSignal.photoDate = images[0].date;
+        } else {
+            currentPhotoIndex = 0;
+            selectedSignal.image = null;
+            selectedSignal.photoDate = null;
+        }
+
+        // Save to backend (IndexedDB, LocalStorage, Firestore, REST)
+        saveSignalToBackend(selectedSignal);
+
+        // Update UI
+        renderSignalPhoto(selectedSignal);
+        if (document.getElementById('modalPhotoLightbox')?.classList.contains('active')) {
+            if (images.length > 0) {
+                updateLightboxPhotoView();
+            } else {
+                document.getElementById('modalPhotoLightbox')?.classList.remove('active');
+            }
+        }
+
+        showToast(`Foto ${currentNum} excluída com sucesso!`, 'success');
+    }
+
+    document.getElementById('btnDeleteCurrentPhoto')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteCurrentSignalPhoto();
+    });
+
+    document.getElementById('btnLightboxDeletePhoto')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteCurrentSignalPhoto();
+    });
+
+    // =========================================================================
+    // LIGHTBOX ZOOM & PAN SYSTEM
+    // =========================================================================
     function updateLightboxTransform(smooth = true) {
         const img = document.getElementById('lightboxImg');
         const container = document.getElementById('lightboxImgContainer');
@@ -1713,33 +1870,91 @@ document.addEventListener('DOMContentLoaded', () => {
         updateLightboxTransform(true);
     }
 
-    function openPhotoLightbox() {
-        if (!selectedSignal || !selectedSignal.image) return;
-        
-        const modal = document.getElementById('modalPhotoLightbox');
+    function updateLightboxPhotoView() {
+        if (!selectedSignal) return;
+        const images = getSignalImages(selectedSignal);
+        if (images.length === 0) {
+            document.getElementById('modalPhotoLightbox')?.classList.remove('active');
+            return;
+        }
+
+        if (currentPhotoIndex >= images.length) {
+            currentPhotoIndex = Math.max(0, images.length - 1);
+        }
+
+        const curImg = images[currentPhotoIndex];
         const img = document.getElementById('lightboxImg');
         const badge = document.getElementById('lightboxSignalBadge');
         const title = document.getElementById('lightboxSignalName');
+        const counter = document.getElementById('lightboxPhotoCounter');
         const date = document.getElementById('lightboxPhotoDate');
         const btnDownload = document.getElementById('lightboxBtnDownload');
-
-        if (!modal || !img) return;
+        const prevBtn = document.getElementById('btnLightboxPrev');
+        const nextBtn = document.getElementById('btnLightboxNext');
+        const thumbStrip = document.getElementById('lightboxThumbStrip');
 
         resetLightboxZoom();
 
-        img.src = selectedSignal.image;
+        if (img) img.src = curImg.url;
         if (badge) badge.textContent = `DH2: ${selectedSignal.code || '--'}`;
         if (title) title.textContent = selectedSignal.name || 'Sinal Náutico';
-        if (date) {
-            date.innerHTML = `<i class="fa-solid fa-calendar-day"></i> ${selectedSignal.photoDate ? 'Foto de: ' + selectedSignal.photoDate : 'Sem data'}`;
-        }
-        if (btnDownload) {
-            btnDownload.href = selectedSignal.image;
-            btnDownload.download = `DH2_${(selectedSignal.code || 'sinal').replace(/\s+/g, '_')}_foto.jpg`;
+
+        if (counter) {
+            counter.style.display = images.length > 1 ? 'inline-block' : 'none';
+            counter.textContent = `Foto ${currentPhotoIndex + 1} de ${images.length}`;
         }
 
+        if (date) {
+            date.innerHTML = `<i class="fa-solid fa-calendar-day"></i> ${curImg.date ? 'Foto de: ' + curImg.date : 'Sem data'}`;
+        }
+
+        if (btnDownload) {
+            btnDownload.href = curImg.url;
+            btnDownload.download = `DH2_${(selectedSignal.code || 'sinal').replace(/\s+/g, '_')}_foto_${currentPhotoIndex + 1}.jpg`;
+        }
+
+        if (prevBtn) prevBtn.style.display = images.length > 1 ? 'flex' : 'none';
+        if (nextBtn) nextBtn.style.display = images.length > 1 ? 'flex' : 'none';
+
+        if (thumbStrip) {
+            if (images.length > 1) {
+                thumbStrip.style.display = 'flex';
+                thumbStrip.innerHTML = images.map((im, idx) => `
+                    <img src="${im.url}" class="lightbox-thumb-item ${idx === currentPhotoIndex ? 'active' : ''}" 
+                         onclick="window.selectSignalPhotoIndex(${idx})" alt="Foto ${idx + 1}" title="Foto ${idx + 1} (${im.date || ''})">
+                `).join('');
+            } else {
+                thumbStrip.style.display = 'none';
+                thumbStrip.innerHTML = '';
+            }
+        }
+    }
+
+    function openPhotoLightbox() {
+        if (!selectedSignal) return;
+        const images = getSignalImages(selectedSignal);
+        if (images.length === 0) {
+            showToast('Nenhuma foto anexada para expandir.', 'warning');
+            return;
+        }
+        
+        const modal = document.getElementById('modalPhotoLightbox');
+        if (!modal) return;
+
+        updateLightboxPhotoView();
         modal.classList.add('active');
     }
+
+    // Lightbox Nav Arrows Click
+    document.getElementById('btnLightboxPrev')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.navigateSignalPhoto(-1);
+    });
+
+    document.getElementById('btnLightboxNext')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.navigateSignalPhoto(1);
+    });
 
     // Zoom Controls Events
     document.getElementById('btnLightboxZoomIn')?.addEventListener('click', (e) => {
@@ -1797,6 +2012,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isLightboxPanning) {
             isLightboxPanning = false;
             document.getElementById('lightboxImgContainer')?.classList.remove('panning');
+        }
+    });
+
+    // Keyboard navigation when Lightbox is active
+    window.addEventListener('keydown', (e) => {
+        const lightboxModal = document.getElementById('modalPhotoLightbox');
+        if (!lightboxModal || !lightboxModal.classList.contains('active')) return;
+
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            window.navigateSignalPhoto(-1);
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            window.navigateSignalPhoto(1);
+        } else if (e.key === 'Delete') {
+            e.preventDefault();
+            deleteCurrentSignalPhoto();
         }
     });
 
@@ -1963,26 +2195,43 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnTriggerPhotoUpload')?.addEventListener('click', () => inputPhotoFile?.click());
 
     inputPhotoFile?.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file || !selectedSignal) return;
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0 || !selectedSignal) return;
 
-        showToast('Processando e otimizando foto para o banco de dados...', 'info');
+        showToast(`Processando ${files.length} foto(s) para a galeria do banco de dados...`, 'info');
 
         try {
-            const optimizedBase64 = await optimizeImage(file, 1280, 1280, 0.82);
-            selectedSignal.image = optimizedBase64;
+            const images = getSignalImages(selectedSignal);
             const now = new Date();
-            selectedSignal.photoDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+            const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
+            for (const file of files) {
+                const optimizedBase64 = await optimizeImage(file, 1280, 1280, 0.82);
+                images.push({
+                    id: 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    url: optimizedBase64,
+                    date: dateStr
+                });
+            }
+
+            selectedSignal.images = images;
+            selectedSignal.image = images[0].url;
+            selectedSignal.photoDate = images[0].date;
+            currentPhotoIndex = images.length - 1; // View the newest added photo
 
             // Salva na memória, Firestore, LocalStorage, IndexedDB e REST API
             saveSignalToBackend(selectedSignal);
 
             // Atualiza a interface gráfica imediatamente
             renderSignalPhoto(selectedSignal);
-            showToast(`Foto do sinal ${selectedSignal.code} salva permanentemente no banco de dados e na nuvem!`, 'success');
+            if (document.getElementById('modalPhotoLightbox')?.classList.contains('active')) {
+                updateLightboxPhotoView();
+            }
+
+            showToast(`${files.length} foto(s) adicionada(s) à galeria do sinal ${selectedSignal.code}!`, 'success');
         } catch (err) {
-            console.error('Erro ao processar imagem:', err);
-            showToast('Erro ao processar a imagem anexada.', 'danger');
+            console.error('Erro ao processar imagem(ns):', err);
+            showToast('Erro ao processar a(s) imagem(ns) anexada(s).', 'danger');
         } finally {
             inputPhotoFile.value = '';
         }
