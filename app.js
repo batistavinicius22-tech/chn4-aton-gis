@@ -1524,22 +1524,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderSignalPhoto(signal) {
         const placeholder = document.getElementById('photoPlaceholder');
+        const imgWrapper = document.getElementById('photoImgWrapper');
         const imgDisplay = document.getElementById('signalImgDisplay');
         const infoBox = document.getElementById('photoInfoBox');
         const dateDisplay = document.getElementById('photoDateDisplay');
 
         if (signal.image) {
             placeholder.style.display = 'none';
+            if (imgWrapper) imgWrapper.style.display = 'flex';
             imgDisplay.style.display = 'block';
             imgDisplay.src = signal.image;
             infoBox.style.display = 'flex';
             dateDisplay.innerHTML = `<i class="fa-solid fa-calendar-day"></i> Foto tirada em: ${signal.photoDate || 'Sem data'}`;
         } else {
             placeholder.style.display = 'flex';
+            if (imgWrapper) imgWrapper.style.display = 'none';
             imgDisplay.style.display = 'none';
             infoBox.style.display = 'none';
         }
     }
+
+    function openPhotoLightbox() {
+        if (!selectedSignal || !selectedSignal.image) return;
+        
+        const modal = document.getElementById('modalPhotoLightbox');
+        const img = document.getElementById('lightboxImg');
+        const badge = document.getElementById('lightboxSignalBadge');
+        const title = document.getElementById('lightboxSignalName');
+        const date = document.getElementById('lightboxPhotoDate');
+        const btnDownload = document.getElementById('lightboxBtnDownload');
+
+        if (!modal || !img) return;
+
+        img.src = selectedSignal.image;
+        if (badge) badge.textContent = `DH2: ${selectedSignal.code || '--'}`;
+        if (title) title.textContent = selectedSignal.name || 'Sinal Náutico';
+        if (date) {
+            date.innerHTML = `<i class="fa-solid fa-calendar-day"></i> ${selectedSignal.photoDate ? 'Foto de: ' + selectedSignal.photoDate : 'Sem data'}`;
+        }
+        if (btnDownload) {
+            btnDownload.href = selectedSignal.image;
+            btnDownload.download = `DH2_${(selectedSignal.code || 'sinal').replace(/\s+/g, '_')}_foto.jpg`;
+        }
+
+        modal.classList.add('active');
+    }
+
+    // Bind click to expand photo in DH2
+    document.getElementById('signalImgDisplay')?.addEventListener('click', openPhotoLightbox);
+    document.getElementById('photoImgWrapper')?.addEventListener('click', openPhotoLightbox);
+    document.getElementById('btnExpandPhotoDetail')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openPhotoLightbox();
+    });
 
     function toggleEditSpecMode(enable) {
         const viewMode = document.getElementById('viewSpecMode');
@@ -2059,6 +2096,21 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         backdrop.addEventListener('click', (e) => {
             if (e.target === backdrop) backdrop.classList.remove('active');
         });
+    });
+
+    // Close active modal or photo lightbox on ESC key press
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' || e.key === 'Esc') {
+            const activeLightbox = document.getElementById('modalPhotoLightbox');
+            if (activeLightbox && activeLightbox.classList.contains('active')) {
+                activeLightbox.classList.remove('active');
+                return;
+            }
+            const activeModals = document.querySelectorAll('.modal-backdrop.active');
+            if (activeModals.length > 0) {
+                activeModals[activeModals.length - 1].classList.remove('active');
+            }
+        }
     });
 
     document.getElementById('btnOpenSimulator')?.addEventListener('click', openSimulator);

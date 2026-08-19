@@ -641,9 +641,17 @@
                                         <i class="fa-solid fa-image"></i>
                                         <span>Nenhuma foto anexada</span>
                                     </div>
-                                    <img id="signalImgDisplay" src="" alt="Foto do Sinal" style="display:none;" class="signal-img-preview">
+                                    <div class="photo-img-wrapper" id="photoImgWrapper" style="display:none;" title="Clique para expandir em tela cheia">
+                                        <img id="signalImgDisplay" src="" alt="Foto do Sinal" class="signal-img-preview">
+                                        <div class="photo-overlay-hint" id="photoOverlayHint">
+                                            <i class="fa-solid fa-up-right-and-down-left-from-center"></i> Clique para expandir
+                                        </div>
+                                    </div>
                                     <div class="photo-info" id="photoInfoBox" style="display:none;">
                                         <span class="photo-date" id="photoDateDisplay"><i class="fa-solid fa-calendar-day"></i> Data: --/--/----</span>
+                                        <button type="button" class="btn-photo-expand" id="btnExpandPhotoDetail" title="Expandir visualização da foto">
+                                            <i class="fa-solid fa-expand"></i> Expandir
+                                        </button>
                                     </div>
                                 </div>
 
@@ -1060,6 +1068,33 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline" data-close="modalBackups">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LIGHTBOX: VISUALIZAÇÃO EXPANDIDA DE FOTO EXCLUSIVA -->
+    <div class="modal-backdrop modal-lightbox-backdrop" id="modalPhotoLightbox">
+        <div class="lightbox-dialog">
+            <div class="lightbox-header">
+                <div class="lightbox-title-wrap">
+                    <span class="badge" id="lightboxSignalBadge">DH2: --</span>
+                    <h3 id="lightboxSignalName" style="margin:0; font-size:1.1rem; color:var(--text-primary);">Foto do Sinal Náutico</h3>
+                </div>
+                <div class="lightbox-actions">
+                    <span class="lightbox-date" id="lightboxPhotoDate"><i class="fa-solid fa-calendar-day"></i> --</span>
+                    <a id="lightboxBtnDownload" href="#" download="foto_sinal.jpg" class="btn btn-outline btn-sm" title="Baixar foto">
+                        <i class="fa-solid fa-download"></i> Baixar Foto
+                    </a>
+                    <button class="modal-close lightbox-close" data-close="modalPhotoLightbox" title="Fechar visualização">&times;</button>
+                </div>
+            </div>
+            <div class="lightbox-body" id="lightboxBody">
+                <div class="lightbox-img-container">
+                    <img id="lightboxImg" src="" alt="Visualização em alta resolução do sinal">
+                </div>
+            </div>
+            <div class="lightbox-footer">
+                <span class="lightbox-hint"><i class="fa-solid fa-circle-info text-gold"></i> Pressione <kbd>ESC</kbd> ou clique fora da imagem para fechar a visualização expandida.</span>
             </div>
         </div>
     </div>
