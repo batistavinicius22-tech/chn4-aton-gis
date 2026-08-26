@@ -74,10 +74,37 @@ document.addEventListener('DOMContentLoaded', () => {
         custom: { name: "Ponto de Partida Personalizado", lat: -1.41111, lng: -48.48722 }
     };
 
+    // Função de ordenação natural crescente:
+    // 1. Números puros (ex: 32, 100, 320) ordenados numericamente (32 < 100 < 320).
+    // 2. Códigos com letras (ex: PA-20, BAP-01) ficam por último em ordem alfabética natural.
+    function compareSignalCodes(a, b) {
+        const codeA = String(a?.code || '').trim();
+        const codeB = String(b?.code || '').trim();
+
+        const isNumA = /^\d+$/.test(codeA);
+        const isNumB = /^\d+$/.test(codeB);
+
+        // Se ambos forem numéricos puros, compara o valor numérico inteiro
+        if (isNumA && isNumB) {
+            const numA = parseInt(codeA, 10);
+            const numB = parseInt(codeB, 10);
+            if (numA !== numB) return numA - numB;
+            return codeA.localeCompare(codeB);
+        }
+
+        // Números puros vêm antes de códigos com letras
+        if (isNumA && !isNumB) return -1;
+        if (!isNumA && isNumB) return 1;
+
+        // Ambos contêm letras: ordena alfabeticamente com suporte natural (ex: PA-2 antes de PA-20)
+        return codeA.localeCompare(codeB, 'pt-BR', { numeric: true, sensitivity: 'base' });
+    }
+
     // State Variables
     let signalsData = (typeof googleEarthSignals !== 'undefined' && Array.isArray(googleEarthSignals) && googleEarthSignals.length > 0)
         ? [...googleEarthSignals]
         : [...initialSignals];
+    signalsData.sort(compareSignalCodes);
     let selectedSignal = null;
     const selectedSignalCodes = new Set(); // Multi-signal selection for custom map view
     let currentFilter = 'all';
@@ -1326,7 +1353,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getFilteredSignals() {
-        return signalsData.filter(s => {
+        const filtered = signalsData.filter(s => {
             if (currentFilter === 'selected') {
                 return selectedSignalCodes.has(s.code);
             }
@@ -1344,6 +1371,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             return matchesFilter && matchesSearch && matchesTypeFilter(s) && matchesResponsavelFilter(s);
         });
+
+        return filtered.sort(compareSignalCodes);
     }
 
     function renderSelectedTray() {
@@ -3467,6 +3496,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         }
 
         signalsData.push(newSignal);
+        signalsData.sort(compareSignalCodes);
         saveLocalCache();
         updateIE();
         renderMapMarkers();
@@ -3498,6 +3528,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                         remoteSignals.push(doc.data());
                     });
                     signalsData = remoteSignals;
+                    signalsData.sort(compareSignalCodes);
                     saveLocalCache();
                     updateTypeFilterDropdown();
                     updateIE();
@@ -3553,6 +3584,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                     const resp = await fetch('/api/signals');
                     if (resp.ok) {
                         signalsData = await resp.json();
+                        signalsData.sort(compareSignalCodes);
                         saveLocalCache();
                         updateTypeFilterDropdown();
                         updateIE();
