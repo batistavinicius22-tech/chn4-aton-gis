@@ -96,9 +96,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Map & Layers State
     let mapMarkers = {}; 
     let routePolyline = null;
-    let measurePolyline = null;
     let isMeasureMode = false;
     let measurePoints = [];
+    let measureDynamicLine = null;
+    let measureTooltip = null;
 
     // GeoTIFF Overlays State
     let geotiffLayers = []; // Array of { id, name, layer, opacity }
@@ -114,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
+    const measureLayerGroup = L.layerGroup().addTo(map);
 
     // Layer 1: Esri World Imagery
     const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -2827,6 +2829,240 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         map.fitBounds(bounds, { padding: [40, 40] });
     });
 
+    // =========================================================================
+    // MODO MEDIÇÃO DE DISTÂNCIA INTERATIVA (RÉGUA NÁUTICA COM NM & METROS)
+    // =========================================================================
+    function formatDistanceMetricAndNautical(nm) {
+        const meters = nm * 1852;
+        let metricStr = '';
+        if (meters < 1000) {
+            metricStr = `${Math.round(meters)} m`;
+        } else {
+            metricStr = `${(meters / 1000).toFixed(2)} km`;
+        }
+        const nmStr = `${nm.toFixed(2)} NM`;
+        return { nmStr, metricStr, meters, fullStr: `${nmStr} (${metricStr})` };
+    }
+
+    function toggleMeasureMode() {
+        if (isMeasureMode) {
+            stopMeasureMode();
+        } else {
+            startMeasureMode();
+        }
+    }
+
+    function startMeasureMode() {
+        isMeasureMode = true;
+        document.getElementById('btnToggleMeasure')?.classList.add('active');
+        map.getContainer().style.cursor = 'crosshair';
+        map.doubleClickZoom.disable();
+
+        // Create / show floating measurement HUD
+        let hud = document.getElementById('measureHud');
+        if (!hud) {
+            hud = document.createElement('div');
+            hud.id = 'measureHud';
+            hud.className = 'measure-hud';
+            hud.innerHTML = `
+                <div class="measure-hud-info">
+                    <i class="fa-solid fa-ruler-combined text-gold"></i>
+                    <span id="measureHudText">Clique no mapa para marcar o 1º ponto de medição.</span>
+                </div>
+                <div class="measure-hud-actions">
+                    <button type="button" class="btn-measure-hud" id="btnMeasureClear" title="Limpar traçado de medição"><i class="fa-solid fa-trash-can"></i> Limpar</button>
+                    <button type="button" class="btn-measure-hud btn-measure-close" id="btnMeasureClose" title="Sair do modo medição"><i class="fa-solid fa-xmark"></i> Sair</button>
+                </div>
+            `;
+            document.querySelector('.app-map-wrapper')?.appendChild(hud);
+
+            document.getElementById('btnMeasureClear')?.addEventListener('click', clearMeasureData);
+            document.getElementById('btnMeasureClose')?.addEventListener('click', stopMeasureMode);
+        } else {
+            hud.style.display = 'flex';
+            updateMeasureHudText('Clique no mapa para marcar o 1º ponto de medição.');
+        }
+
+        map.on('click', onMeasureMapClick);
+        map.on('mousemove', onMeasureMouseMove);
+        map.on('dblclick', onMeasureMapDblClick);
+
+        showToast('Modo Medição Ativado: Clique no mapa para iniciar a medição.', 'info');
+    }
+
+    function updateMeasureHudText(text) {
+        const el = document.getElementById('measureHudText');
+        if (el) el.innerHTML = text;
+    }
+
+    function onMeasureMouseMove(e) {
+        if (!isMeasureMode) return;
+        if (measurePoints.length === 0) return;
+
+        const pLast = measurePoints[measurePoints.length - 1];
+        const pCurrent = e.latlng;
+
+        const segNM = haversineNM(pLast.lat, pLast.lng, pCurrent.lat, pCurrent.lng);
+        const segBearing = calculateBearing(pLast.lat, pLast.lng, pCurrent.lat, pCurrent.lng);
+        const segFormat = formatDistanceMetricAndNautical(segNM);
+
+        let totalNM = 0;
+        for (let i = 0; i < measurePoints.length - 1; i++) {
+            totalNM += haversineNM(measurePoints[i].lat, measurePoints[i].lng, measurePoints[i+1].lat, measurePoints[i+1].lng);
+        }
+        totalNM += segNM;
+        const totalFormat = formatDistanceMetricAndNautical(totalNM);
+
+        // Update Dynamic Rubber-band Line
+        if (!measureDynamicLine) {
+            measureDynamicLine = L.polyline([pLast, pCurrent], {
+                color: '#f59e0b',
+                weight: 3,
+                dashArray: '6, 6',
+                opacity: 0.95
+            }).addTo(measureLayerGroup);
+        } else {
+            measureDynamicLine.setLatLngs([pLast, pCurrent]);
+        }
+
+        // Live Tooltip
+        const segIndex = measurePoints.length;
+        const tooltipHtml = `
+            <div>
+                <strong>Reta ${segIndex}:</strong> ${segFormat.nmStr} <span style="color:#93c5fd;">(${segFormat.metricStr})</span>
+            </div>
+            <div style="font-size: 0.75rem; color: #cbd5e1; margin-top: 2px;">
+                Rumo: <strong>${segBearing}°</strong> ${measurePoints.length > 1 ? `| Total: <strong>${totalFormat.nmStr}</strong> (${totalFormat.metricStr})` : ''}
+            </div>
+        `;
+
+        if (!measureTooltip) {
+            measureTooltip = L.tooltip({
+                permanent: true,
+                direction: 'top',
+                offset: [0, -12],
+                className: 'measure-live-tooltip'
+            }).setLatLng(pCurrent).setContent(tooltipHtml).addTo(map);
+        } else {
+            measureTooltip.setLatLng(pCurrent).setContent(tooltipHtml);
+        }
+
+        updateMeasureHudText(`Reta ${segIndex}: <strong>${segFormat.nmStr}</strong> (${segFormat.metricStr}) • Rumo: <strong>${segBearing}°</strong> ${measurePoints.length > 1 ? `| Acumulado: <strong>${totalFormat.nmStr}</strong>` : ''}`);
+    }
+
+    function onMeasureMapClick(e) {
+        if (!isMeasureMode) return;
+
+        const newPoint = e.latlng;
+        measurePoints.push(newPoint);
+        const idx = measurePoints.length;
+
+        // Vertex Circle Marker
+        const isStart = idx === 1;
+        const markerIcon = L.divIcon({
+            className: 'measure-vertex-icon-wrapper',
+            html: `<div class="measure-vertex-marker ${isStart ? 'start' : ''}"><span>${idx}</span></div>`,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+
+        L.marker(newPoint, { icon: markerIcon }).addTo(measureLayerGroup);
+
+        if (idx === 1) {
+            updateMeasureHudText('Ponto 1 fixado. Mova o mouse para esticar a 1ª reta e clique para fixar o ponto 2.');
+        } else {
+            // Fix previous segment
+            const pPrev = measurePoints[idx - 2];
+            const segNM = haversineNM(pPrev.lat, pPrev.lng, newPoint.lat, newPoint.lng);
+            const segFormat = formatDistanceMetricAndNautical(segNM);
+            const segBearing = calculateBearing(pPrev.lat, pPrev.lng, newPoint.lat, newPoint.lng);
+
+            // Fixed Solid Line
+            L.polyline([pPrev, newPoint], {
+                color: '#38bdf8',
+                weight: 4,
+                opacity: 0.95
+            }).addTo(measureLayerGroup);
+
+            // Midpoint Segment Badge
+            const midLat = (pPrev.lat + newPoint.lat) / 2;
+            const midLng = (pPrev.lng + newPoint.lng) / 2;
+            const badgeIcon = L.divIcon({
+                className: 'measure-badge-wrapper',
+                html: `<div class="measure-segment-badge"><span>${segFormat.nmStr}</span> <small>(${segFormat.metricStr})</small></div>`,
+                iconSize: [160, 24],
+                iconAnchor: [80, 12]
+            });
+            L.marker([midLat, midLng], { icon: badgeIcon, interactive: false }).addTo(measureLayerGroup);
+
+            // Reset dynamic line anchor to newPoint
+            if (measureDynamicLine) {
+                measureDynamicLine.setLatLngs([newPoint, newPoint]);
+            }
+
+            let totalNM = 0;
+            for (let i = 0; i < measurePoints.length - 1; i++) {
+                totalNM += haversineNM(measurePoints[i].lat, measurePoints[i].lng, measurePoints[i+1].lat, measurePoints[i+1].lng);
+            }
+            const totalFormat = formatDistanceMetricAndNautical(totalNM);
+
+            updateMeasureHudText(`Reta ${idx - 1} fixada: <strong>${segFormat.nmStr}</strong> (${segFormat.metricStr}) • Total: <strong>${totalFormat.nmStr}</strong>. Mova o mouse para a próxima reta ou dê duplo-clique para finalizar.`);
+        }
+    }
+
+    function onMeasureMapDblClick(e) {
+        if (!isMeasureMode) return;
+        L.DomEvent.stop(e);
+
+        if (measureDynamicLine) {
+            measureLayerGroup.removeLayer(measureDynamicLine);
+            measureDynamicLine = null;
+        }
+        if (measureTooltip) {
+            map.removeLayer(measureTooltip);
+            measureTooltip = null;
+        }
+
+        let totalNM = 0;
+        for (let i = 0; i < measurePoints.length - 1; i++) {
+            totalNM += haversineNM(measurePoints[i].lat, measurePoints[i].lng, measurePoints[i+1].lat, measurePoints[i+1].lng);
+        }
+        const totalFormat = formatDistanceMetricAndNautical(totalNM);
+
+        updateMeasureHudText(`Medição concluída! Distância total: <strong>${totalFormat.nmStr}</strong> (${totalFormat.metricStr}) em ${Math.max(1, measurePoints.length - 1)} reta(s).`);
+        showToast(`Medição finalizada: ${totalFormat.nmStr} (${totalFormat.metricStr})`, 'success');
+    }
+
+    function clearMeasureData() {
+        measurePoints = [];
+        measureLayerGroup.clearLayers();
+        if (measureDynamicLine) {
+            measureDynamicLine = null;
+        }
+        if (measureTooltip) {
+            map.removeLayer(measureTooltip);
+            measureTooltip = null;
+        }
+        updateMeasureHudText('Medição limpa. Clique no mapa para iniciar uma nova medição.');
+    }
+
+    function stopMeasureMode() {
+        clearMeasureData();
+        isMeasureMode = false;
+        document.getElementById('btnToggleMeasure')?.classList.remove('active');
+        map.getContainer().style.cursor = '';
+        map.doubleClickZoom.enable();
+
+        map.off('click', onMeasureMapClick);
+        map.off('mousemove', onMeasureMouseMove);
+        map.off('dblclick', onMeasureMapDblClick);
+
+        const hud = document.getElementById('measureHud');
+        if (hud) hud.remove();
+    }
+
+    document.getElementById('btnToggleMeasure')?.addEventListener('click', toggleMeasureMode);
+
     document.getElementById('btnMapReset')?.addEventListener('click', () => {
         map.flyTo([-0.5, -49.0], 8, { duration: 1.2 });
     });
@@ -2844,9 +3080,13 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         });
     });
 
-    // Close active modal or photo lightbox on ESC key press
+    // Close active modal, measurement mode or photo lightbox on ESC key press
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' || e.key === 'Esc') {
+            if (isMeasureMode) {
+                stopMeasureMode();
+                return;
+            }
             const activeLightbox = document.getElementById('modalPhotoLightbox');
             if (activeLightbox && activeLightbox.classList.contains('active')) {
                 activeLightbox.classList.remove('active');

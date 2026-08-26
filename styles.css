@@ -1177,6 +1177,173 @@ html, body {
     color: var(--accent-gold);
 }
 
+.tool-btn.active {
+    background: var(--accent-gold);
+    color: #041226;
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
+}
+
+/* Floating Distance Measurement HUD */
+.measure-hud {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 850;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 58, 102, 0.92));
+    border: 1px solid var(--accent-gold);
+    border-radius: var(--radius-md);
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.5), 0 0 15px rgba(245, 158, 11, 0.25);
+    font-family: var(--font-tech);
+    animation: traySlideDown 0.25s ease;
+    max-width: 90vw;
+}
+
+.measure-hud-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #ffffff;
+    white-space: nowrap;
+}
+
+.measure-hud-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.btn-measure-hud {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #f1f5f9;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: var(--font-tech);
+    font-size: 0.74rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-measure-hud:hover {
+    background: rgba(245, 158, 11, 0.25);
+    border-color: var(--accent-gold);
+    color: #ffffff;
+}
+
+.btn-measure-close {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #fca5a5;
+}
+
+.btn-measure-close:hover {
+    background: rgba(239, 68, 68, 0.4);
+    border-color: #ef4444;
+    color: #ffffff;
+}
+
+/* Measurement Vertex Marker & Pulse */
+.measure-vertex-icon-wrapper {
+    background: transparent;
+    border: none;
+}
+
+.measure-vertex-marker {
+    width: 20px;
+    height: 20px;
+    background: #0f172a;
+    border: 2px solid var(--accent-gold);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-tech);
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--accent-gold);
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+    position: relative;
+}
+
+.measure-vertex-marker.start {
+    background: var(--accent-gold);
+    color: #0f172a;
+    border-color: #ffffff;
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.9);
+}
+
+.measure-vertex-marker::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    animation: measurePulse 2s infinite ease-out;
+}
+
+@keyframes measurePulse {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(2); opacity: 0; }
+}
+
+/* Measurement Midpoint Segment Badge */
+.measure-badge-wrapper {
+    background: transparent;
+    border: none;
+    pointer-events: none;
+}
+
+.measure-segment-badge {
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid var(--accent-cyan);
+    border-radius: 12px;
+    padding: 2px 8px;
+    color: #38bdf8;
+    font-family: var(--font-tech);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.measure-segment-badge small {
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+/* Custom Live Cursor Tooltip */
+.leaflet-tooltip.measure-live-tooltip {
+    background: rgba(15, 23, 42, 0.95) !important;
+    border: 1px solid var(--accent-gold) !important;
+    color: #ffffff !important;
+    font-family: var(--font-tech) !important;
+    font-size: 0.8rem !important;
+    padding: 5px 10px !important;
+    border-radius: 6px !important;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5) !important;
+    pointer-events: none !important;
+}
+
+.leaflet-tooltip.measure-live-tooltip::before {
+    border-top-color: var(--accent-gold) !important;
+}
+
 .layer-badge {
     background: var(--glass-bg);
     backdrop-filter: blur(8px);
