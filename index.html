@@ -148,11 +148,14 @@
                         <button class="clear-search" id="btnClearSearch" title="Limpar busca">&times;</button>
                     </div>
 
-                    <!-- Filter Row 1: Status -->
+                    <!-- Filter Row 1: Status & Custom Selection -->
                     <div class="filter-pills mb-2">
                         <button class="pill-btn active" data-filter="all">Todos (<span id="countAll">0</span>)</button>
                         <button class="pill-btn status-op" data-filter="op">🟢 Op (<span id="countOp">0</span>)</button>
                         <button class="pill-btn status-av" data-filter="av">🔴 Avariados (<span id="countAv">0</span>)</button>
+                        <button class="pill-btn status-sel" data-filter="selected" id="pillFilterSelected" title="Ver somente os sinais marcados">
+                            <i class="fa-solid fa-square-check"></i> Selecionados (<span id="countSelected">0</span>)
+                        </button>
                     </div>
 
                     <!-- Filter Row 2: Type Category -->
@@ -198,10 +201,40 @@
                     </div>
                 </div>
 
+                <!-- Active Selection Tray / Dock & Drop Zone -->
+                <div class="selected-signals-tray" id="selectedSignalsTray" style="display: none;">
+                    <div class="tray-header">
+                        <div class="tray-title">
+                            <i class="fa-solid fa-bullseye-pointer"></i>
+                            <span>EXIBINDO NO MAPA (<span id="trayCountBadge">0</span>)</span>
+                        </div>
+                        <div class="tray-actions">
+                            <button type="button" class="btn-tray-action" id="btnFitSelected" title="Ajustar zoom para todos os sinais selecionados">
+                                <i class="fa-solid fa-expand"></i> Enquadrar
+                            </button>
+                            <button type="button" class="btn-tray-action btn-tray-reset" id="btnResetToCHN4Default" title="Limpar seleção e voltar à visualização padrão do CHN-4">
+                                <i class="fa-solid fa-rotate-left"></i> Padrão CHN-4
+                            </button>
+                        </div>
+                    </div>
+                    <div class="selected-chips-container" id="selectedSignalsChips">
+                        <!-- Chips rendered dynamically -->
+                    </div>
+                </div>
+
+                <!-- Signal Drop Target Zone when Dragging -->
+                <div class="signal-drop-zone" id="signalDropZone">
+                    <i class="fa-solid fa-hand-pointer"></i>
+                    <span>Solte o card aqui para adicionar à visualização do mapa</span>
+                </div>
+
                 <!-- Signal Cards List Container -->
                 <div class="signal-list-header">
                     <span>SINAIS NÁUTICOS REGISTRADOS</span>
                     <div class="list-actions">
+                        <button class="btn-text btn-quick-reset" id="btnQuickResetCHN4" title="Restaurar visualização de todos os sinais CHN-4">
+                            <i class="fa-solid fa-rotate-left"></i> Padrão CHN-4
+                        </button>
                         <button class="btn-text" id="btnCenterAll"><i class="fa-solid fa-expand"></i> Enquadrar Todos</button>
                     </div>
                 </div>

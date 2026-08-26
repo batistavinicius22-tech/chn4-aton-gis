@@ -79,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ? [...googleEarthSignals]
         : [...initialSignals];
     let selectedSignal = null;
+    const selectedSignalCodes = new Set(); // Multi-signal selection for custom map view
     let currentFilter = 'all';
     let currentSearch = '';
     let currentTypeFilter = 'ALL'; // Category filter: ALL | FAROL | FAROLETE | BOIA | BALIZA
@@ -601,6 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updateTypeFilterDropdown();
         updateIE();
+        renderSelectedTray();
         renderMapMarkers();
         renderSignalList();
     }
@@ -1320,6 +1322,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getFilteredSignals() {
         return signalsData.filter(s => {
+            if (currentFilter === 'selected') {
+                return selectedSignalCodes.has(s.code);
+            }
+
             const matchesFilter = currentFilter === 'all' ||
                 (currentFilter === 'op' && isOperational(s.status)) ||
                 (currentFilter === 'av' && !isOperational(s.status));
@@ -1335,11 +1341,160 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function renderSelectedTray() {
+        const tray = document.getElementById('selectedSignalsTray');
+        const countBadge = document.getElementById('trayCountBadge');
+        const countSelectedEl = document.getElementById('countSelected');
+        const pillSel = document.getElementById('pillFilterSelected');
+        const chipsContainer = document.getElementById('selectedSignalsChips');
+
+        const count = selectedSignalCodes.size;
+        if (countBadge) countBadge.textContent = count;
+        if (countSelectedEl) countSelectedEl.textContent = count;
+
+        if (count === 0) {
+            if (tray) tray.style.display = 'none';
+            if (pillSel) pillSel.style.display = 'none';
+            if (currentFilter === 'selected') {
+                currentFilter = 'all';
+                document.querySelectorAll('.pill-btn').forEach(p => {
+                    if (p.getAttribute('data-filter') === 'all') p.classList.add('active');
+                    else p.classList.remove('active');
+                });
+                renderSignalList();
+                renderMapMarkers();
+            }
+            return;
+        }
+
+        if (tray) tray.style.display = 'flex';
+        if (pillSel) pillSel.style.display = 'inline-flex';
+
+        if (chipsContainer) {
+            chipsContainer.innerHTML = '';
+            selectedSignalCodes.forEach(code => {
+                const sig = signalsData.find(s => s.code === code);
+                const chip = document.createElement('div');
+                chip.className = 'signal-chip';
+                chip.title = 'Clique para focar no mapa';
+                chip.innerHTML = `
+                    <i class="fa-solid fa-anchor text-cyan"></i>
+                    <span class="chip-code">${code}</span>
+                    <span>${sig ? sig.name : ''}</span>
+                    <button type="button" class="chip-remove" onclick="event.stopPropagation(); window.toggleSelectSignal('${code}')" title="Desmarcar">&times;</button>
+                `;
+                chip.addEventListener('click', () => {
+                    window.focusSelectedSignal(code);
+                });
+                chipsContainer.appendChild(chip);
+            });
+        }
+    }
+
+    window.toggleSelectSignal = (code, forceState) => {
+        if (!code) return;
+        const exists = selectedSignalCodes.has(code);
+        let willBeSelected = exists;
+
+        if (forceState === true) {
+            selectedSignalCodes.add(code);
+            willBeSelected = true;
+        } else if (forceState === false) {
+            selectedSignalCodes.delete(code);
+            willBeSelected = false;
+        } else {
+            if (exists) {
+                selectedSignalCodes.delete(code);
+                willBeSelected = false;
+            } else {
+                selectedSignalCodes.add(code);
+                willBeSelected = true;
+            }
+        }
+
+        const sig = signalsData.find(s => s.code === code);
+        if (willBeSelected) {
+            showToast(`Sinal ${code}${sig ? ' (' + sig.name + ')' : ''} selecionado para o mapa.`, 'info');
+        } else {
+            showToast(`Sinal ${code} removido da seleção.`, 'info');
+        }
+
+        renderSelectedTray();
+        renderSignalList();
+        renderMapMarkers();
+
+        if (willBeSelected) {
+            if (selectedSignalCodes.size === 1 && sig) {
+                map.flyTo([sig.lat, sig.lng], 12, { duration: 0.8 });
+            } else if (selectedSignalCodes.size > 1) {
+                fitSelectedSignals();
+            }
+        }
+    };
+
+    function fitSelectedSignals() {
+        if (selectedSignalCodes.size === 0) return;
+        const list = signalsData.filter(s => selectedSignalCodes.has(s.code));
+        if (list.length === 0) return;
+        if (list.length === 1) {
+            map.flyTo([list[0].lat, list[0].lng], 12, { duration: 1.0 });
+            return;
+        }
+        const bounds = L.latLngBounds(list.map(s => [s.lat, s.lng]));
+        map.fitBounds(bounds, { padding: [60, 60], maxZoom: 13 });
+    }
+    window.fitSelectedSignals = fitSelectedSignals;
+
+    window.focusSelectedSignal = (code) => {
+        const sig = signalsData.find(s => s.code === code);
+        if (!sig) return;
+        map.flyTo([sig.lat, sig.lng], 13, { duration: 1.0 });
+        if (mapMarkers[code]) {
+            mapMarkers[code].openPopup();
+        }
+        highlightSignalCard(code);
+    };
+
+    function restoreDefaultCHN4View() {
+        selectedSignalCodes.clear();
+        currentSearch = '';
+        if (searchInput) searchInput.value = '';
+        currentFilter = 'all';
+        document.querySelectorAll('.pill-btn').forEach(p => {
+            if (p.getAttribute('data-filter') === 'all') p.classList.add('active');
+            else p.classList.remove('active');
+        });
+
+        // Set Responsáveis to CHN-4 only
+        const c1 = document.getElementById('chkRespCHN4');
+        const c2 = document.getElementById('chkRespCPAP');
+        const c3 = document.getElementById('chkRespCPMA');
+        const c5 = document.getElementById('chkRespExtra');
+        if (c1) c1.checked = true;
+        if (c2) c2.checked = false;
+        if (c3) c3.checked = false;
+        if (c5) c5.checked = false;
+
+        currentTypeFilter = 'ALL';
+        if (typeFilterSelect) typeFilterSelect.value = 'ALL';
+
+        renderSelectedTray();
+        renderSignalList();
+        renderMapMarkers();
+        map.flyTo([-0.5, -49.0], 8, { duration: 1.2 });
+        showToast('Visualização padrão dos sinais CHN-4 restaurada.', 'success');
+    }
+    window.restoreDefaultCHN4View = restoreDefaultCHN4View;
+
     function renderMapMarkers() {
         Object.values(mapMarkers).forEach(m => map.removeLayer(m));
         mapMarkers = {};
 
-        const visibleSignals = getFilteredSignals();
+        // If custom selection is active, exclusively show selected signals
+        const visibleSignals = (selectedSignalCodes.size > 0)
+            ? signalsData.filter(s => selectedSignalCodes.has(s.code))
+            : getFilteredSignals();
+
         visibleSignals.forEach(signal => {
             const marker = L.marker([signal.lat, signal.lng], {
                 icon: createCustomIcon(signal)
@@ -1405,9 +1560,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         filtered.forEach(s => {
             const isOp = isOperational(s.status);
+            const isSelected = selectedSignalCodes.has(s.code);
             const card = document.createElement('div');
-            card.className = `signal-card ${isOp ? 'status-op' : 'status-av'}`;
+            card.className = `signal-card ${isOp ? 'status-op' : 'status-av'} ${isSelected ? 'is-card-selected' : ''}`;
             card.id = `card-${s.code}`;
+            card.setAttribute('draggable', 'true');
 
             const respClass = (s.responsavel === 'CPAP') ? 'resp-cpap' : (s.responsavel === 'CPMA') ? 'resp-cpma' : (s.responsavel === 'Extra-MB') ? 'resp-extra' : 'resp-chn4';
             const fullType = getFullTypeName(s.type);
@@ -1415,6 +1572,9 @@ document.addEventListener('DOMContentLoaded', () => {
             card.innerHTML = `
                 <div class="signal-card-head">
                     <div class="signal-code-title">
+                        <button type="button" class="btn-card-select ${isSelected ? 'checked' : ''}" onclick="event.stopPropagation(); window.toggleSelectSignal('${s.code}')" title="${isSelected ? 'Remover da visualização conjunta' : 'Marcar para visualizar no mapa'}">
+                            <i class="fa-solid ${isSelected ? 'fa-square-check' : 'fa-square'}"></i>
+                        </button>
                         <i class="fa-solid ${getSignalIconClass(s.type)}" style="color:${isOp ? 'var(--status-op)' : 'var(--status-av)'}"></i>
                         <h4>${s.code}</h4>
                     </div>
@@ -1435,6 +1595,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span>Alcance: ${s.rangeNM} NM</span>
                 </div>
             `;
+
+            // Drag and Drop listeners on card
+            card.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', s.code);
+                card.classList.add('dragging');
+                const dropZone = document.getElementById('signalDropZone');
+                if (dropZone) dropZone.classList.add('is-dragging-active');
+            });
+
+            card.addEventListener('dragend', () => {
+                card.classList.remove('dragging');
+                const dropZone = document.getElementById('signalDropZone');
+                if (dropZone) dropZone.classList.remove('is-dragging-active', 'drag-over');
+            });
 
             card.addEventListener('click', () => {
                 map.flyTo([s.lat, s.lng], 11, { duration: 1.2 });
@@ -2579,12 +2753,18 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
     searchInput?.addEventListener('input', (e) => {
         currentSearch = e.target.value;
         renderSignalList();
+        if (selectedSignalCodes.size === 0) {
+            renderMapMarkers();
+        }
     });
 
     document.getElementById('btnClearSearch')?.addEventListener('click', () => {
         if (searchInput) searchInput.value = '';
         currentSearch = '';
         renderSignalList();
+        if (selectedSignalCodes.size === 0) {
+            renderMapMarkers();
+        }
     });
 
     document.querySelectorAll('.pill-btn').forEach(pill => {
@@ -2596,6 +2776,36 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             renderMapMarkers();
         });
     });
+
+    // Tray & Quick Reset Handlers
+    document.getElementById('btnResetToCHN4Default')?.addEventListener('click', restoreDefaultCHN4View);
+    document.getElementById('btnQuickResetCHN4')?.addEventListener('click', restoreDefaultCHN4View);
+    document.getElementById('btnFitSelected')?.addEventListener('click', fitSelectedSignals);
+
+    // Drag and Drop Zone Event Listeners
+    const setupDropZone = (element) => {
+        if (!element) return;
+        element.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            element.classList.add('drag-over');
+        });
+        element.addEventListener('dragleave', () => {
+            element.classList.remove('drag-over');
+        });
+        element.addEventListener('drop', (e) => {
+            e.preventDefault();
+            element.classList.remove('drag-over');
+            const code = e.dataTransfer.getData('text/plain');
+            if (code) {
+                window.toggleSelectSignal(code, true);
+            }
+            document.getElementById('signalDropZone')?.classList.remove('is-dragging-active');
+        });
+    };
+
+    setupDropZone(document.getElementById('signalDropZone'));
+    setupDropZone(document.getElementById('selectedSignalsTray'));
 
     const typeFilterSelect = document.getElementById('typeFilterSelect');
     typeFilterSelect?.addEventListener('change', (e) => {
