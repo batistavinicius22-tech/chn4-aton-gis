@@ -252,29 +252,24 @@
                         <span class="badge badge-warning">Canal Navegável</span>
                     </div>
 
-                    <p class="help-text text-secondary mb-2">
-                        <i class="fa-solid fa-circle-info"></i> Clique no mapa para adicionar **Pontos de Guinada (Waypoints)** contornando terras e bancos de areia pelo canal seguro.
+                    <p class="help-text text-secondary mb-3">
+                        <i class="fa-solid fa-circle-info"></i> Clique em <strong>"Traçar no Mapa"</strong>. O <strong>1º clique</strong> define o Ponto de Partida, e os cliques seguintes adicionam os <strong>Pontos de Guinada (Waypoints)</strong> contornando bancos e terras pelo canal seguro.
                     </p>
 
-                    <!-- Base Selection -->
-                    <div class="form-group">
-                        <label for="routeBaseSelect"><i class="fa-solid fa-anchor"></i> Origem / Ponto de Partida:</label>
-                        <select id="routeBaseSelect" class="form-control">
-                            <option value="belem">Base Naval de Val-de-Cães (Belém / CHN-4)</option>
-                            <option value="macapa">Capitania dos Portos do Amapá (Macapá)</option>
-                            <option value="santarem">Capitania Fluvial de Santarém</option>
-                            <option value="salinopolis">Ponto Focal Salinópolis (Atalaia)</option>
-                            <option value="custom">📍 Ponto de Partida Personalizado (Definido no Mapa)</option>
-                        </select>
-                        <button class="btn btn-outline btn-sm w-full mt-1" id="btnPickBasePointOnMap" title="Clique no mapa para definir a posição exata da Partida">
-                            <i class="fa-solid fa-crosshairs"></i> Capturar Partida no Mapa
+                    <!-- Route Mode Action Buttons -->
+                    <div class="route-actions-grid mb-3">
+                        <button class="btn btn-primary" id="btnToggleDrawDerrota">
+                            <i class="fa-solid fa-pen-nib"></i> <span id="btnDrawDerrotaText">Traçar no Mapa</span>
+                        </button>
+                        <button class="btn btn-primary" id="btnToggleRouteVisibility" title="Exibir ou ocultar o traçado no mapa">
+                            <i class="fa-solid fa-eye"></i> <span id="btnRouteVisText">Ocultar Derrota</span>
                         </button>
                     </div>
 
                     <!-- Ship Speed Input -->
-                    <div class="form-group">
+                    <div class="form-group mb-3">
                         <label for="shipSpeedInput">
-                            <i class="fa-solid fa-gauge-high"></i> Velocidade do Navio (Nós / kts):
+                            <i class="fa-solid fa-gauge-high"></i> Velocidade Média do Navio (Nós / kts):
                         </label>
                         <div class="input-with-unit">
                             <input type="number" id="shipSpeedInput" min="1" max="40" value="10" step="0.5" class="form-control">
@@ -282,22 +277,12 @@
                         </div>
                     </div>
 
-                    <!-- Route Mode Action Buttons -->
-                    <div class="route-actions-grid">
-                        <button class="btn btn-primary" id="btnToggleDrawDerrota">
-                            <i class="fa-solid fa-pen-nib"></i> <span id="btnDrawDerrotaText">Desenhar no Mapa</span>
-                        </button>
-                        <button class="btn btn-primary" id="btnToggleRouteVisibility" title="Exibir ou desativar/ocultar o traçado no mapa">
-                            <i class="fa-solid fa-eye"></i> <span id="btnRouteVisText">Exibir Derrota</span>
-                        </button>
-                    </div>
-
                     <!-- Terrestrial Viatura & Clear Buttons -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" class="mb-3">
-                        <button class="btn btn-success btn-sm" id="btnOpenGoogleMapsRoute" title="Abrir rota no Google Maps para navegação terrestre por viatura">
-                            <i class="fa-solid fa-car"></i> Rota Viatura (Google Maps)
+                        <button class="btn btn-success btn-sm" id="btnOpenGoogleMapsRoute" title="Exportar e abrir rota no Google Maps para navegação de apoio terrestre por viatura">
+                            <i class="fa-solid fa-car"></i> Rota Google Maps
                         </button>
-                        <button class="btn btn-danger-outline btn-sm" id="btnClearRoute" title="Limpar todos os pontos da derrota">
+                        <button class="btn btn-danger-outline btn-sm" id="btnClearRoute" title="Limpar todos os waypoints e o traçado da derrota">
                             <i class="fa-solid fa-trash-can"></i> Limpar Derrota
                         </button>
                     </div>
@@ -305,7 +290,7 @@
                     <!-- Route Summary Telemetry -->
                     <div class="telemetry-box" id="routeTelemetry">
                         <div class="telemetry-item">
-                            <span class="telemetry-label">DISTÂNCIA TOTAL (NM)</span>
+                            <span class="telemetry-label">DISTÂNCIA TOTAL</span>
                             <span class="telemetry-val" id="routeDistanceVal">0.0 <small>NM</small></span>
                         </div>
                         <div class="telemetry-item">

@@ -91,7 +91,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let routeWaypoints = []; 
     let waypointMarkers = [];
     let isDrawDerrotaMode = false;
-    let isRouteVisible = false; // Control visibility of route markers and polyline on map
+    let isRouteVisible = true; // Control visibility of route markers and polyline on map
+    let routeDynamicLine = null;
+    let routeTooltip = null;
 
     // Map & Layers State
     let mapMarkers = {}; 
@@ -116,6 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     const measureLayerGroup = L.layerGroup().addTo(map);
+    const routeLayerGroup = L.layerGroup().addTo(map);
 
     // Layer 1: Esri World Imagery
     const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -2584,67 +2587,221 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
     });
 
     // =========================================================================
-    // 11. TRAÇADO DE DERROTA NÁUTICA (CANAL SEGURO)
+    // 11. TRAÇADO DE DERROTA NÁUTICA INTERATIVA (CANAL SEGURO)
     // =========================================================================
+    function toggleDrawDerrotaMode() {
+        if (isDrawDerrotaMode) {
+            stopDrawDerrotaMode();
+        } else {
+            startDrawDerrotaMode();
+        }
+    }
+
+    function startDrawDerrotaMode() {
+        isDrawDerrotaMode = true;
+        isRouteVisible = true;
+        const btnText = document.getElementById('btnDrawDerrotaText');
+        const btn = document.getElementById('btnToggleDrawDerrota');
+        if (btnText) btnText.textContent = 'Finalizar Traçado';
+        if (btn) btn.classList.add('active');
+
+        map.getContainer().style.cursor = 'crosshair';
+        map.doubleClickZoom.disable();
+
+        // Attach listeners for interactive drawing
+        map.on('click', onRouteMapClick);
+        map.on('mousemove', onRouteMouseMove);
+        map.on('dblclick', onRouteMapDblClick);
+
+        showToast(routeWaypoints.length === 0
+            ? 'Derrota Náutica: Clique no mapa para marcar o Ponto de Partida.'
+            : 'Derrota Náutica: Clique no mapa para adicionar o próximo Waypoint.', 'info');
+    }
+
+    function stopDrawDerrotaMode() {
+        isDrawDerrotaMode = false;
+        const btnText = document.getElementById('btnDrawDerrotaText');
+        const btn = document.getElementById('btnToggleDrawDerrota');
+        if (btnText) btnText.textContent = 'Traçar no Mapa';
+        if (btn) btn.classList.remove('active');
+
+        if (routeDynamicLine) {
+            routeLayerGroup.removeLayer(routeDynamicLine);
+            routeDynamicLine = null;
+        }
+        if (routeTooltip) {
+            map.removeLayer(routeTooltip);
+            routeTooltip = null;
+        }
+
+        map.getContainer().style.cursor = '';
+        map.doubleClickZoom.enable();
+
+        map.off('click', onRouteMapClick);
+        map.off('mousemove', onRouteMouseMove);
+        map.off('dblclick', onRouteMapDblClick);
+
+        updateRoute();
+    }
+
+    function onRouteMouseMove(e) {
+        if (!isDrawDerrotaMode) return;
+        if (routeWaypoints.length === 0) return;
+
+        const pLast = routeWaypoints[routeWaypoints.length - 1];
+        const pCurrent = e.latlng;
+
+        const segNM = haversineNM(pLast.lat, pLast.lng, pCurrent.lat, pCurrent.lng);
+        const segBearing = calculateBearing(pLast.lat, pLast.lng, pCurrent.lat, pCurrent.lng);
+        const segFormat = formatDistanceMetricAndNautical(segNM);
+
+        let totalNM = 0;
+        for (let i = 0; i < routeWaypoints.length - 1; i++) {
+            totalNM += haversineNM(routeWaypoints[i].lat, routeWaypoints[i].lng, routeWaypoints[i+1].lat, routeWaypoints[i+1].lng);
+        }
+        totalNM += segNM;
+
+        if (!routeDynamicLine) {
+            routeDynamicLine = L.polyline([[pLast.lat, pLast.lng], pCurrent], {
+                color: '#f59e0b',
+                weight: 4,
+                dashArray: '8, 8',
+                opacity: 0.9
+            }).addTo(routeLayerGroup);
+        } else {
+            routeDynamicLine.setLatLngs([[pLast.lat, pLast.lng], pCurrent]);
+        }
+
+        const nextLegNum = routeWaypoints.length;
+        const tooltipHtml = `
+            <div>
+                <strong>Perna ${nextLegNum}:</strong> ${segFormat.nmStr} <span style="color:#93c5fd;">(${segFormat.metricStr})</span>
+            </div>
+            <div style="font-size: 0.75rem; color: #cbd5e1; margin-top: 2px;">
+                Rumo: <strong>${segBearing}°</strong> | Derrota Total: <strong>${totalNM.toFixed(1)} NM</strong>
+            </div>
+        `;
+
+        if (!routeTooltip) {
+            routeTooltip = L.tooltip({
+                permanent: true,
+                direction: 'top',
+                offset: [0, -14],
+                className: 'measure-live-tooltip'
+            }).setLatLng(pCurrent).setContent(tooltipHtml).addTo(map);
+        } else {
+            routeTooltip.setLatLng(pCurrent).setContent(tooltipHtml);
+        }
+    }
+
+    function onRouteMapClick(e) {
+        if (!isDrawDerrotaMode) return;
+
+        const newPoint = e.latlng;
+        const idx = routeWaypoints.length;
+        const wpName = idx === 0 ? 'Ponto de Partida' : `Waypoint ${idx}`;
+
+        routeWaypoints.push({
+            id: `wpt_${Date.now()}_${idx}`,
+            name: wpName,
+            lat: newPoint.lat,
+            lng: newPoint.lng
+        });
+
+        isRouteVisible = true;
+        updateRoute();
+
+        if (idx === 0) {
+            showToast('Partida definida! Mova o mouse e clique para adicionar os Pontos de Guinada.', 'success');
+        } else {
+            showToast(`Waypoint ${idx} adicionado à derrota.`, 'info');
+        }
+    }
+
+    function onRouteMapDblClick(e) {
+        if (!isDrawDerrotaMode) return;
+        L.DomEvent.stop(e);
+        stopDrawDerrotaMode();
+        showToast('Traçado de derrota finalizado.', 'success');
+    }
+
     function updateRoute() {
-        const baseKey = document.getElementById('routeBaseSelect').value;
-        const base = navalBases[baseKey] || navalBases.belem;
-
-        const fullSequence = [
-            { id: 'base', name: base.name, lat: base.lat, lng: base.lng, isBase: true },
-            ...routeWaypoints
-        ];
-
-        if (routePolyline) map.removeLayer(routePolyline);
-        waypointMarkers.forEach(m => map.removeLayer(m));
+        routeLayerGroup.clearLayers();
         waypointMarkers = [];
 
-        if (isRouteVisible) {
-            const latLngs = fullSequence.map(wp => [wp.lat, wp.lng]);
+        if (!isRouteVisible || routeWaypoints.length === 0) {
+            renderWaypointsList(routeWaypoints);
+            calculateRouteTelemetry(routeWaypoints);
+            return;
+        }
+
+        const latLngs = routeWaypoints.map(wp => [wp.lat, wp.lng]);
+
+        // Draw Nautical Channel Line
+        if (latLngs.length >= 2) {
             routePolyline = L.polyline(latLngs, {
                 color: '#f59e0b',
                 weight: 4,
                 dashArray: '8, 8',
                 lineJoin: 'round'
-            }).addTo(map);
+            }).addTo(routeLayerGroup);
 
-            fullSequence.forEach((wp, index) => {
-                const isFirst = index === 0;
-                const isLast = index === fullSequence.length - 1 && fullSequence.length > 1;
-                let colorClass = 'wp-waypoint';
-                if (isFirst) colorClass = 'wp-base';
-                if (isLast) colorClass = 'wp-destination';
+            // Add midpoint badges for each leg
+            for (let i = 0; i < routeWaypoints.length - 1; i++) {
+                const p1 = routeWaypoints[i];
+                const p2 = routeWaypoints[i + 1];
+                const distNM = haversineNM(p1.lat, p1.lng, p2.lat, p2.lng);
+                const bearing = calculateBearing(p1.lat, p1.lng, p2.lat, p2.lng);
+                const distFormat = formatDistanceMetricAndNautical(distNM);
 
-                const icon = L.divIcon({
-                    className: 'custom-wp-icon-wrapper',
-                    html: `<div class="wp-marker ${colorClass}"><span>${index === 0 ? 'P' : index}</span></div>`,
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
+                const midLat = (p1.lat + p2.lat) / 2;
+                const midLng = (p1.lng + p2.lng) / 2;
+
+                const badgeIcon = L.divIcon({
+                    className: 'measure-badge-wrapper',
+                    html: `<div class="route-leg-badge"><span>Perna ${i + 1}: ${distFormat.nmStr}</span> <small>(${distFormat.metricStr}) • ${bearing}°</small></div>`,
+                    iconSize: [200, 24],
+                    iconAnchor: [100, 12]
                 });
 
-                const marker = L.marker([wp.lat, wp.lng], {
-                    icon: icon,
-                    draggable: true
-                }).addTo(map);
-
-                marker.on('dragend', (e) => {
-                    const newPos = e.target.getLatLng();
-                    if (index === 0) {
-                        base.lat = newPos.lat;
-                        base.lng = newPos.lat;
-                    } else {
-                        routeWaypoints[index - 1].lat = newPos.lat;
-                        routeWaypoints[index - 1].lng = newPos.lng;
-                    }
-                    updateRoute();
-                });
-
-                waypointMarkers.push(marker);
-            });
+                L.marker([midLat, midLng], { icon: badgeIcon, interactive: false }).addTo(routeLayerGroup);
+            }
         }
 
-        renderWaypointsList(fullSequence);
-        calculateRouteTelemetry(fullSequence);
+        // Place Draggable Waypoint Markers
+        routeWaypoints.forEach((wp, index) => {
+            const isFirst = index === 0;
+            const isLast = index === routeWaypoints.length - 1 && routeWaypoints.length > 1;
+            let colorClass = 'wp-waypoint';
+            if (isFirst) colorClass = 'wp-base';
+            else if (isLast) colorClass = 'wp-destination';
+
+            const labelText = isFirst ? 'P' : (isLast ? 'D' : index);
+
+            const icon = L.divIcon({
+                className: 'custom-wp-icon-wrapper',
+                html: `<div class="wp-marker ${colorClass}" title="${wp.name}"><span>${labelText}</span></div>`,
+                iconSize: [28, 28],
+                iconAnchor: [14, 14]
+            });
+
+            const marker = L.marker([wp.lat, wp.lng], {
+                icon: icon,
+                draggable: true
+            }).addTo(routeLayerGroup);
+
+            marker.on('dragend', (e) => {
+                const newPos = e.target.getLatLng();
+                routeWaypoints[index].lat = newPos.lat;
+                routeWaypoints[index].lng = newPos.lng;
+                updateRoute();
+            });
+
+            waypointMarkers.push(marker);
+        });
+
+        renderWaypointsList(routeWaypoints);
+        calculateRouteTelemetry(routeWaypoints);
     }
 
     function calculateRouteTelemetry(sequence) {
@@ -2662,9 +2819,15 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         const hours = Math.floor(totalHours);
         const minutes = Math.round((totalHours - hours) * 60);
 
-        document.getElementById('routeDistanceVal').innerHTML = `${totalDistance.toFixed(1)} <small>NM</small>`;
-        document.getElementById('routeWaypointsCount').innerHTML = `${Math.max(0, sequence.length - 1)} <small>pts</small>`;
-        document.getElementById('routeEtaVal').textContent = `${hours}h ${String(minutes).padStart(2, '0')}m`;
+        const distFormat = formatDistanceMetricAndNautical(totalDistance);
+
+        const distEl = document.getElementById('routeDistanceVal');
+        const countEl = document.getElementById('routeWaypointsCount');
+        const etaEl = document.getElementById('routeEtaVal');
+
+        if (distEl) distEl.innerHTML = `${distFormat.nmStr} <small style="font-size:0.75rem; color:#38bdf8;">(${distFormat.metricStr})</small>`;
+        if (countEl) countEl.innerHTML = `${sequence.length} <small>pts</small>`;
+        if (etaEl) etaEl.textContent = `${hours}h ${String(minutes).padStart(2, '0')}m`;
     }
 
     function renderWaypointsList(sequence) {
@@ -2672,8 +2835,8 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         if (!container) return;
         container.innerHTML = '';
 
-        if (sequence.length <= 1) {
-            container.innerHTML = '<li class="waypoint-item empty">Nenhum ponto de guinada adicionado à derrota.</li>';
+        if (sequence.length === 0) {
+            container.innerHTML = '<li class="waypoint-item empty" style="color:var(--text-muted); text-align:center; padding:12px;">Nenhum ponto traçado. Clique em "Traçar no Mapa" para começar.</li>';
             return;
         }
 
@@ -2687,14 +2850,19 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                 const prev = sequence[i - 1];
                 const dist = haversineNM(prev.lat, prev.lng, wp.lat, wp.lng);
                 const bearing = calculateBearing(prev.lat, prev.lng, wp.lat, wp.lng);
-                legInfo = `Perna ${i}: Dist ${dist.toFixed(1)} NM | Rumo ${bearing}°`;
+                const distFormat = formatDistanceMetricAndNautical(dist);
+                legInfo = `Perna ${i}: ${distFormat.nmStr} (${distFormat.metricStr}) • Rumo ${bearing}°`;
             }
+
+            const isStart = i === 0;
+            const isEnd = i === sequence.length - 1 && sequence.length > 1;
+            const badgeLabel = isStart ? 'PARTIDA' : (isEnd ? 'DESTINO' : `WPT ${i}`);
 
             li.innerHTML = `
                 <div class="wp-item-head">
-                    <span class="wp-num">${i === 0 ? 'PARTIDA' : `WPT ${i}`}</span>
-                    <strong>${wp.name}</strong>
-                    ${i > 0 ? `<button class="btn-remove-wp" onclick="window.removeWaypoint(${i - 1})">&times;</button>` : ''}
+                    <span class="wp-num" style="background:${isStart ? 'var(--accent-gold)' : (isEnd ? 'var(--status-op)' : 'var(--navy-700)')}; color:${isStart ? '#0f172a' : '#ffffff'};">${badgeLabel}</span>
+                    <strong style="color:#ffffff; cursor:pointer;" onclick="window.focusWaypoint(${i})">${wp.name}</strong>
+                    <button class="btn-remove-wp" onclick="window.removeWaypoint(${i})" title="Remover este ponto">&times;</button>
                 </div>
                 <div class="wp-item-meta">${legInfo}</div>
                 <div class="wp-coords">${toDMS(wp.lat, true)} | ${toDMS(wp.lng, false)}</div>
@@ -2706,6 +2874,14 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
     window.removeWaypoint = (index) => {
         routeWaypoints.splice(index, 1);
         updateRoute();
+        showToast('Ponto removido da derrota.', 'info');
+    };
+
+    window.focusWaypoint = (index) => {
+        if (routeWaypoints[index]) {
+            const wp = routeWaypoints[index];
+            map.flyTo([wp.lat, wp.lng], 13, { duration: 1.0 });
+        }
     };
 
     window.addSignalToRoute = (code) => {
@@ -2713,7 +2889,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         if (!signal) return;
 
         routeWaypoints.push({
-            code: signal.code,
+            id: `sig_${signal.code}`,
             name: `${signal.code} - ${signal.name}`,
             lat: signal.lat,
             lng: signal.lng
@@ -2723,6 +2899,40 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         updateRoute();
         showToast(`Sinal ${signal.code} adicionado à derrota náutica!`, 'success');
     };
+
+    // Route Buttons Listeners
+    document.getElementById('btnToggleDrawDerrota')?.addEventListener('click', toggleDrawDerrotaMode);
+
+    document.getElementById('btnToggleRouteVisibility')?.addEventListener('click', () => {
+        isRouteVisible = !isRouteVisible;
+        const textEl = document.getElementById('btnRouteVisText');
+        if (textEl) textEl.textContent = isRouteVisible ? 'Ocultar Derrota' : 'Exibir Derrota';
+        updateRoute();
+        showToast(isRouteVisible ? 'Derrota exibida no mapa.' : 'Derrota ocultada do mapa.', 'info');
+    });
+
+    document.getElementById('btnClearRoute')?.addEventListener('click', () => {
+        if (routeWaypoints.length === 0) return;
+        if (confirm('Deseja limpar todos os pontos da derrota náutica?')) {
+            routeWaypoints = [];
+            if (isDrawDerrotaMode) stopDrawDerrotaMode();
+            updateRoute();
+            showToast('Derrota náutica limpa com sucesso.', 'info');
+        }
+    });
+
+    document.getElementById('btnOpenGoogleMapsRoute')?.addEventListener('click', () => {
+        if (routeWaypoints.length < 2) {
+            showToast('Trace pelo menos 2 pontos de derrota para abrir no Google Maps.', 'warning');
+            return;
+        }
+        const coords = routeWaypoints.map(wp => `${wp.lat.toFixed(6)},${wp.lng.toFixed(6)}`).join('/');
+        window.open(`https://www.google.com/maps/dir/${coords}`, '_blank');
+    });
+
+    document.getElementById('shipSpeedInput')?.addEventListener('input', () => {
+        calculateRouteTelemetry(routeWaypoints);
+    });
 
     // =========================================================================
     // 12. CONTROLES DE INTERFACE & FILTROS
@@ -3080,11 +3290,15 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         });
     });
 
-    // Close active modal, measurement mode or photo lightbox on ESC key press
+    // Close active modal, measurement mode, route drawing mode or photo lightbox on ESC key press
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' || e.key === 'Esc') {
             if (isMeasureMode) {
                 stopMeasureMode();
+                return;
+            }
+            if (isDrawDerrotaMode) {
+                stopDrawDerrotaMode();
                 return;
             }
             const activeLightbox = document.getElementById('modalPhotoLightbox');
