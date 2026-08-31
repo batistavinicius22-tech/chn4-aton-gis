@@ -476,6 +476,10 @@
                                         <th>IE Individual (NORMAM-601):</th>
                                         <td id="modalSpecIeIndividual" style="color: var(--status-op); font-weight: 700;">100,00% (Mensal) | 100,00% (Anual)</td>
                                     </tr>
+                                    <tr>
+                                        <th>Plano de Contingência:</th>
+                                        <td id="modalSpecContingencyPlan" style="color: var(--accent-gold-light); font-size: 0.88rem; line-height: 1.4; white-space: pre-line;">--</td>
+                                    </tr>
                                 </table>
 
                                 <!-- Direct Editable Computation Date Card -->
@@ -588,6 +592,10 @@
                                         <option value="CPPA">CPPA (Capitania dos Portos do Pará)</option>
                                         <option value="Extra-MB">Órgãos Extra-Marinha do Brasil</option>
                                     </select>
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="fa-solid fa-shield-halved text-gold"></i> Plano de Contingência:</label>
+                                    <textarea id="editContingencyPlan" class="form-control" rows="3" placeholder="Ação de contingência para restabelecer o sinal em caso de falha/avaria..."></textarea>
                                 </div>
                                 <div class="form-actions-grid mt-3">
                                     <button type="submit" class="btn btn-success">
@@ -961,6 +969,10 @@
                                             <option value="CPPA">CPPA (Capitania dos Portos do Pará)</option>
                                             <option value="Extra-MB">Órgãos Extra-Marinha do Brasil</option>
                                         </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="addContingencyPlan"><i class="fa-solid fa-shield-halved text-gold"></i> Plano de Contingência</label>
+                                        <textarea id="addContingencyPlan" class="form-control" rows="2" placeholder="Procedimento de contingência em caso de avaria ou falha..."></textarea>
                                     </div>
                                 </div>
                             </div>

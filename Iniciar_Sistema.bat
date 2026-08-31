@@ -13,5 +13,12 @@ echo.
 :: Abre o navegador padrao no endereco do sistema
 start http://localhost:3000
 
-:: Executa o servidor nativo em PowerShell
-powershell -ExecutionPolicy Bypass -File server.ps1
+:: Executa preferencialmente com Node.js (mais rapido) ou PowerShell nativo
+where node >nul 2>nul
+if %errorlevel% equ 0 (
+    echo Iniciando com motor Node.js...
+    node server.js
+) else (
+    echo Iniciando com motor PowerShell...
+    powershell -ExecutionPolicy Bypass -File server.ps1
+)

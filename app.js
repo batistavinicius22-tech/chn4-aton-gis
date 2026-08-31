@@ -523,37 +523,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Client-side image resizer/compressor to ensure crystal-clear display under Firestore (<1MB) & storage limits
     function optimizeImage(file, maxWidth = 1280, maxHeight = 1280, quality = 0.82) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
+            if (!file) {
+                resolve(null);
+                return;
+            }
             const reader = new FileReader();
             reader.onload = (e) => {
+                const dataResult = e.target.result;
                 const img = new Image();
                 img.onload = () => {
-                    let width = img.width;
-                    let height = img.height;
+                    try {
+                        let width = img.width || 800;
+                        let height = img.height || 600;
 
-                    if (width > maxWidth || height > maxHeight) {
-                        if (width / height > maxWidth / maxHeight) {
-                            height = Math.round((height * maxWidth) / width);
-                            width = maxWidth;
-                        } else {
-                            width = Math.round((width * maxHeight) / height);
-                            height = maxHeight;
+                        if (width > maxWidth || height > maxHeight) {
+                            if (width / height > maxWidth / maxHeight) {
+                                height = Math.round((height * maxWidth) / width);
+                                width = maxWidth;
+                            } else {
+                                width = Math.round((width * maxHeight) / height);
+                                height = maxHeight;
+                            }
                         }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.max(1, width);
+                        canvas.height = Math.max(1, height);
+                        const ctx = canvas.getContext('2d');
+                        if (ctx) {
+                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                            const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                            resolve(dataUrl);
+                            return;
+                        }
+                    } catch (canvasErr) {
+                        console.warn('Canvas optimization fallback to direct dataUrl:', canvasErr);
                     }
-
-                    const canvas = document.createElement('canvas');
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    const dataUrl = canvas.toDataURL('image/jpeg', quality);
-                    resolve(dataUrl);
+                    resolve(dataResult);
                 };
-                img.onerror = () => reject(new Error('Falha ao processar arquivo de imagem'));
-                img.src = e.target.result;
+                img.onerror = () => {
+                    // Fallback to direct raw dataURL if browser canvas failed to render image element
+                    console.warn('Image onload fallback to raw FileReader result');
+                    resolve(dataResult);
+                };
+                img.src = dataResult;
             };
-            reader.onerror = () => reject(new Error('Falha ao ler arquivo'));
+            reader.onerror = () => {
+                console.error('FileReader failed to read image file');
+                resolve(null);
+            };
             reader.readAsDataURL(file);
         });
     }
@@ -1682,6 +1701,7 @@ document.addEventListener('DOMContentLoaded', () => {
             altitudeM: typeof signal.altitudeM === 'number' ? signal.altitudeM : parseFloat(signal.altitudeM) || 0,
             jurisdiction: String(signal.jurisdiction || 'CHN-4').trim(),
             responsavel: String(signal.responsavel || 'CHN-4').trim(),
+            contingencyPlan: signal.contingencyPlan ? String(signal.contingencyPlan).trim() : (signal.planoContingencia ? String(signal.planoContingencia).trim() : ''),
             occurrenceStartDate: signal.occurrenceStartDate ? String(signal.occurrenceStartDate).trim() : (signal.inoperableSince ? String(signal.inoperableSince).trim() : null),
             inoperableSince: signal.inoperableSince ? String(signal.inoperableSince).trim() : (signal.occurrenceStartDate ? String(signal.occurrenceStartDate).trim() : null),
             image: signal.image || (Array.isArray(signal.images) && signal.images.length > 0 ? signal.images[0].url : null),
@@ -1784,6 +1804,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const specRespEl = document.getElementById('modalSpecResponsavel');
         if (specRespEl) specRespEl.textContent = signal.responsavel || 'CHN-4';
+
+        const contPlanEl = document.getElementById('modalSpecContingencyPlan');
+        if (contPlanEl) {
+            contPlanEl.textContent = signal.contingencyPlan || signal.planoContingencia || 'Não informado';
+        }
 
         const isOp = isOperational(signal.status);
         document.getElementById('modalSpecStatus').innerHTML = `<span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${signal.status}</span>`;
@@ -2306,6 +2331,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const editRespEl = document.getElementById('editResponsavel');
             if (editRespEl) editRespEl.value = selectedSignal.responsavel || 'CHN-4';
+
+            const editContPlanEl = document.getElementById('editContingencyPlan');
+            if (editContPlanEl) editContPlanEl.value = selectedSignal.contingencyPlan || selectedSignal.planoContingencia || '';
         } else {
             viewMode.style.display = 'block';
             editForm.style.display = 'none';
@@ -2357,6 +2385,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const newJur = document.getElementById('editJurisdiction').value.trim();
         const newResp = document.getElementById('editResponsavel')?.value || selectedSignal.responsavel || 'CHN-4';
+        const newContPlan = document.getElementById('editContingencyPlan')?.value?.trim() || '';
 
         // 1. If code changed, delete old document from Firestore/Backend first
         if (oldCode && oldCode !== newCode) {
@@ -2382,6 +2411,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedSignal.lng = newLng;
         selectedSignal.jurisdiction = newJur;
         selectedSignal.responsavel = newResp;
+        selectedSignal.contingencyPlan = newContPlan;
 
         // 3. Save to backend (Cloud Firestore + REST API / signals.json)
         saveSignalToBackend(selectedSignal);
@@ -2464,37 +2494,45 @@ document.addEventListener('DOMContentLoaded', () => {
         const files = Array.from(e.target.files || []);
         if (files.length === 0 || !selectedSignal) return;
 
-        showToast(`Processando ${files.length} foto(s) para a galeria do banco de dados...`, 'info');
+        showToast(`Processando ${files.length} foto(s) para a galeria do sinal...`, 'info');
 
         try {
             const images = getSignalImages(selectedSignal);
             const now = new Date();
             const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
 
+            let addedCount = 0;
             for (const file of files) {
                 const optimizedBase64 = await optimizeImage(file, 1280, 1280, 0.82);
-                images.push({
-                    id: 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                    url: optimizedBase64,
-                    date: dateStr
-                });
+                if (optimizedBase64) {
+                    images.push({
+                        id: 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                        url: optimizedBase64,
+                        date: dateStr
+                    });
+                    addedCount++;
+                }
             }
 
-            selectedSignal.images = images;
-            selectedSignal.image = images[0].url;
-            selectedSignal.photoDate = images[0].date;
-            currentPhotoIndex = images.length - 1; // View the newest added photo
+            if (addedCount > 0) {
+                selectedSignal.images = images;
+                selectedSignal.image = images[images.length - 1].url;
+                selectedSignal.photoDate = images[images.length - 1].date;
+                currentPhotoIndex = images.length - 1; // View the newest added photo
 
-            // Salva na memória, Firestore, LocalStorage, IndexedDB e REST API
-            saveSignalToBackend(selectedSignal);
+                // Salva na memória, Firestore, LocalStorage, IndexedDB e REST API
+                saveSignalToBackend(selectedSignal);
 
-            // Atualiza a interface gráfica imediatamente
-            renderSignalPhoto(selectedSignal);
-            if (document.getElementById('modalPhotoLightbox')?.classList.contains('active')) {
-                updateLightboxPhotoView();
+                // Atualiza a interface gráfica imediatamente
+                renderSignalPhoto(selectedSignal);
+                if (document.getElementById('modalPhotoLightbox')?.classList.contains('active')) {
+                    updateLightboxPhotoView();
+                }
+
+                showToast(`${addedCount} foto(s) adicionada(s) à galeria do sinal ${selectedSignal.code}!`, 'success');
+            } else {
+                showToast('Nenhuma imagem pôde ser processada.', 'warning');
             }
-
-            showToast(`${files.length} foto(s) adicionada(s) à galeria do sinal ${selectedSignal.code}!`, 'success');
         } catch (err) {
             console.error('Erro ao processar imagem(ns):', err);
             showToast('Erro ao processar a(s) imagem(ns) anexada(s).', 'danger');
@@ -3468,6 +3506,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             altitudeM: parseFloat(document.getElementById('addAltitude').value) || 5,
             jurisdiction: document.getElementById('addJurisdiction').value.trim() || `Jurisdição ${responsavelVal}`,
             responsavel: responsavelVal,
+            contingencyPlan: document.getElementById('addContingencyPlan')?.value?.trim() || '',
             image: null,
             photoDate: null,
             history: [
@@ -3884,46 +3923,61 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
 
         tableBody.innerHTML = '<tr><td colspan="4" class="text-center p-3 text-muted">Buscando pontos de parada...</td></tr>';
 
-        let backups = [];
+        let serverBackups = [];
         try {
             const resp = await fetch('/api/backups');
             if (resp.ok) {
-                backups = await resp.json();
+                serverBackups = await resp.json();
             }
         } catch (e) {
-            console.warn('API REST /api/backups indisponível, usando backups locais.', e);
+            console.warn('API REST /api/backups indisponível.', e);
         }
 
-        if (!Array.isArray(backups) || backups.length === 0) {
-            try {
-                const localRaw = localStorage.getItem('chn4_aton_backups_history');
-                if (localRaw) backups = JSON.parse(localRaw);
-            } catch (e) {}
+        let localBackups = [];
+        try {
+            const localRaw = localStorage.getItem('chn4_aton_backups_history');
+            if (localRaw) localBackups = JSON.parse(localRaw);
+        } catch (e) {}
+
+        const allBackups = [];
+        if (Array.isArray(serverBackups)) {
+            serverBackups.forEach(b => allBackups.push({ ...b, isLocal: false }));
+        }
+        if (Array.isArray(localBackups)) {
+            localBackups.forEach((b, idx) => {
+                allBackups.push({ ...b, localIndex: idx, isLocal: true, filename: b.filename || null });
+            });
         }
 
-        if (!Array.isArray(backups) || backups.length === 0) {
+        if (allBackups.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="4" class="text-center p-3 text-muted">Nenhum ponto de parada ou backup encontrado. Clique em "Criar Ponto de Parada Agora".</td></tr>';
             return;
         }
 
         tableBody.innerHTML = '';
-        backups.forEach(b => {
+        allBackups.forEach(b => {
             const tr = document.createElement('tr');
             tr.style.borderBottom = '1px solid var(--border-color)';
 
+            const badgeOrigin = b.isLocal 
+                ? '<span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: rgba(255,193,7,0.15); color: var(--accent-gold); border: 1px solid var(--accent-gold); margin-left: 6px;">Navegador</span>' 
+                : '<span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: rgba(76,175,80,0.15); color: var(--status-op); border: 1px solid var(--status-op); margin-left: 6px;">Disco</span>';
+
+            const restoreParam = b.filename ? `'${b.filename}', false, null` : `null, true, ${b.localIndex}`;
+
             tr.innerHTML = `
                 <td style="padding: 10px 8px; font-weight: 500;">
-                    <i class="fa-solid fa-calendar-check text-gold"></i> ${b.formattedDate || b.createdAt}
+                    <i class="fa-solid fa-calendar-check text-gold"></i> ${b.formattedDate || b.createdAt} ${badgeOrigin}
                 </td>
                 <td style="padding: 10px 8px;">
-                    <span class="backup-badge-count">${b.count} sinais</span>
+                    <span class="backup-badge-count">${b.count || (b.signals ? b.signals.length : 0)} sinais</span>
                 </td>
                 <td style="padding: 10px 8px; color: var(--text-secondary);">
                     ${b.note || 'Ponto de Parada'}
                 </td>
                 <td style="padding: 10px 8px; text-align: right;">
                     <div style="display: flex; gap: 6px; justify-content: flex-end;">
-                        <button class="btn btn-primary btn-sm" onclick="window.restoreBackupPoint('${b.filename}')" title="Restaurar base de dados para este ponto">
+                        <button class="btn btn-primary btn-sm" onclick="window.restoreBackupPoint(${restoreParam})" title="Restaurar base de dados para este ponto">
                             <i class="fa-solid fa-rotate-left"></i> Restaurar
                         </button>
                         ${b.filename ? `<button class="btn btn-outline btn-sm" onclick="window.downloadBackupFile('${b.filename}')" title="Baixar arquivo JSON de backup"><i class="fa-solid fa-download"></i></button>` : ''}
@@ -3947,7 +4001,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                 body: JSON.stringify({ note: note })
             });
             if (resp.ok) {
-                showToast('Ponto de parada criado com sucesso!', 'success');
+                showToast('Ponto de parada criado e salvo no disco com sucesso!', 'success');
                 loadBackupsList();
                 return;
             }
@@ -3977,12 +4031,14 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         }
     });
 
-    window.restoreBackupPoint = async (filename) => {
+    window.restoreBackupPoint = async (filename, isLocal, localIndex) => {
         if (!confirm(`ATENÇÃO: Deseja restaurar o banco de dados para o Ponto de Parada escolhido?\n\nEsta ação irá atualizar o mapa e a lista de sinais em todos os dispositivos conectados.`)) {
             return;
         }
 
-        if (filename) {
+        let restoredSignals = null;
+
+        if (filename && !isLocal) {
             try {
                 const resp = await fetch('/api/backups/restore', {
                     method: 'POST',
@@ -3993,44 +4049,70 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                 if (resp.ok) {
                     const resData = await resp.json();
                     if (resData.signals && Array.isArray(resData.signals)) {
-                        signalsData = resData.signals;
-                    } else {
-                        await loadSignalsFromBackend();
+                        restoredSignals = resData.signals;
                     }
-
-                    saveLocalCache();
-                    updateTypeFilterDropdown();
-                    updateIE();
-                    renderMapMarkers();
-                    renderSignalList();
-
-                    modalBackups?.classList.remove('active');
-                    showToast(`Base restaurada com sucesso para o backup ${filename}!`, 'success');
-                    return;
                 }
             } catch (e) {
                 console.warn('Erro ao restaurar via REST API:', e);
             }
         }
 
-        try {
-            const raw = localStorage.getItem('chn4_aton_backups_history');
-            if (raw) {
-                const localBackups = JSON.parse(raw);
-                const target = localBackups.find(b => b.filename === filename || (!filename && b.signals));
-                if (target && Array.isArray(target.signals)) {
-                    signalsData = [...target.signals];
-                    saveLocalCache();
-                    updateTypeFilterDropdown();
-                    updateIE();
-                    renderMapMarkers();
-                    renderSignalList();
-                    modalBackups?.classList.remove('active');
-                    showToast('Base restaurada do cache local!', 'success');
+        // If local backup was selected or REST API filename failed
+        if (!restoredSignals && (isLocal || localIndex !== undefined)) {
+            try {
+                const raw = localStorage.getItem('chn4_aton_backups_history');
+                if (raw) {
+                    const localBackups = JSON.parse(raw);
+                    const target = localIndex !== undefined && localIndex !== null && localBackups[localIndex] 
+                        ? localBackups[localIndex] 
+                        : localBackups.find(b => b.filename === filename || (!filename && b.signals));
+                    
+                    if (target && Array.isArray(target.signals) && target.signals.length > 0) {
+                        restoredSignals = target.signals;
+                        // Synchronize this local backup immediately to the server and signals.json!
+                        try {
+                            await fetch('/api/backups/restore', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ signals: target.signals, note: target.note || 'Restaurado do navegador' })
+                            });
+                        } catch (err) {
+                            console.warn('Sync local backup to server warning:', err);
+                        }
+                    }
                 }
+            } catch (e) {
+                console.error('Erro ao ler backup local:', e);
             }
-        } catch (e) {
-            showToast('Erro ao restaurar backup.', 'danger');
+        }
+
+        if (restoredSignals && Array.isArray(restoredSignals) && restoredSignals.length > 0) {
+            signalsData = restoredSignals;
+            saveLocalCache();
+            updateTypeFilterDropdown();
+            updateIE();
+            renderMapMarkers();
+            renderSignalList();
+
+            // Sync with Firestore if active
+            if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
+                try {
+                    const batch = db.batch();
+                    restoredSignals.forEach(s => {
+                        const clean = sanitizeForDatabase(s);
+                        if (clean && clean.code) {
+                            const ref = db.collection("signals").doc(clean.code);
+                            batch.set(ref, clean, { merge: true });
+                        }
+                    });
+                    batch.commit().catch(console.warn);
+                } catch (e) {}
+            }
+
+            modalBackups?.classList.remove('active');
+            showToast(`Base de dados restaurada com sucesso (${restoredSignals.length} sinais)!`, 'success');
+        } else {
+            showToast('Erro ao restaurar o ponto de parada selecionado.', 'danger');
         }
     };
 

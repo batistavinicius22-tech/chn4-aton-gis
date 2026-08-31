@@ -205,10 +205,11 @@ const server = http.createServer((req, res) => {
 
     // POST /api/signals (Add new signal)
     if (pathname === '/api/signals' && method === 'POST') {
-        let body = '';
-        req.on('data', chunk => body += chunk.toString());
+        const chunks = [];
+        req.on('data', chunk => chunks.push(chunk));
         req.on('end', () => {
             try {
+                const body = Buffer.concat(chunks).toString('utf8');
                 const newSignal = JSON.parse(body);
                 if (!newSignal.code || !newSignal.name) {
                     res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -217,8 +218,7 @@ const server = http.createServer((req, res) => {
                 }
 
                 const signals = readSignals();
-                // Check if code exists
-                const existingIndex = signals.findIndex(s => s.code === newSignal.code);
+                const existingIndex = signals.findIndex(s => String(s.code).trim().toLowerCase() === String(newSignal.code).trim().toLowerCase());
                 if (existingIndex >= 0) {
                     signals[existingIndex] = { ...signals[existingIndex], ...newSignal };
                 } else {
@@ -238,31 +238,66 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // PUT /api/signals/:code (Update signal)
-    if (pathname.startsWith('/api/signals/') && method === 'PUT') {
-        const code = decodeURIComponent(pathname.replace('/api/signals/', ''));
-        let body = '';
-        req.on('data', chunk => body += chunk.toString());
+    // POST /api/signals/bulk (Bulk save or sync signals)
+    if (pathname === '/api/signals/bulk' && method === 'POST') {
+        const chunks = [];
+        req.on('data', chunk => chunks.push(chunk));
         req.on('end', () => {
             try {
-                const updatedData = JSON.parse(body);
-                const signals = readSignals();
-                const idx = signals.findIndex(s => s.code === code);
-                if (idx === -1) {
-                    res.writeHead(404, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: 'Signal not found.' }));
+                const body = Buffer.concat(chunks).toString('utf8');
+                const parsed = JSON.parse(body);
+                const signalsToSave = Array.isArray(parsed.signals) ? parsed.signals : (Array.isArray(parsed) ? parsed : null);
+                if (!signalsToSave || signalsToSave.length === 0) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Lista de sinais vazia ou inválida.' }));
                     return;
                 }
 
-                signals[idx] = { ...signals[idx], ...updatedData };
-                writeSignals(signals);
-                broadcastEvent('update', signals[idx]);
+                const note = parsed.note || 'Sincronização em massa';
+                writeSignals(signalsToSave, true, note);
+                broadcastEvent('reload', { note, count: signalsToSave.length });
 
                 res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: true, signal: signals[idx] }));
+                res.end(JSON.stringify({ success: true, count: signalsToSave.length, signals: signalsToSave }));
             } catch (err) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Invalid JSON payload.' }));
+                res.end(JSON.stringify({ error: 'Invalid JSON payload: ' + err.message }));
+            }
+        });
+        return;
+    }
+
+    // PUT /api/signals/:code (Update signal with automatic UPSERT)
+    if (pathname.startsWith('/api/signals/') && method === 'PUT') {
+        const rawCode = pathname.replace('/api/signals/', '');
+        const code = decodeURIComponent(rawCode).trim();
+        const chunks = [];
+        req.on('data', chunk => chunks.push(chunk));
+        req.on('end', () => {
+            try {
+                const body = Buffer.concat(chunks).toString('utf8');
+                const updatedData = JSON.parse(body);
+                const signals = readSignals();
+                const idx = signals.findIndex(s => 
+                    String(s.code).trim().toLowerCase() === code.toLowerCase() ||
+                    (updatedData.code && String(s.code).trim().toLowerCase() === String(updatedData.code).trim().toLowerCase())
+                );
+
+                if (idx === -1) {
+                    // UPSERT: if signal doesn't exist yet, append it!
+                    signals.push(updatedData);
+                } else {
+                    signals[idx] = { ...signals[idx], ...updatedData };
+                }
+
+                writeSignals(signals);
+                broadcastEvent('update', updatedData);
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: true, signal: updatedData }));
+            } catch (err) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Invalid JSON payload: ' + err.message }));
             }
         });
         return;
@@ -270,9 +305,10 @@ const server = http.createServer((req, res) => {
 
     // DELETE /api/signals/:code (Delete signal permanently)
     if (pathname.startsWith('/api/signals/') && method === 'DELETE') {
-        const code = decodeURIComponent(pathname.replace('/api/signals/', ''));
+        const rawCode = pathname.replace('/api/signals/', '');
+        const code = decodeURIComponent(rawCode).trim();
         const signals = readSignals();
-        const newSignals = signals.filter(s => s.code !== code);
+        const newSignals = signals.filter(s => String(s.code).trim().toLowerCase() !== code.toLowerCase());
 
         if (signals.length === newSignals.length) {
             res.writeHead(404, { 'Content-Type': 'application/json' });
@@ -302,10 +338,11 @@ const server = http.createServer((req, res) => {
 
     // POST /api/backups/create (Create manual snapshot)
     if (pathname === '/api/backups/create' && method === 'POST') {
-        let body = '';
-        req.on('data', chunk => body += chunk.toString());
+        const chunks = [];
+        req.on('data', chunk => chunks.push(chunk));
         req.on('end', () => {
             try {
+                const body = Buffer.concat(chunks).toString('utf8');
                 const parsed = body ? JSON.parse(body) : {};
                 const note = parsed.note || 'Ponto de parada manual';
                 const meta = createBackupSnapshot(note);
@@ -324,46 +361,49 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // POST /api/backups/restore (Restore database from snapshot)
+    // POST /api/backups/restore (Restore database from snapshot file OR snapshot object)
     if (pathname === '/api/backups/restore' && method === 'POST') {
-        let body = '';
-        req.on('data', chunk => body += chunk.toString());
+        const chunks = [];
+        req.on('data', chunk => chunks.push(chunk));
         req.on('end', () => {
             try {
+                const body = Buffer.concat(chunks).toString('utf8');
                 const parsed = JSON.parse(body);
-                const filename = parsed.filename;
-                if (!filename) {
-                    res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: 'Nome do arquivo de backup não informado.' }));
-                    return;
+                let restoredSignals = null;
+                let sourceName = 'backup';
+
+                if (parsed.filename) {
+                    const filename = parsed.filename;
+                    const targetPath = path.join(BACKUPS_DIR, path.basename(filename));
+                    if (!fs.existsSync(targetPath)) {
+                        res.writeHead(404, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'Arquivo de backup não encontrado no disco.' }));
+                        return;
+                    }
+                    const backupContent = JSON.parse(fs.readFileSync(targetPath, 'utf8'));
+                    restoredSignals = Array.isArray(backupContent.signals) 
+                        ? backupContent.signals 
+                        : (Array.isArray(backupContent) ? backupContent : []);
+                    sourceName = filename;
+                } else if (Array.isArray(parsed.signals) && parsed.signals.length > 0) {
+                    restoredSignals = parsed.signals;
+                    sourceName = parsed.note || 'Ponto de parada do navegador';
                 }
 
-                const targetPath = path.join(BACKUPS_DIR, path.basename(filename));
-                if (!fs.existsSync(targetPath)) {
-                    res.writeHead(404, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: 'Arquivo de backup não encontrado.' }));
-                    return;
-                }
-
-                const backupContent = JSON.parse(fs.readFileSync(targetPath, 'utf8'));
-                const restoredSignals = Array.isArray(backupContent.signals) 
-                    ? backupContent.signals 
-                    : (Array.isArray(backupContent) ? backupContent : []);
-
-                if (restoredSignals.length === 0) {
+                if (!restoredSignals || restoredSignals.length === 0) {
                     res.writeHead(400, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ error: 'Backup vazio ou formato inválido.' }));
                     return;
                 }
 
-                // First create safety backup of current state before restoring
-                createBackupSnapshot(`Pré-restauração de ${filename}`);
+                // Create safety backup of current state before restoring
+                createBackupSnapshot(`Pré-restauração de ${sourceName}`);
 
                 // Write restored signals to DB
                 fs.writeFileSync(DB_FILE, JSON.stringify(restoredSignals, null, 2), 'utf8');
 
                 // Broadcast SSE event to all open tabs/devices to reload in real-time!
-                broadcastEvent('reload', { restoredFrom: filename, count: restoredSignals.length });
+                broadcastEvent('reload', { restoredFrom: sourceName, count: restoredSignals.length });
 
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ success: true, count: restoredSignals.length, signals: restoredSignals }));
