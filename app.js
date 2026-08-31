@@ -75,29 +75,25 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Função de ordenação natural crescente:
-    // 1. Números puros (ex: 32, 100, 320) ordenados numericamente (32 < 100 < 320).
-    // 2. Códigos com letras (ex: PA-20, BAP-01) ficam por último em ordem alfabética natural.
+    // 1. Códigos numéricos e decimais (ex: 32, 100, 319, 319.1, 319.3, 319A, 320) ordenados de forma crescente contínua.
+    // 2. Códigos que iniciam com letras (ex: AP-01, BAP-01, PA-20) vêm na sequência em ordem alfabética natural.
     function compareSignalCodes(a, b) {
-        const codeA = String(a?.code || '').trim();
-        const codeB = String(b?.code || '').trim();
+        const codeA = String(a && typeof a === 'object' ? (a.code || '') : (a || '')).trim();
+        const codeB = String(b && typeof b === 'object' ? (b.code || '') : (b || '')).trim();
 
-        const isNumA = /^\d+$/.test(codeA);
-        const isNumB = /^\d+$/.test(codeB);
+        const startsWithNumA = /^\d/.test(codeA);
+        const startsWithNumB = /^\d/.test(codeB);
 
-        // Se ambos forem numéricos puros, compara o valor numérico inteiro
-        if (isNumA && isNumB) {
-            const numA = parseInt(codeA, 10);
-            const numB = parseInt(codeB, 10);
-            if (numA !== numB) return numA - numB;
-            return codeA.localeCompare(codeB);
-        }
+        // Se um começa com número e o outro não, numéricos vêm primeiro
+        if (startsWithNumA && !startsWithNumB) return -1;
+        if (!startsWithNumA && startsWithNumB) return 1;
 
-        // Números puros vêm antes de códigos com letras
-        if (isNumA && !isNumB) return -1;
-        if (!isNumA && isNumB) return 1;
+        // Ambos começam com número ou ambos com letras:
+        // Normaliza vírgulas para pontos decimais se houver (ex: 319,3 -> 319.3)
+        const normA = codeA.replace(',', '.');
+        const normB = codeB.replace(',', '.');
 
-        // Ambos contêm letras: ordena alfabeticamente com suporte natural (ex: PA-2 antes de PA-20)
-        return codeA.localeCompare(codeB, 'pt-BR', { numeric: true, sensitivity: 'base' });
+        return normA.localeCompare(normB, 'pt-BR', { numeric: true, sensitivity: 'base' });
     }
 
     // State Variables
