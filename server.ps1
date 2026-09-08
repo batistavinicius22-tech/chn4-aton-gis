@@ -14,7 +14,7 @@ if (-not (Test-Path $backupsDir)) {
 
 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 
-function Create-BackupSnapshot($note, $signalsData) {
+function New-BackupSnapshot($note, $signalsData) {
     try {
         $now = Get-Date
         $ts = $now.ToString("yyyy-MM-ddTHH-mm-ss-fff")
@@ -38,7 +38,7 @@ function Create-BackupSnapshot($note, $signalsData) {
     }
 }
 
-function List-Backups() {
+function Get-Backups() {
     $list = @()
     if (Test-Path $backupsDir) {
         $files = Get-ChildItem -Path $backupsDir -Filter "backup_*.json" | Sort-Object LastWriteTime -Descending
@@ -111,7 +111,7 @@ while ($listener.IsListening) {
 
         # GET /api/backups
         if ($path -eq "/api/backups" -and $req.HttpMethod -eq "GET") {
-            $backups = List-Backups
+            $backups = Get-Backups
             $json = $backups | ConvertTo-Json -Depth 5
             if (-not $json) { $json = "[]" }
             $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
@@ -150,7 +150,7 @@ while ($listener.IsListening) {
             $note = if ($parsed.note) { $parsed.note } else { "Ponto de parada manual" }
             
             $signals = if (Test-Path $dbFile) { @(([System.IO.File]::ReadAllText($dbFile, [System.Text.Encoding]::UTF8)) | ConvertFrom-Json) } else { @() }
-            $meta = Create-BackupSnapshot $note $signals
+            $meta = New-BackupSnapshot $note $signals
 
             $ret = @{ success = $true; backup = $meta } | ConvertTo-Json -Depth 5
             $bytes = [System.Text.Encoding]::UTF8.GetBytes($ret)
@@ -187,7 +187,7 @@ while ($listener.IsListening) {
             if ($restoredSignals -and $restoredSignals.Count -gt 0) {
                 # Pre-backup
                 $currSignals = if (Test-Path $dbFile) { @(([System.IO.File]::ReadAllText($dbFile, [System.Text.Encoding]::UTF8)) | ConvertFrom-Json) } else { @() }
-                Create-BackupSnapshot "Pré-restauração de $sourceName" $currSignals | Out-Null
+                New-BackupSnapshot "Pré-restauração de $sourceName" $currSignals | Out-Null
 
                 $out = $restoredSignals | ConvertTo-Json -Depth 12
                 [System.IO.File]::WriteAllText($dbFile, $out, $utf8NoBom)
@@ -219,7 +219,7 @@ while ($listener.IsListening) {
 
             if ($signalsToSave -and $signalsToSave.Count -gt 0) {
                 $note = if ($parsed.note) { $parsed.note } else { "Sincronização em massa" }
-                Create-BackupSnapshot $note $signalsToSave | Out-Null
+                New-BackupSnapshot $note $signalsToSave | Out-Null
                 $out = $signalsToSave | ConvertTo-Json -Depth 12
                 [System.IO.File]::WriteAllText($dbFile, $out, $utf8NoBom)
 
@@ -253,7 +253,7 @@ while ($listener.IsListening) {
                 $signals += $newSignal
             }
 
-            Create-BackupSnapshot "Criação/Atualização do sinal $($newSignal.code)" $signals | Out-Null
+            New-BackupSnapshot "Criação/Atualização do sinal $($newSignal.code)" $signals | Out-Null
             $out = $signals | ConvertTo-Json -Depth 12
             [System.IO.File]::WriteAllText($dbFile, $out, $utf8NoBom)
 
@@ -307,7 +307,7 @@ while ($listener.IsListening) {
             $signals = if (Test-Path $dbFile) { @(([System.IO.File]::ReadAllText($dbFile, [System.Text.Encoding]::UTF8)) | ConvertFrom-Json) } else { @() }
             $filtered = @($signals | Where-Object { $_.code.ToString().Trim() -ne $code })
             
-            Create-BackupSnapshot "Exclusão do sinal $code" $filtered | Out-Null
+            New-BackupSnapshot "Exclusão do sinal $code" $filtered | Out-Null
             $out = $filtered | ConvertTo-Json -Depth 12
             [System.IO.File]::WriteAllText($dbFile, $out, $utf8NoBom)
 

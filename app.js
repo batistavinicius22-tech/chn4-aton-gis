@@ -97,10 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // State Variables
-    let signalsData = (typeof googleEarthSignals !== 'undefined' && Array.isArray(googleEarthSignals) && googleEarthSignals.length > 0)
-        ? [...googleEarthSignals]
-        : [...initialSignals];
-    signalsData.sort(compareSignalCodes);
+    let signalsData = [];
     let selectedSignal = null;
     const selectedSignalCodes = new Set(); // Multi-signal selection for custom map view
     let currentFilter = 'all';
@@ -574,14 +571,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadSignalsFromBackend() {
-        // Se o Firebase estiver ativo, o listener em tempo real (onSnapshot) gerencia a sincronização
-        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
-            return;
-        }
-
         let loadedSignals = null;
 
-        // Tentar API REST do servidor central (node server.js / python server.py / server.ps1)
+        // 1. Tentar API REST do servidor central (node server.js / python server.py / server.ps1)
         try {
             const resp = await fetch('/api/signals');
             if (resp.ok) {
@@ -594,7 +586,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('API REST /api/signals indisponível.', e);
         }
 
-        // Tentar ler o arquivo de banco de dados central signals.json
+        // 2. Tentar ler o arquivo de banco de dados central signals.json
         if (!loadedSignals) {
             try {
                 const resp = await fetch('./signals.json');
@@ -609,7 +601,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Fallback para IndexedDB e cache local no navegador
+        // 3. Fallback para IndexedDB e cache local no navegador
         if (!loadedSignals) {
             const idbSignals = await loadIndexedDB();
             if (idbSignals && idbSignals.length > 0) {
@@ -626,25 +618,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (loadedSignals && Array.isArray(loadedSignals) && loadedSignals.length > 0 && loadedSignals[0].code) {
             signalsData = loadedSignals;
+            signalsData.sort(compareSignalCodes);
             saveLocalCache();
-            console.log(`✅ Carregados ${signalsData.length} sinais do banco de dados central.`);
-        } else if (typeof googleEarthSignals !== 'undefined' && Array.isArray(googleEarthSignals) && googleEarthSignals.length > 0) {
-            signalsData = googleEarthSignals.map(s => {
-                if (!s.responsavel) {
-                    const code = s.code || '';
-                    const jur = s.jurisdiction || '';
-                    const name = s.name || '';
-                    if (jur.includes('Amapa') || name.includes('Amapa') || jur.includes('CPAP') || code.startsWith('AP-')) s.responsavel = 'CPAP';
-                    else if (jur.includes('Maranhao') || name.includes('Maranhao') || jur.includes('CPMA') || code.startsWith('MA-')) s.responsavel = 'CPMA';
-                    else if (jur.includes('Para') || name.includes('Para') || jur.includes('CPPA') || code.startsWith('PA-')) {
-                        if (jur.includes('Guajara') || jur.includes('Belem') || jur.includes('CHN-4')) s.responsavel = 'CHN-4';
-                        else s.responsavel = 'CPPA';
-                    } else if (jur.includes('Extra-MB') || jur.includes('Privado')) s.responsavel = 'Extra-MB';
-                    else s.responsavel = 'CHN-4';
-                }
-                return s;
-            });
-            console.log(`✅ Carregados ${signalsData.length} sinais do backup em memória.`);
+            console.log(`✅ Carregados ${signalsData.length} sinais da base de dados persistente.`);
+        } else if (signalsData.length === 0) {
+            signalsData = [...initialSignals];
+            signalsData.sort(compareSignalCodes);
+            console.log(`ℹ️ Inicializado com sinais padrão.`);
         }
 
         updateTypeFilterDropdown();
@@ -3579,25 +3559,13 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                     }
                     console.log(`🔥 Cloud Firestore: ${signalsData.length} sinais sincronizados em tempo real.`);
                 } else {
-                    console.log("🔥 Firestore está vazio. Iniciando carga automática (auto-seed)...");
-                    showToast("Populando o banco de dados Firebase Firestore com a base de dados...", "info");
-                    
-                    const batch = db.batch();
-                    signalsData.forEach(s => {
-                        if (s.code) {
-                            const ref = db.collection("signals").doc(s.code);
-                            batch.set(ref, s);
-                        }
-                    });
-                    batch.commit().then(() => {
-                        console.log("🔥 Firestore populado com sucesso!");
-                        showToast("🔥 Base de dados enviada para o Firebase Firestore na nuvem!", "success");
-                    }).catch(err => {
-                        console.error("Erro no auto-seed do Firestore:", err);
-                    });
+                    console.log("ℹ️ Cloud Firestore: Coleção de sinais na nuvem está vazia. Nenhuma alteração automática realizada.");
                 }
             }, (err) => {
-                console.warn("Erro no listener Firestore:", err);
+                console.warn("⚠️ Aviso no listener Firestore:", err);
+                if (syncText) syncText.textContent = 'OFFLINE / ERRO FIREBASE';
+                if (syncDot) syncDot.className = 'sync-dot sync-offline';
+                showToast('⚠️ Falha ao conectar ao Firebase Cloud. Operando com dados locais seguros.', 'warning');
             });
             return;
         }

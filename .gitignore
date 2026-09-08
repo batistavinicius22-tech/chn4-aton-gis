@@ -1,8 +1,6 @@
-# System files
+# System & IDE files
 .DS_Store
 Thumbs.db
-
-# IDE files
 .vscode/
 .idea/
 *.log
@@ -12,4 +10,16 @@ backups/
 wms_cache/
 node_modules/
 
+# KML & Google Earth (Evitar injeção de dados legados no GitHub)
+*.kml
+kml_signals.js
 
+# Credenciais e Chaves de API do Firebase (Não versionar chaves privadas no GitHub)
+firebase-config.js
+!firebase-config.example.js
+
+# Cartas Náuticas GeoTIFF pesadas (mantidas localmente na estação de trabalho)
+cartas_geotiff/*.tif
+cartas_geotiff/*.tiff
+cartas_geotiff/*.TIF
+cartas_geotiff/*.TIFF
