@@ -123,6 +123,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let measureDynamicLine = null;
     let measureTooltip = null;
 
+    // Pin Coordinate Inspection State
+    let isPinInspectMode = false;
+    let pinInspectMarker = null;
+    let pinInspectTooltip = null;
+
     // GeoTIFF Overlays State
     let geotiffLayers = []; // Array of { id, name, layer, opacity }
     const dhnGeoTiffGroup = L.layerGroup(); // Dedicated Layer Group for DHN GeoTIFF charts
@@ -138,6 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     const measureLayerGroup = L.layerGroup().addTo(map);
+    const pinInspectLayerGroup = L.layerGroup().addTo(map);
     const routeLayerGroup = L.layerGroup().addTo(map);
 
     // Layer 1: Esri World Imagery
@@ -1610,9 +1616,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="display: flex; gap: 4px; align-items: center;">
                         <span class="responsavel-badge ${respClass}">${s.responsavel || 'CHN-4'}</span>
                         <span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${s.status}</span>
-                        <button type="button" class="btn-card-delete" onclick="event.stopPropagation(); window.deleteSignalFromCard('${s.code}', '${s.name.replace(/'/g, "\\'")}')" title="Excluir Sinal Náutico">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
                     </div>
                 </div>
                 <div class="signal-card-body">
@@ -1711,24 +1714,9 @@ document.addEventListener('DOMContentLoaded', () => {
             selectedSignal = clean;
         }
 
-        // 1. Sempre salva localmente no Cache / IndexedDB
+        // Modo Visualizador (Somente Leitura): gravações desativadas para proteção da nuvem
         saveLocalCache();
-
-        // 2. Persiste no Firebase Cloud Firestore na nuvem (se ativo)
-        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
-            db.collection("signals").doc(clean.code).set(clean, { merge: true })
-                .then(() => console.log(`🔥 Firestore: Sinal ${clean.code} (com foto/dados) salvo na nuvem com sucesso!`))
-                .catch(err => console.error("Erro ao salvar no Firestore:", err));
-        }
-
-        // 3. Persiste na API REST local (se o servidor node/python estiver rodando)
-        fetch(`/api/signals/${encodeURIComponent(clean.code)}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(clean)
-        }).then(r => {
-            if (r.ok) console.log(`💾 REST API: Sinal ${clean.code} gravado em signals.json!`);
-        }).catch(err => console.warn('API REST fallback:', err));
+        console.log(`ℹ️ Modo Visualizador: Sinal ${clean.code} em modo somente leitura.`);
     }
 
     function updateIndividualSignalIEDisplay(signal) {
@@ -1796,8 +1784,10 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPhotoIndex = 0;
         renderSignalPhoto(signal);
 
-        document.getElementById('selectNewStatus').value = isOp ? 'OPERACIONAL' : signal.status;
-        document.getElementById('textOccurrenceReason').value = '';
+        const selectNewStatus = document.getElementById('selectNewStatus');
+        if (selectNewStatus) selectNewStatus.value = isOp ? 'OPERACIONAL' : signal.status;
+        const textOccurrenceReason = document.getElementById('textOccurrenceReason');
+        if (textOccurrenceReason) textOccurrenceReason.value = '';
 
         const btnAvradio = document.getElementById('btnGenerateAvradioModal');
         if (btnAvradio) btnAvradio.style.display = isOp ? 'none' : 'inline-flex';
@@ -2001,7 +1991,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.navigateSignalPhoto(1);
     });
 
-    // Delete photo function
+    // Delete photo function (Desativado no Modo Visualizador)
     async function deleteCurrentSignalPhoto() {
         if (!selectedSignal) return;
         const images = getSignalImages(selectedSignal);
@@ -2251,9 +2241,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (e.key === 'ArrowRight') {
             e.preventDefault();
             window.navigateSignalPhoto(1);
-        } else if (e.key === 'Delete') {
-            e.preventDefault();
-            deleteCurrentSignalPhoto();
         }
     });
 
@@ -2270,22 +2257,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const editForm = document.getElementById('formEditSpec');
         const textBtn = document.getElementById('textBtnEdit');
 
-        if (enable && selectedSignal) {
-            viewMode.style.display = 'none';
+        if (enable && selectedSignal && editForm) {
+            if (viewMode) viewMode.style.display = 'none';
             editForm.style.display = 'block';
-            textBtn.textContent = 'Cancelar Edição';
+            if (textBtn) textBtn.textContent = 'Cancelar Edição';
 
-            document.getElementById('editCode').value = selectedSignal.code;
-            document.getElementById('editName').value = selectedSignal.name;
-            document.getElementById('editType').value = selectedSignal.type;
-            document.getElementById('editCharacteristic').value = selectedSignal.characteristic;
-            document.getElementById('editRange').value = selectedSignal.rangeNM;
-            document.getElementById('editAltitude').value = selectedSignal.altitudeM;
-            document.getElementById('editLat').value = selectedSignal.lat;
-            document.getElementById('editLng').value = selectedSignal.lng;
-            document.getElementById('editJurisdiction').value = selectedSignal.jurisdiction || 'CHN-4';
+            if (document.getElementById('editCode')) document.getElementById('editCode').value = selectedSignal.code;
+            if (document.getElementById('editName')) document.getElementById('editName').value = selectedSignal.name;
+            if (document.getElementById('editType')) document.getElementById('editType').value = selectedSignal.type;
+            if (document.getElementById('editCharacteristic')) document.getElementById('editCharacteristic').value = selectedSignal.characteristic;
+            if (document.getElementById('editRange')) document.getElementById('editRange').value = selectedSignal.rangeNM;
+            if (document.getElementById('editAltitude')) document.getElementById('editAltitude').value = selectedSignal.altitudeM;
+            if (document.getElementById('editLat')) document.getElementById('editLat').value = selectedSignal.lat;
+            if (document.getElementById('editLng')) document.getElementById('editLng').value = selectedSignal.lng;
+            if (document.getElementById('editJurisdiction')) document.getElementById('editJurisdiction').value = selectedSignal.jurisdiction || 'CHN-4';
             
-            // Populate Nautical DDM fields
             const latDDM = decimalToDDM(selectedSignal.lat, true);
             const lngDDM = decimalToDDM(selectedSignal.lng, false);
             if (document.getElementById('editLatDeg')) document.getElementById('editLatDeg').value = latDDM.deg;
@@ -2295,7 +2281,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (document.getElementById('editLngMin')) document.getElementById('editLngMin').value = lngDDM.min;
             if (document.getElementById('editLngHem')) document.getElementById('editLngHem').value = lngDDM.hem;
 
-            // Default coordinate mode to Nautical
             document.getElementById('btnEditCoordModeGMS')?.classList.add('active');
             document.getElementById('btnEditCoordModeDecimal')?.classList.remove('active');
             if (document.getElementById('panelEditCoordGMS')) document.getElementById('panelEditCoordGMS').style.display = 'block';
@@ -2311,20 +2296,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const editContPlanEl = document.getElementById('editContingencyPlan');
             if (editContPlanEl) editContPlanEl.value = selectedSignal.contingencyPlan || selectedSignal.planoContingencia || '';
         } else {
-            viewMode.style.display = 'block';
-            editForm.style.display = 'none';
-            textBtn.textContent = 'Editar Ficha Técnica';
+            if (viewMode) viewMode.style.display = 'block';
+            if (editForm) editForm.style.display = 'none';
+            if (textBtn) textBtn.textContent = 'Editar Ficha Técnica';
         }
     }
 
-    document.getElementById('btnToggleEditMode').addEventListener('click', () => {
+    document.getElementById('btnToggleEditMode')?.addEventListener('click', () => {
         const editForm = document.getElementById('formEditSpec');
         const isEditing = editForm.style.display === 'block';
         toggleEditSpecMode(!isEditing);
     });
 
     // Save Technical Specification Edit
-    document.getElementById('formEditSpec').addEventListener('submit', (e) => {
+    document.getElementById('formEditSpec')?.addEventListener('submit', (e) => {
         e.preventDefault();
         if (!selectedSignal) return;
 
@@ -2363,16 +2348,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const newResp = document.getElementById('editResponsavel')?.value || selectedSignal.responsavel || 'CHN-4';
         const newContPlan = document.getElementById('editContingencyPlan')?.value?.trim() || '';
 
-        // 1. If code changed, delete old document from Firestore/Backend first
+        // 1. Em modo visualizador, exclusões na nuvem são bloqueadas
         if (oldCode && oldCode !== newCode) {
-            if (mapMarkers[oldCode]) {
-                map.removeLayer(mapMarkers[oldCode]);
-                delete mapMarkers[oldCode];
-            }
-            if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
-                db.collection("signals").doc(oldCode).delete().catch(console.warn);
-            }
-            fetch(`/api/signals/${encodeURIComponent(oldCode)}`, { method: 'DELETE' }).catch(console.warn);
             signalsData = signalsData.filter(s => s.code !== oldCode);
         }
 
@@ -2404,52 +2381,10 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Ficha Técnica do sinal ${newCode} salva com sucesso no banco de dados!`, 'success');
     });
 
-    // Delete Signal Function
+    // Delete Signal Function (Desativado no Modo Visualizador)
     async function deleteSignalPermanently(code, name) {
-        if (!confirm(`ATENÇÃO: Deseja realmente EXCLUIR PERMANENTEMENTE o auxílio à navegação [${code} - ${name}]?`)) {
-            return;
-        }
-
-        // Delete from Firebase Firestore or REST API
-        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
-            try {
-                await db.collection("signals").doc(code).delete();
-                console.log(`🔥 Firestore: Sinal ${code} excluído da nuvem!`);
-            } catch (err) {
-                console.error("Erro ao excluir do Firestore:", err);
-            }
-        } else {
-            try {
-                await fetch(`/api/signals/${encodeURIComponent(code)}`, {
-                    method: 'DELETE'
-                });
-            } catch (err) {
-                console.warn('Exclusão via API REST em modo fallback:', err);
-            }
-        }
-
-        // Update local array and cache
-        signalsData = signalsData.filter(s => s.code !== code);
-        saveLocalCache();
-
-        if (mapMarkers[code]) {
-            map.removeLayer(mapMarkers[code]);
-            delete mapMarkers[code];
-        }
-
-        routeWaypoints = routeWaypoints.filter(wp => wp.code !== code);
-        updateRoute();
-
-        document.getElementById('modalSignalDetail').classList.remove('active');
-        document.getElementById('modalAddSignal').classList.remove('active');
-        selectedSignal = null;
-
-        updateTypeFilterDropdown();
-        updateIE();
-        renderMapMarkers();
-        renderSignalList();
-
-        showToast(`Sinal ${code} excluído permanentemente do banco de dados!`, 'warning');
+        showToast('Modo Visualizador: Exclusão de sinais desativada.', 'warning');
+        return;
     }
 
     window.deleteSignalFromCard = (code, name) => {
@@ -2540,7 +2475,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    document.getElementById('formUpdateStatus').addEventListener('submit', (e) => {
+    document.getElementById('formUpdateStatus')?.addEventListener('submit', (e) => {
         e.preventDefault();
         if (!selectedSignal) return;
 
@@ -3106,6 +3041,9 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
     }
 
     function startMeasureMode() {
+        if (isPinInspectMode) {
+            stopPinInspectMode();
+        }
         isMeasureMode = true;
         document.getElementById('btnToggleMeasure')?.classList.add('active');
         map.getContainer().style.cursor = 'crosshair';
@@ -3316,6 +3254,235 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
 
     document.getElementById('btnToggleMeasure')?.addEventListener('click', toggleMeasureMode);
 
+    // =========================================================================
+    // MODO INSPEÇÃO E FIXAÇÃO DE COORDENADAS POR ALFINETE (PIN INSPECT)
+    // =========================================================================
+    function togglePinInspectMode() {
+        if (isPinInspectMode) {
+            stopPinInspectMode();
+        } else {
+            startPinInspectMode();
+        }
+    }
+
+    function startPinInspectMode() {
+        if (isMeasureMode) {
+            stopMeasureMode();
+        }
+        if (typeof isDrawDerrotaMode !== 'undefined' && isDrawDerrotaMode) {
+            stopDrawDerrotaMode();
+        }
+
+        isPinInspectMode = true;
+        document.getElementById('btnTogglePinInspect')?.classList.add('active');
+        map.getContainer().style.cursor = 'crosshair';
+
+        let hud = document.getElementById('pinInspectHud');
+        if (!hud) {
+            hud = document.createElement('div');
+            hud.id = 'pinInspectHud';
+            hud.className = 'pin-inspect-hud';
+            hud.innerHTML = `
+                <div class="pin-inspect-hud-info">
+                    <i class="fa-solid fa-map-pin text-gold"></i>
+                    <span id="pinInspectHudText">Mova o mouse para ler coordenadas • Clique no mapa para fixar o alfinete.</span>
+                </div>
+                <div class="pin-inspect-hud-actions">
+                    <button type="button" class="btn-pin-hud" id="btnPinInspectClear" style="display:none;" title="Remover alfinete e continuar inspecionando"><i class="fa-solid fa-location-crosshairs"></i> Desafixar</button>
+                    <button type="button" class="btn-pin-hud btn-pin-close" id="btnPinInspectClose" title="Sair do modo alfinete (ESC)"><i class="fa-solid fa-xmark"></i> Sair</button>
+                </div>
+            `;
+            document.querySelector('.app-map-wrapper')?.appendChild(hud);
+            document.getElementById('btnPinInspectClear')?.addEventListener('click', clearPinInspectMarker);
+            document.getElementById('btnPinInspectClose')?.addEventListener('click', stopPinInspectMode);
+        } else {
+            hud.style.display = 'flex';
+            updatePinInspectHudText('Mova o mouse para ler coordenadas • Clique no mapa para fixar o alfinete.');
+            const clearBtn = document.getElementById('btnPinInspectClear');
+            if (clearBtn && !pinInspectMarker) clearBtn.style.display = 'none';
+        }
+
+        map.on('mousemove', onPinInspectMouseMove);
+        map.on('click', onPinInspectMapClick);
+
+        showToast('Modo Alfinete Ativado: Mova o mouse para ler ou clique no mapa para fixar coordenadas. (ESC para sair)', 'info');
+    }
+
+    function updatePinInspectHudText(text) {
+        const el = document.getElementById('pinInspectHudText');
+        if (el) el.innerHTML = text;
+    }
+
+    function formatCoordTexts(lat, lng) {
+        let latDDM = '';
+        let lngDDM = '';
+        if (typeof decimalToDDM === 'function') {
+            latDDM = decimalToDDM(lat, true).formatted;
+            lngDDM = decimalToDDM(lng, false).formatted;
+        } else {
+            latDDM = `${lat.toFixed(5)}°`;
+            lngDDM = `${lng.toFixed(5)}°`;
+        }
+        const decLat = lat.toFixed(6);
+        const decLng = lng.toFixed(6);
+        return { latDDM, lngDDM, decLat, decLng, fullCopy: `${latDDM}, ${lngDDM} (${decLat}, ${decLng})` };
+    }
+
+    function onPinInspectMouseMove(e) {
+        if (!isPinInspectMode) return;
+        const coords = formatCoordTexts(e.latlng.lat, e.latlng.lng);
+
+        if (!pinInspectMarker) {
+            updatePinInspectHudText(`Lat: <strong>${coords.latDDM}</strong> | Long: <strong>${coords.lngDDM}</strong> <small style="color:#94a3b8;">(${coords.decLat}, ${coords.decLng})</small> • Clique para fixar`);
+        }
+
+        const tooltipHtml = `
+            <div style="font-size:0.72rem; color:#f59e0b; font-weight:700; text-transform:uppercase; margin-bottom:2px;">
+                <i class="fa-solid fa-map-pin"></i> Inspecionar Ponto
+            </div>
+            <div style="font-weight:700; color:#ffffff; font-size:0.85rem; line-height:1.3;">
+                ${coords.latDDM}<br>${coords.lngDDM}
+            </div>
+            <div style="font-size:0.72rem; color:#94a3b8; margin-top:2px;">
+                ${coords.decLat}°, ${coords.decLng}°
+            </div>
+            <div style="font-size:0.68rem; color:#38bdf8; margin-top:3px; font-weight:600;">
+                Clique no mapa para fixar o alfinete
+            </div>
+        `;
+
+        if (!pinInspectTooltip) {
+            pinInspectTooltip = L.tooltip({
+                permanent: true,
+                direction: 'top',
+                offset: [0, -15],
+                className: 'pin-live-tooltip'
+            }).setLatLng(e.latlng).setContent(tooltipHtml).addTo(map);
+        } else {
+            pinInspectTooltip.setLatLng(e.latlng).setContent(tooltipHtml);
+        }
+    }
+
+    function onPinInspectMapClick(e) {
+        if (!isPinInspectMode) return;
+        const latlng = e.latlng || e;
+        const coords = formatCoordTexts(latlng.lat, latlng.lng);
+
+        if (pinInspectTooltip) {
+            map.removeLayer(pinInspectTooltip);
+            pinInspectTooltip = null;
+        }
+
+        const pinIcon = L.divIcon({
+            className: 'pin-fixed-icon-wrapper',
+            html: `
+                <div class="pin-fixed-marker">
+                    <i class="fa-solid fa-map-pin"></i>
+                    <span class="pin-pulse"></span>
+                </div>
+            `,
+            iconSize: [32, 38],
+            iconAnchor: [16, 36],
+            popupAnchor: [0, -36]
+        });
+
+        if (!pinInspectMarker) {
+            pinInspectMarker = L.marker(latlng, { icon: pinIcon, draggable: true }).addTo(pinInspectLayerGroup);
+            pinInspectMarker.on('dragend', (ev) => {
+                onPinInspectMapClick(ev.target.getLatLng());
+            });
+        } else {
+            pinInspectMarker.setLatLng(latlng);
+        }
+
+        const popupContent = `
+            <div class="pin-popup-card">
+                <div class="pin-popup-header">
+                    <div class="pin-popup-title">
+                        <i class="fa-solid fa-map-pin"></i> Alfinete Fixado
+                    </div>
+                </div>
+                <div class="pin-popup-coords">
+                    <div class="pin-popup-row">
+                        <span class="pin-popup-label">Latitude DDM:</span>
+                        <span class="pin-popup-val">${coords.latDDM}</span>
+                    </div>
+                    <div class="pin-popup-row">
+                        <span class="pin-popup-label">Longitude DDM:</span>
+                        <span class="pin-popup-val">${coords.lngDDM}</span>
+                    </div>
+                    <div class="pin-popup-row" style="margin-top:4px; padding-top:4px; border-top:1px dashed rgba(255,255,255,0.1);">
+                        <span class="pin-popup-label">Decimal:</span>
+                        <span class="pin-popup-val" style="color:#93c5fd;">${coords.decLat}, ${coords.decLng}</span>
+                    </div>
+                </div>
+                <div class="pin-popup-actions">
+                    <button type="button" class="btn-pin-copy" id="btnCopyPinCoords">
+                        <i class="fa-solid fa-copy"></i> Copiar
+                    </button>
+                    <button type="button" class="btn-pin-dismiss" id="btnDismissPin">
+                        <i class="fa-solid fa-xmark"></i> Fechar
+                    </button>
+                </div>
+            </div>
+        `;
+
+        pinInspectMarker.bindPopup(popupContent, {
+            className: 'pin-inspect-popup',
+            offset: [0, -18],
+            closeOnClick: false
+        }).openPopup();
+
+        setTimeout(() => {
+            document.getElementById('btnCopyPinCoords')?.addEventListener('click', () => {
+                navigator.clipboard.writeText(coords.fullCopy).then(() => {
+                    showToast('Coordenadas copiadas para a área de transferência!', 'success');
+                    const copyBtn = document.getElementById('btnCopyPinCoords');
+                    if (copyBtn) copyBtn.innerHTML = '<i class="fa-solid fa-check" style="color:#22c55e;"></i> Copiado!';
+                }).catch(() => {
+                    showToast(`${coords.fullCopy}`, 'info');
+                });
+            });
+            document.getElementById('btnDismissPin')?.addEventListener('click', () => {
+                stopPinInspectMode();
+            });
+        }, 50);
+
+        updatePinInspectHudText(`Alfinete fixado: <strong>${coords.latDDM}</strong>, <strong>${coords.lngDDM}</strong> <small style="color:#93c5fd;">(${coords.decLat}, ${coords.decLng})</small> • Pressione ESC ou Fechar para sair`);
+
+        const clearBtn = document.getElementById('btnPinInspectClear');
+        if (clearBtn) clearBtn.style.display = 'inline-flex';
+    }
+
+    function clearPinInspectMarker() {
+        if (pinInspectMarker) {
+            pinInspectLayerGroup.removeLayer(pinInspectMarker);
+            pinInspectMarker = null;
+        }
+        const clearBtn = document.getElementById('btnPinInspectClear');
+        if (clearBtn) clearBtn.style.display = 'none';
+        updatePinInspectHudText('Mova o mouse para ler coordenadas • Clique no mapa para fixar o alfinete.');
+    }
+
+    function stopPinInspectMode() {
+        clearPinInspectMarker();
+        if (pinInspectTooltip) {
+            map.removeLayer(pinInspectTooltip);
+            pinInspectTooltip = null;
+        }
+        isPinInspectMode = false;
+        document.getElementById('btnTogglePinInspect')?.classList.remove('active');
+        map.getContainer().style.cursor = '';
+
+        map.off('mousemove', onPinInspectMouseMove);
+        map.off('click', onPinInspectMapClick);
+
+        const hud = document.getElementById('pinInspectHud');
+        if (hud) hud.remove();
+    }
+
+    document.getElementById('btnTogglePinInspect')?.addEventListener('click', togglePinInspectMode);
+
     document.getElementById('btnMapReset')?.addEventListener('click', () => {
         map.flyTo([-0.5, -49.0], 8, { duration: 1.2 });
     });
@@ -3333,9 +3500,13 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         });
     });
 
-    // Close active modal, measurement mode, route drawing mode or photo lightbox on ESC key press
+    // Close active modal, measurement mode, route drawing mode, pin inspection mode or photo lightbox on ESC key press
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' || e.key === 'Esc') {
+            if (isPinInspectMode) {
+                stopPinInspectMode();
+                return;
+            }
             if (isMeasureMode) {
                 stopMeasureMode();
                 return;
@@ -3490,25 +3661,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             ]
         };
 
-        // Persist to Firebase Firestore or REST API
-        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
-            try {
-                await db.collection("signals").doc(code).set(newSignal);
-                console.log(`🔥 Firestore: Sinal ${code} criado na nuvem!`);
-            } catch (err) {
-                console.error("Erro ao criar no Firestore:", err);
-            }
-        } else {
-            try {
-                await fetch('/api/signals', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newSignal)
-                });
-            } catch (err) {
-                console.warn('API REST POST fallback:', err);
-            }
-        }
+        // Modo Visualizador: Criação desativada na nuvem
 
         signalsData.push(newSignal);
         signalsData.sort(compareSignalCodes);
@@ -3559,10 +3712,10 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                     }
                     console.log(`🔥 Cloud Firestore: ${signalsData.length} sinais sincronizados em tempo real.`);
                 } else {
-                    console.log("ℹ️ Cloud Firestore: Coleção de sinais na nuvem está vazia. Nenhuma alteração automática realizada.");
+                    console.log("🔥 Firestore snapshot recebido vazio no visualizador.");
                 }
             }, (err) => {
-                console.warn("⚠️ Aviso no listener Firestore:", err);
+                console.warn("⚠️ Aviso no listener Firestore (Viewer):", err);
                 if (syncText) syncText.textContent = 'OFFLINE / ERRO FIREBASE';
                 if (syncDot) syncDot.className = 'sync-dot sync-offline';
                 showToast('⚠️ Falha ao conectar ao Firebase Cloud. Operando com dados locais seguros.', 'warning');
@@ -4058,20 +4211,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             renderMapMarkers();
             renderSignalList();
 
-            // Sync with Firestore if active
-            if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
-                try {
-                    const batch = db.batch();
-                    restoredSignals.forEach(s => {
-                        const clean = sanitizeForDatabase(s);
-                        if (clean && clean.code) {
-                            const ref = db.collection("signals").doc(clean.code);
-                            batch.set(ref, clean, { merge: true });
-                        }
-                    });
-                    batch.commit().catch(console.warn);
-                } catch (e) {}
-            }
+            // Modo Visualizador: Restauração na nuvem desativada
 
             modalBackups?.classList.remove('active');
             showToast(`Base de dados restaurada com sucesso (${restoredSignals.length} sinais)!`, 'success');
