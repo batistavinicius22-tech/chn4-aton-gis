@@ -4834,9 +4834,34 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
     });
 
     // =========================================================================
+    // SPLASH SCREEN DE ABERTURA (CHN-4)
+    // (Basta alterar ENABLE_SPLASH para false para desativar instantaneamente)
+    // =========================================================================
+    const ENABLE_SPLASH = true;
+
+    function initSplashScreen() {
+        const splash = document.getElementById('splashScreen');
+        if (!splash) return;
+
+        if (!ENABLE_SPLASH) {
+            splash.style.display = 'none';
+            return;
+        }
+
+        // Permanece por 2.0 segundos, depois executa fade-out suave de 0.8s
+        setTimeout(() => {
+            splash.classList.add('splash-hidden');
+            setTimeout(() => {
+                splash.style.display = 'none';
+            }, 850);
+        }, 2000);
+    }
+
+    // =========================================================================
     // 15. INITIAL BOOTSTRAP
     // =========================================================================
     async function init() {
+        initSplashScreen();
         await loadSignalsFromBackend();
         setupRealtimeSync();
         updateRoute();
