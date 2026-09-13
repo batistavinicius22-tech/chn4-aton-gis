@@ -1138,6 +1138,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (statBalizaEl) statBalizaEl.textContent = balizaCount;
         if (statFarolEl) statFarolEl.textContent = farolCount;
 
+        if (circleGauge) {
+            const deg = (ieAnualVal / 100) * 360;
+            const color = ieAnualVal >= 95 ? 'var(--status-op)' : (ieAnualVal >= 80 ? 'var(--accent-gold)' : 'var(--status-av)');
+            circleGauge.style.background = `conic-gradient(${color} 0deg ${deg}deg, var(--navy-700) ${deg}deg 360deg)`;
+        }
+
         // Global count badges for Tab 1
         const total = signalsData.length;
         const totalOp = signalsData.filter(s => isOperational(s.status)).length;
@@ -1813,9 +1819,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="display: flex; gap: 4px; align-items: center;">
                         <span class="responsavel-badge ${respClass}">${s.responsavel || 'CHN-4'}</span>
                         <span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${s.status}</span>
-                        <button type="button" class="btn-card-delete" onclick="event.stopPropagation(); window.deleteSignalFromCard('${s.code}', '${s.name.replace(/'/g, "\\'")}')" title="Excluir Sinal Náutico">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
                     </div>
                 </div>
                 <div class="signal-card-body">
@@ -1914,24 +1917,9 @@ document.addEventListener('DOMContentLoaded', () => {
             selectedSignal = clean;
         }
 
-        // 1. Sempre salva localmente no Cache / IndexedDB
+        // Modo Visualizador (Somente Leitura): gravações desativadas para proteção da nuvem
         saveLocalCache();
-
-        // 2. Persiste no Firebase Cloud Firestore na nuvem (se ativo)
-        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
-            db.collection("signals").doc(clean.code).set(clean, { merge: true })
-                .then(() => console.log(`🔥 Firestore: Sinal ${clean.code} (com foto/dados) salvo na nuvem com sucesso!`))
-                .catch(err => console.error("Erro ao salvar no Firestore:", err));
-        }
-
-        // 3. Persiste na API REST local (se o servidor node/python estiver rodando)
-        fetch(`/api/signals/${encodeURIComponent(clean.code)}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(clean)
-        }).then(r => {
-            if (r.ok) console.log(`💾 REST API: Sinal ${clean.code} gravado em signals.json!`);
-        }).catch(err => console.warn('API REST fallback:', err));
+        console.log(`ℹ️ Modo Visualizador: Sinal ${clean.code} em modo somente leitura.`);
     }
 
     function updateIndividualSignalIEDisplay(signal) {
@@ -2002,8 +1990,10 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPhotoIndex = 0;
         renderSignalPhoto(signal);
 
-        document.getElementById('selectNewStatus').value = isOp ? 'OPERACIONAL' : signal.status;
-        document.getElementById('textOccurrenceReason').value = '';
+        const selectNewStatus = document.getElementById('selectNewStatus');
+        if (selectNewStatus) selectNewStatus.value = isOp ? 'OPERACIONAL' : signal.status;
+        const textOccurrenceReason = document.getElementById('textOccurrenceReason');
+        if (textOccurrenceReason) textOccurrenceReason.value = '';
 
         const btnAvradio = document.getElementById('btnGenerateAvradioModal');
         if (btnAvradio) btnAvradio.style.display = isOp ? 'none' : 'inline-flex';
@@ -2207,7 +2197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.navigateSignalPhoto(1);
     });
 
-    // Delete photo function
+    // Delete photo function (Desativado no Modo Visualizador)
     async function deleteCurrentSignalPhoto() {
         if (!selectedSignal) return;
         const images = getSignalImages(selectedSignal);
@@ -2457,9 +2447,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (e.key === 'ArrowRight') {
             e.preventDefault();
             window.navigateSignalPhoto(1);
-        } else if (e.key === 'Delete') {
-            e.preventDefault();
-            deleteCurrentSignalPhoto();
         }
     });
 
@@ -2476,22 +2463,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const editForm = document.getElementById('formEditSpec');
         const textBtn = document.getElementById('textBtnEdit');
 
-        if (enable && selectedSignal) {
-            viewMode.style.display = 'none';
+        if (enable && selectedSignal && editForm) {
+            if (viewMode) viewMode.style.display = 'none';
             editForm.style.display = 'block';
-            textBtn.textContent = 'Cancelar Edição';
+            if (textBtn) textBtn.textContent = 'Cancelar Edição';
 
-            document.getElementById('editCode').value = selectedSignal.code;
-            document.getElementById('editName').value = selectedSignal.name;
-            document.getElementById('editType').value = selectedSignal.type;
-            document.getElementById('editCharacteristic').value = selectedSignal.characteristic;
-            document.getElementById('editRange').value = selectedSignal.rangeNM;
-            document.getElementById('editAltitude').value = selectedSignal.altitudeM;
-            document.getElementById('editLat').value = selectedSignal.lat;
-            document.getElementById('editLng').value = selectedSignal.lng;
-            document.getElementById('editJurisdiction').value = selectedSignal.jurisdiction || 'CHN-4';
+            if (document.getElementById('editCode')) document.getElementById('editCode').value = selectedSignal.code;
+            if (document.getElementById('editName')) document.getElementById('editName').value = selectedSignal.name;
+            if (document.getElementById('editType')) document.getElementById('editType').value = selectedSignal.type;
+            if (document.getElementById('editCharacteristic')) document.getElementById('editCharacteristic').value = selectedSignal.characteristic;
+            if (document.getElementById('editRange')) document.getElementById('editRange').value = selectedSignal.rangeNM;
+            if (document.getElementById('editAltitude')) document.getElementById('editAltitude').value = selectedSignal.altitudeM;
+            if (document.getElementById('editLat')) document.getElementById('editLat').value = selectedSignal.lat;
+            if (document.getElementById('editLng')) document.getElementById('editLng').value = selectedSignal.lng;
+            if (document.getElementById('editJurisdiction')) document.getElementById('editJurisdiction').value = selectedSignal.jurisdiction || 'CHN-4';
             
-            // Populate Nautical DDM fields
             const latDDM = decimalToDDM(selectedSignal.lat, true);
             const lngDDM = decimalToDDM(selectedSignal.lng, false);
             if (document.getElementById('editLatDeg')) document.getElementById('editLatDeg').value = latDDM.deg;
@@ -2501,7 +2487,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (document.getElementById('editLngMin')) document.getElementById('editLngMin').value = lngDDM.min;
             if (document.getElementById('editLngHem')) document.getElementById('editLngHem').value = lngDDM.hem;
 
-            // Default coordinate mode to Nautical
             document.getElementById('btnEditCoordModeGMS')?.classList.add('active');
             document.getElementById('btnEditCoordModeDecimal')?.classList.remove('active');
             if (document.getElementById('panelEditCoordGMS')) document.getElementById('panelEditCoordGMS').style.display = 'block';
@@ -2517,20 +2502,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const editContPlanEl = document.getElementById('editContingencyPlan');
             if (editContPlanEl) editContPlanEl.value = selectedSignal.contingencyPlan || selectedSignal.planoContingencia || '';
         } else {
-            viewMode.style.display = 'block';
-            editForm.style.display = 'none';
-            textBtn.textContent = 'Editar Ficha Técnica';
+            if (viewMode) viewMode.style.display = 'block';
+            if (editForm) editForm.style.display = 'none';
+            if (textBtn) textBtn.textContent = 'Editar Ficha Técnica';
         }
     }
 
-    document.getElementById('btnToggleEditMode').addEventListener('click', () => {
+    document.getElementById('btnToggleEditMode')?.addEventListener('click', () => {
         const editForm = document.getElementById('formEditSpec');
         const isEditing = editForm.style.display === 'block';
         toggleEditSpecMode(!isEditing);
     });
 
     // Save Technical Specification Edit
-    document.getElementById('formEditSpec').addEventListener('submit', (e) => {
+    document.getElementById('formEditSpec')?.addEventListener('submit', (e) => {
         e.preventDefault();
         if (!selectedSignal) return;
 
@@ -2569,16 +2554,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const newResp = document.getElementById('editResponsavel')?.value || selectedSignal.responsavel || 'CHN-4';
         const newContPlan = document.getElementById('editContingencyPlan')?.value?.trim() || '';
 
-        // 1. If code changed, delete old document from Firestore/Backend first
+        // 1. Em modo visualizador, exclusões na nuvem são bloqueadas
         if (oldCode && oldCode !== newCode) {
-            if (mapMarkers[oldCode]) {
-                map.removeLayer(mapMarkers[oldCode]);
-                delete mapMarkers[oldCode];
-            }
-            if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
-                db.collection("signals").doc(oldCode).delete().catch(console.warn);
-            }
-            fetch(`/api/signals/${encodeURIComponent(oldCode)}`, { method: 'DELETE' }).catch(console.warn);
             signalsData = signalsData.filter(s => s.code !== oldCode);
         }
 
@@ -2610,52 +2587,10 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Ficha Técnica do sinal ${newCode} salva com sucesso no banco de dados!`, 'success');
     });
 
-    // Delete Signal Function
+    // Delete Signal Function (Desativado no Modo Visualizador)
     async function deleteSignalPermanently(code, name) {
-        if (!confirm(`ATENÇÃO: Deseja realmente EXCLUIR PERMANENTEMENTE o auxílio à navegação [${code} - ${name}]?`)) {
-            return;
-        }
-
-        // Delete from Firebase Firestore or REST API
-        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
-            try {
-                await db.collection("signals").doc(code).delete();
-                console.log(`🔥 Firestore: Sinal ${code} excluído da nuvem!`);
-            } catch (err) {
-                console.error("Erro ao excluir do Firestore:", err);
-            }
-        } else {
-            try {
-                await fetch(`/api/signals/${encodeURIComponent(code)}`, {
-                    method: 'DELETE'
-                });
-            } catch (err) {
-                console.warn('Exclusão via API REST em modo fallback:', err);
-            }
-        }
-
-        // Update local array and cache
-        signalsData = signalsData.filter(s => s.code !== code);
-        saveLocalCache();
-
-        if (mapMarkers[code]) {
-            map.removeLayer(mapMarkers[code]);
-            delete mapMarkers[code];
-        }
-
-        routeWaypoints = routeWaypoints.filter(wp => wp.code !== code);
-        updateRoute();
-
-        document.getElementById('modalSignalDetail').classList.remove('active');
-        document.getElementById('modalAddSignal').classList.remove('active');
-        selectedSignal = null;
-
-        updateTypeFilterDropdown();
-        updateIE();
-        renderMapMarkers();
-        renderSignalList();
-
-        showToast(`Sinal ${code} excluído permanentemente do banco de dados!`, 'warning');
+        showToast('Modo Visualizador: Exclusão de sinais desativada.', 'warning');
+        return;
     }
 
     window.deleteSignalFromCard = (code, name) => {
@@ -2746,7 +2681,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    document.getElementById('formUpdateStatus').addEventListener('submit', (e) => {
+    document.getElementById('formUpdateStatus')?.addEventListener('submit', (e) => {
         e.preventDefault();
         if (!selectedSignal) return;
 
@@ -3208,6 +3143,116 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                 updateRoute();
             }
         });
+    });
+
+    // =========================================================================
+    // MINIMIZAR / EXPANDIR PAINEL LATERAL PARA A DIREITA (VISUALIZAÇÃO PC)
+    // =========================================================================
+    const appSidebar = document.getElementById('appSidebar');
+    const appContainer = document.querySelector('.app-container');
+    const btnEdgeMinimizeSidebar = document.getElementById('btnEdgeMinimizeSidebar');
+    const btnMinimizeSidebar = document.getElementById('btnMinimizeSidebar');
+    const btnExpandSidebar = document.getElementById('btnExpandSidebar');
+    const btnToolToggleSidebar = document.getElementById('btnToolToggleSidebar');
+
+    function toggleSidebarPC(forceState) {
+        if (!appSidebar) return;
+        const willMinimize = (forceState !== undefined) 
+            ? forceState 
+            : !appSidebar.classList.contains('minimized');
+
+        if (willMinimize) {
+            appSidebar.classList.add('minimized');
+            if (btnExpandSidebar) btnExpandSidebar.style.display = 'flex';
+            if (btnToolToggleSidebar) {
+                btnToolToggleSidebar.classList.add('active');
+                btnToolToggleSidebar.title = "Restaurar / Exibir Painel Lateral (PC)";
+            }
+        } else {
+            appSidebar.classList.remove('minimized');
+            if (btnExpandSidebar) btnExpandSidebar.style.display = 'none';
+            if (btnToolToggleSidebar) {
+                btnToolToggleSidebar.classList.remove('active');
+                btnToolToggleSidebar.title = "Minimizar Painel Lateral (PC)";
+            }
+        }
+
+        // Recalcular dimensões do mapa Leaflet para preencher a tela sem falhas
+        setTimeout(() => { if (map) map.invalidateSize(); }, 80);
+        setTimeout(() => { if (map) map.invalidateSize(); }, 350);
+    }
+
+    btnEdgeMinimizeSidebar?.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleSidebarPC(true);
+    });
+
+    btnMinimizeSidebar?.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleSidebarPC(true);
+    });
+
+    btnExpandSidebar?.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleSidebarPC(false);
+    });
+
+    btnToolToggleSidebar?.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleSidebarPC();
+    });
+
+    // =========================================================================
+    // VISUALIZAÇÃO MOBILE (SÓ MAPA / SÓ PAINEL / MAPA + PAINEL)
+    // =========================================================================
+    const btnMobileShowBoth = document.getElementById('btnMobileShowBoth');
+    const btnMobileShowMap = document.getElementById('btnMobileShowMap');
+    const btnMobileShowSidebar = document.getElementById('btnMobileShowSidebar');
+
+    function setMobileViewMode(mode) {
+        if (!appContainer) return;
+
+        // Atualizar estado ativo dos botões seletores
+        [btnMobileShowBoth, btnMobileShowMap, btnMobileShowSidebar].forEach(btn => {
+            if (btn) btn.classList.remove('active');
+        });
+
+        // Limpar classes de modo
+        appContainer.classList.remove('mode-map-only', 'mode-sidebar-only');
+
+        if (mode === 'map') {
+            appContainer.classList.add('mode-map-only');
+            if (btnMobileShowMap) btnMobileShowMap.classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else if (mode === 'sidebar') {
+            appContainer.classList.add('mode-sidebar-only');
+            if (btnMobileShowSidebar) btnMobileShowSidebar.classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            // 'both' (Padrão: Mapa + Painel com rolagem)
+            if (btnMobileShowBoth) btnMobileShowBoth.classList.add('active');
+        }
+
+        // Atualizar renderização das camadas do Leaflet
+        setTimeout(() => { if (map) map.invalidateSize(); }, 80);
+        setTimeout(() => { if (map) map.invalidateSize(); }, 300);
+    }
+
+    btnMobileShowBoth?.addEventListener('click', () => setMobileViewMode('both'));
+    btnMobileShowMap?.addEventListener('click', () => setMobileViewMode('map'));
+    btnMobileShowSidebar?.addEventListener('click', () => setMobileViewMode('sidebar'));
+
+    // Limpeza de estado e ajuste do mapa no redimensionamento da janela
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 900) {
+            // Ao retornar para PC, remove classes de modo exclusivo mobile
+            if (appContainer) appContainer.classList.remove('mode-map-only', 'mode-sidebar-only');
+        } else {
+            // No celular, garante que a barra lateral não fique presa no minimized de PC
+            if (appSidebar) appSidebar.classList.remove('minimized');
+            if (btnExpandSidebar) btnExpandSidebar.style.display = 'none';
+        }
+        if (map) map.invalidateSize();
     });
 
     const searchInput = document.getElementById('searchInput');
@@ -4006,25 +4051,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             ]
         };
 
-        // Persist to Firebase Firestore or REST API
-        if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
-            try {
-                await db.collection("signals").doc(code).set(newSignal);
-                console.log(`🔥 Firestore: Sinal ${code} criado na nuvem!`);
-            } catch (err) {
-                console.error("Erro ao criar no Firestore:", err);
-            }
-        } else {
-            try {
-                await fetch('/api/signals', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newSignal)
-                });
-            } catch (err) {
-                console.warn('API REST POST fallback:', err);
-            }
-        }
+        // Modo Visualizador: Criação desativada na nuvem
 
         signalsData.push(newSignal);
         signalsData.sort(compareSignalCodes);
@@ -4075,10 +4102,10 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                     }
                     console.log(`🔥 Cloud Firestore: ${signalsData.length} sinais sincronizados em tempo real.`);
                 } else {
-                    console.log("ℹ️ Cloud Firestore: Coleção de sinais na nuvem está vazia. Nenhuma alteração automática realizada.");
+                    console.log("🔥 Firestore snapshot recebido vazio no visualizador.");
                 }
             }, (err) => {
-                console.warn("⚠️ Aviso no listener Firestore:", err);
+                console.warn("⚠️ Aviso no listener Firestore (Viewer):", err);
                 if (syncText) syncText.textContent = 'OFFLINE / ERRO FIREBASE';
                 if (syncDot) syncDot.className = 'sync-dot sync-offline';
                 showToast('⚠️ Falha ao conectar ao Firebase Cloud. Operando com dados locais seguros.', 'warning');
@@ -4574,20 +4601,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             renderMapMarkers();
             renderSignalList();
 
-            // Sync with Firestore if active
-            if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
-                try {
-                    const batch = db.batch();
-                    restoredSignals.forEach(s => {
-                        const clean = sanitizeForDatabase(s);
-                        if (clean && clean.code) {
-                            const ref = db.collection("signals").doc(clean.code);
-                            batch.set(ref, clean, { merge: true });
-                        }
-                    });
-                    batch.commit().catch(console.warn);
-                } catch (e) {}
-            }
+            // Modo Visualizador: Restauração na nuvem desativada
 
             modalBackups?.classList.remove('active');
             showToast(`Base de dados restaurada com sucesso (${restoredSignals.length} sinais)!`, 'success');
