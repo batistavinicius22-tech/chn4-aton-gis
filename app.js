@@ -1925,11 +1925,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Sempre salva localmente no Cache / IndexedDB
         saveLocalCache();
 
-        // 2. Persiste no Firebase Cloud Firestore na nuvem (se ativo)
+        // 2. Persiste no Firebase Cloud Firestore na nuvem (se ativo e conectado)
         if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
-            db.collection("signals").doc(clean.code).set(clean, { merge: true })
-                .then(() => console.log(`🔥 Firestore: Sinal ${clean.code} (com foto/dados) salvo na nuvem com sucesso!`))
-                .catch(err => console.error("Erro ao salvar no Firestore:", err));
+            if (window.isSystemOfflineOrCache || !navigator.onLine) {
+                showToast('⚠️ ATENÇÃO: Dispositivo operando em MODO OFFLINE (Cache). Alteração salva localmente, mas não enviada para a nuvem para evitar conflitos.', 'warning');
+            } else {
+                db.collection("signals").doc(clean.code).set(clean, { merge: true })
+                    .then(() => console.log(`🔥 Firestore: Sinal ${clean.code} salvo na nuvem com sucesso!`))
+                    .catch(err => console.error("Erro ao salvar no Firestore:", err));
+            }
         }
 
         // 3. Persiste na API REST local (se o servidor node/python estiver rodando)
@@ -2621,6 +2625,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Delete Signal Function
     async function deleteSignalPermanently(code, name) {
         if (!confirm(`ATENÇÃO: Deseja realmente EXCLUIR PERMANENTEMENTE o auxílio à navegação [${code} - ${name}]?`)) {
+            return;
+        }
+
+        if (window.isSystemOfflineOrCache || !navigator.onLine) {
+            showToast('⚠️ Operação bloqueada: Não é possível excluir sinais enquanto o dispositivo estiver OFFLINE.', 'danger');
             return;
         }
 
@@ -4182,12 +4191,41 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         const syncText = document.getElementById('syncStatusText');
         const syncDot = document.querySelector('#syncStatusBadge .sync-dot');
 
+        // Auto-espelhamento do Firebase Cloud para o disco local (Opção 3)
+        let lastAutoMirrorTime = 0;
+        function autoMirrorSignalsToServer(signals) {
+            const now = Date.now();
+            if (now - lastAutoMirrorTime < 20000) return; // Debounce de 20s
+            lastAutoMirrorTime = now;
+
+            if (!signals || !Array.isArray(signals) || signals.length === 0) return;
+            fetch('/api/signals/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ signals: signals, note: 'Espelho automático do Firebase Cloud' })
+            }).then(r => {
+                if (r.ok) console.log('💾 signals.json no disco atualizado com dados frescos da nuvem.');
+            }).catch(() => {});
+        }
+
         // Priority 1: Firebase Cloud Firestore Real-time listener (Nuvem / GitHub Pages)
         if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
-            if (syncText) syncText.textContent = 'ONLINE (FIREBASE CLOUD)';
-            if (syncDot) syncDot.className = 'sync-dot sync-online';
+            if (syncText) syncText.textContent = 'CONECTANDO NUVEM...';
+            if (syncDot) syncDot.className = 'sync-dot sync-offline';
 
-            db.collection("signals").onSnapshot((snapshot) => {
+            db.collection("signals").onSnapshot({ includeMetadataChanges: true }, (snapshot) => {
+                const isFromCache = snapshot.metadata && snapshot.metadata.fromCache;
+                const isOnline = navigator.onLine && !isFromCache;
+                window.isSystemOfflineOrCache = !isOnline;
+
+                if (isOnline) {
+                    if (syncText) syncText.textContent = 'ONLINE (FIREBASE CLOUD)';
+                    if (syncDot) syncDot.className = 'sync-dot sync-online';
+                } else {
+                    if (syncText) syncText.textContent = 'OFFLINE (CACHE LOCAL)';
+                    if (syncDot) syncDot.className = 'sync-dot sync-offline';
+                }
+
                 if (!snapshot.empty) {
                     const remoteSignals = [];
                     snapshot.forEach(doc => {
@@ -4208,16 +4246,34 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                             renderSignalPhoto(selectedSignal);
                         }
                     }
-                    console.log(`🔥 Cloud Firestore: ${signalsData.length} sinais sincronizados em tempo real.`);
+
+                    if (isOnline) {
+                        autoMirrorSignalsToServer(remoteSignals);
+                    }
+                    console.log(`🔥 Cloud Firestore: ${signalsData.length} sinais sincronizados (${isOnline ? 'ONLINE' : 'CACHE'}).`);
                 } else {
-                    console.log("ℹ️ Cloud Firestore: Coleção de sinais na nuvem está vazia. Nenhuma alteração automática realizada.");
+                    console.log("ℹ️ Cloud Firestore: Coleção de sinais na nuvem está vazia.");
                 }
             }, (err) => {
+                window.isSystemOfflineOrCache = true;
                 console.warn("⚠️ Aviso no listener Firestore:", err);
                 if (syncText) syncText.textContent = 'OFFLINE / ERRO FIREBASE';
                 if (syncDot) syncDot.className = 'sync-dot sync-offline';
                 showToast('⚠️ Falha ao conectar ao Firebase Cloud. Operando com dados locais seguros.', 'warning');
             });
+
+            window.addEventListener('offline', () => {
+                window.isSystemOfflineOrCache = true;
+                if (syncText) syncText.textContent = 'OFFLINE (SEM CONEXÃO)';
+                if (syncDot) syncDot.className = 'sync-dot sync-offline';
+                showToast('⚠️ Conexão perdida. Gravações bloqueadas para proteger a nuvem.', 'warning');
+            });
+
+            window.addEventListener('online', () => {
+                if (syncText) syncText.textContent = 'RECONECTANDO...';
+                if (syncDot) syncDot.className = 'sync-dot sync-offline';
+            });
+
             return;
         }
 

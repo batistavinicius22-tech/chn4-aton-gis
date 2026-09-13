@@ -3307,6 +3307,12 @@ html, body {
     animation: none;
 }
 
+.sync-dot.sync-connecting {
+    background-color: #f59e0b;
+    box-shadow: 0 0 8px #f59e0b;
+    animation: pulse 1s infinite alternate;
+}
+
 @keyframes syncPulse {
     0% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.4; transform: scale(1.3); }
