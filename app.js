@@ -3239,17 +3239,17 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
 
         if (willMinimize) {
             appSidebar.classList.add('minimized');
-            if (btnExpandSidebar) btnExpandSidebar.style.display = 'flex';
+            if (btnExpandSidebar) btnExpandSidebar.style.display = 'none';
             if (btnToolToggleSidebar) {
                 btnToolToggleSidebar.classList.add('active');
-                btnToolToggleSidebar.title = "Restaurar / Exibir Painel Lateral (PC)";
+                btnToolToggleSidebar.title = "Restaurar / Exibir Painel de Sinais (PC)";
             }
         } else {
             appSidebar.classList.remove('minimized');
             if (btnExpandSidebar) btnExpandSidebar.style.display = 'none';
             if (btnToolToggleSidebar) {
                 btnToolToggleSidebar.classList.remove('active');
-                btnToolToggleSidebar.title = "Minimizar Painel Lateral (PC)";
+                btnToolToggleSidebar.title = "Minimizar Painel Lateral para a Direita (PC)";
             }
         }
 
