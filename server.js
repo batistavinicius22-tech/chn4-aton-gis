@@ -36,6 +36,50 @@ function cleanOldBackups(maxKeep = 50) {
     }
 }
 
+// Helper to delete a specific backup
+function deleteBackup(filename) {
+    try {
+        const safeName = path.basename(filename);
+        const filePath = path.join(BACKUPS_DIR, safeName);
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            return true;
+        }
+        return false;
+    } catch (e) {
+        console.error('Error deleting backup:', e);
+        return false;
+    }
+}
+
+// Helper to prune older backups, keeping only the N newest
+function pruneOldBackups(keepCount = 5) {
+    try {
+        const files = fs.readdirSync(BACKUPS_DIR)
+            .filter(f => f.startsWith('backup_') && f.endsWith('.json'))
+            .map(f => ({
+                filename: f,
+                time: fs.statSync(path.join(BACKUPS_DIR, f)).mtimeMs
+            }))
+            .sort((a, b) => b.time - a.time);
+
+        let deletedCount = 0;
+        if (files.length > keepCount) {
+            const toDelete = files.slice(keepCount);
+            toDelete.forEach(f => {
+                try {
+                    fs.unlinkSync(path.join(BACKUPS_DIR, f.filename));
+                    deletedCount++;
+                } catch (e) {}
+            });
+        }
+        return { deletedCount, remainingCount: Math.min(files.length, keepCount) };
+    } catch (e) {
+        console.error('Error pruning backups:', e);
+        return { deletedCount: 0, error: e.message };
+    }
+}
+
 // Helper to create a backup snapshot
 function createBackupSnapshot(note = 'Ponto de parada automático', signalsData = null) {
     try {
@@ -345,7 +389,8 @@ const server = http.createServer((req, res) => {
                 const body = Buffer.concat(chunks).toString('utf8');
                 const parsed = body ? JSON.parse(body) : {};
                 const note = parsed.note || 'Ponto de parada manual';
-                const meta = createBackupSnapshot(note);
+                const providedSignals = Array.isArray(parsed.signals) && parsed.signals.length > 0 ? parsed.signals : null;
+                const meta = createBackupSnapshot(note, providedSignals);
                 if (meta) {
                     res.writeHead(201, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ success: true, backup: meta }));
@@ -356,6 +401,50 @@ const server = http.createServer((req, res) => {
             } catch (e) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: 'Payload JSON inválido.' }));
+            }
+        });
+        return;
+    }
+
+    // POST /api/backups/delete (Delete a specific backup file)
+    if (pathname === '/api/backups/delete' && method === 'POST') {
+        const chunks = [];
+        req.on('data', chunk => chunks.push(chunk));
+        req.on('end', () => {
+            try {
+                const body = Buffer.concat(chunks).toString('utf8');
+                const parsed = body ? JSON.parse(body) : {};
+                if (!parsed.filename) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Nome do arquivo não informado.' }));
+                    return;
+                }
+                const success = deleteBackup(parsed.filename);
+                res.writeHead(success ? 200 : 404, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success, filename: parsed.filename }));
+            } catch (e) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Erro ao excluir backup.' }));
+            }
+        });
+        return;
+    }
+
+    // POST /api/backups/prune (Prune older backups, keeping only the most recent N)
+    if (pathname === '/api/backups/prune' && method === 'POST') {
+        const chunks = [];
+        req.on('data', chunk => chunks.push(chunk));
+        req.on('end', () => {
+            try {
+                const body = Buffer.concat(chunks).toString('utf8');
+                const parsed = body ? JSON.parse(body) : {};
+                const keepCount = parseInt(parsed.keepCount, 10) || 5;
+                const result = pruneOldBackups(keepCount);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: true, ...result }));
+            } catch (e) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Erro ao excluir backups antigos.' }));
             }
         });
         return;

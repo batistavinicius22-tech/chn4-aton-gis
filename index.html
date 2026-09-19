@@ -1089,16 +1089,19 @@
             <div class="modal-body">
                 <div class="backup-actions-bar mb-3" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
                     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                        <button class="btn btn-primary btn-sm" id="btnCreateManualBackup">
+                        <button class="btn btn-primary btn-sm" id="btnCreateManualBackup" title="Criar um novo snapshot imediato">
                             <i class="fa-solid fa-floppy-disk"></i> Criar Ponto de Parada Agora
                         </button>
-                        <button class="btn btn-outline btn-sm" id="btnImportBackupFileTrigger">
+                        <button class="btn btn-danger-outline btn-sm" id="btnPruneOldBackups" title="Excluir pontos de parada mais antigos para liberar memória e disco">
+                            <i class="fa-solid fa-broom"></i> Excluir Mais Antigos
+                        </button>
+                        <button class="btn btn-outline btn-sm" id="btnImportBackupFileTrigger" title="Carregar um backup salvo do seu computador">
                             <i class="fa-solid fa-file-import"></i> Carregar Backup (.json)
                         </button>
                         <input type="file" id="inputBackupFile" accept=".json" style="display: none;">
                     </div>
                     <div class="text-muted" style="font-size: 0.8rem;">
-                        <i class="fa-solid fa-shield-halved text-gold"></i> Snapshots salvos antes de edições
+                        <i class="fa-solid fa-shield-halved text-gold"></i> Snapshots de segurança do sistema
                     </div>
                 </div>
 
@@ -1109,7 +1112,7 @@
                                 <th style="padding: 8px;">DATA / HORA</th>
                                 <th style="padding: 8px;">SINAIS</th>
                                 <th style="padding: 8px;">DESCRIÇÃO / MOTIVO</th>
-                                <th style="padding: 8px; text-align: right;">AÇÕES DE RESTAURAÇÃO</th>
+                                <th style="padding: 8px; text-align: right;">AÇÕES</th>
                             </tr>
                         </thead>
                         <tbody id="backupsListTableBody">

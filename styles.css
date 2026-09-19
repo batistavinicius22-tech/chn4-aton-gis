@@ -1850,7 +1850,8 @@ html, body {
     animation: fadeIn 0.2s ease;
 }
 
-.modal-dialog {
+.modal-dialog,
+.modal-window {
     background: var(--navy-900);
     border: 1px solid var(--navy-700);
     border-radius: var(--radius-md);
@@ -1863,7 +1864,8 @@ html, body {
     overflow: hidden;
 }
 
-.modal-dialog.modal-lg {
+.modal-dialog.modal-lg,
+.modal-window.modal-lg {
     max-width: 960px;
 }
 

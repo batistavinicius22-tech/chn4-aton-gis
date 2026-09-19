@@ -54,6 +54,40 @@ def create_backup_snapshot(note="Ponto de parada automático", signals_data=None
         print("Erro ao criar backup snapshot:", e)
         return None
 
+def delete_backup(filename):
+    try:
+        safe_name = os.path.basename(filename)
+        filepath = os.path.join(BACKUPS_DIR, safe_name)
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            return True
+        return False
+    except Exception as e:
+        print("Erro ao excluir backup:", e)
+        return False
+
+def prune_old_backups(keep_count=5):
+    try:
+        if not os.path.exists(BACKUPS_DIR):
+            return {"deletedCount": 0}
+        files = [
+            f for f in os.listdir(BACKUPS_DIR)
+            if f.startswith("backup_") and f.endswith(".json")
+        ]
+        files.sort(key=lambda f: os.path.getmtime(os.path.join(BACKUPS_DIR, f)), reverse=True)
+        deleted = 0
+        if len(files) > keep_count:
+            for f in files[keep_count:]:
+                try:
+                    os.remove(os.path.join(BACKUPS_DIR, f))
+                    deleted += 1
+                except Exception:
+                    pass
+        return {"deletedCount": deleted, "remainingCount": min(len(files), keep_count)}
+    except Exception as e:
+        print("Erro ao podar backups:", e)
+        return {"deletedCount": 0, "error": str(e)}
+
 def list_backups():
     backups = []
     try:
@@ -274,9 +308,49 @@ class CHN4RequestHandler(http.server.SimpleHTTPRequestHandler):
             try:
                 parsed_body = json.loads(body) if body else {}
                 note = parsed_body.get('note', 'Ponto de parada manual')
-                meta = create_backup_snapshot(note)
+                signals_in = parsed_body.get('signals') if isinstance(parsed_body.get('signals'), list) and len(parsed_body.get('signals')) > 0 else None
+                meta = create_backup_snapshot(note, signals_in)
                 res = json.dumps({"success": True, "backup": meta}, ensure_ascii=False).encode('utf-8')
                 self.send_response(201)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Content-Length', str(len(res)))
+                self.end_headers()
+                self.wfile.write(res)
+            except Exception as e:
+                self.send_response(400)
+                self.end_headers()
+            return
+
+        elif pathname == '/api/backups/delete':
+            length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(length).decode('utf-8') if length > 0 else '{}'
+            try:
+                parsed_body = json.loads(body) if body else {}
+                filename = parsed_body.get('filename')
+                if filename and delete_backup(filename):
+                    res = json.dumps({"success": True, "filename": filename}, ensure_ascii=False).encode('utf-8')
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json; charset=utf-8')
+                    self.send_header('Content-Length', str(len(res)))
+                    self.end_headers()
+                    self.wfile.write(res)
+                else:
+                    self.send_response(404)
+                    self.end_headers()
+            except Exception as e:
+                self.send_response(400)
+                self.end_headers()
+            return
+
+        elif pathname == '/api/backups/prune':
+            length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(length).decode('utf-8') if length > 0 else '{}'
+            try:
+                parsed_body = json.loads(body) if body else {}
+                keep_count = int(parsed_body.get('keepCount', 5))
+                result = prune_old_backups(keep_count)
+                res = json.dumps({"success": True, **result}, ensure_ascii=False).encode('utf-8')
+                self.send_response(200)
                 self.send_header('Content-Type', 'application/json; charset=utf-8')
                 self.send_header('Content-Length', str(len(res)))
                 self.end_headers()

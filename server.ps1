@@ -149,12 +149,70 @@ while ($listener.IsListening) {
             $parsed = if ($body) { $body | ConvertFrom-Json } else { @{} }
             $note = if ($parsed.note) { $parsed.note } else { "Ponto de parada manual" }
             
-            $signals = if (Test-Path $dbFile) { @(([System.IO.File]::ReadAllText($dbFile, [System.Text.Encoding]::UTF8)) | ConvertFrom-Json) } else { @() }
+            $signals = if ($parsed.signals -and $parsed.signals.Count -gt 0) {
+                @($parsed.signals)
+            } elseif (Test-Path $dbFile) {
+                @(([System.IO.File]::ReadAllText($dbFile, [System.Text.Encoding]::UTF8)) | ConvertFrom-Json)
+            } else {
+                @()
+            }
             $meta = New-BackupSnapshot $note $signals
 
             $ret = @{ success = $true; backup = $meta } | ConvertTo-Json -Depth 5
             $bytes = [System.Text.Encoding]::UTF8.GetBytes($ret)
             $res.StatusCode = 201
+            $res.ContentType = "application/json; charset=utf-8"
+            $res.OutputStream.Write($bytes, 0, $bytes.Length)
+            $res.Close()
+            continue
+        }
+
+        # POST /api/backups/delete
+        if ($path -eq "/api/backups/delete" -and $req.HttpMethod -eq "POST") {
+            $reader = New-Object System.IO.StreamReader($req.InputStream, [System.Text.Encoding]::UTF8)
+            $body = $reader.ReadToEnd()
+            $parsed = if ($body) { $body | ConvertFrom-Json } else { @{} }
+            $filename = $parsed.filename
+            if ($filename) {
+                $target = Join-Path $backupsDir ([System.IO.Path]::GetFileName($filename))
+                if (Test-Path $target) {
+                    Remove-Item -Path $target -Force
+                    $res.StatusCode = 200
+                    $ret = @{ success = $true } | ConvertTo-Json
+                } else {
+                    $res.StatusCode = 404
+                    $ret = @{ error = "Arquivo não encontrado." } | ConvertTo-Json
+                }
+            } else {
+                $res.StatusCode = 400
+                $ret = @{ error = "Parâmetro inválido." } | ConvertTo-Json
+            }
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($ret)
+            $res.ContentType = "application/json; charset=utf-8"
+            $res.OutputStream.Write($bytes, 0, $bytes.Length)
+            $res.Close()
+            continue
+        }
+
+        # POST /api/backups/prune
+        if ($path -eq "/api/backups/prune" -and $req.HttpMethod -eq "POST") {
+            $reader = New-Object System.IO.StreamReader($req.InputStream, [System.Text.Encoding]::UTF8)
+            $body = $reader.ReadToEnd()
+            $parsed = if ($body) { $body | ConvertFrom-Json } else { @{} }
+            $keepCount = if ($parsed.keepCount) { [int]$parsed.keepCount } else { 5 }
+            
+            $files = Get-ChildItem -Path $backupsDir -Filter "backup_*.json" | Sort-Object LastWriteTime -Descending
+            $deletedCount = 0
+            if ($files.Count -gt $keepCount) {
+                $toDelete = $files | Select-Object -Skip $keepCount
+                foreach ($f in $toDelete) {
+                    Remove-Item -Path $f.FullName -Force
+                    $deletedCount++
+                }
+            }
+            $ret = @{ success = $true; deletedCount = $deletedCount } | ConvertTo-Json
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($ret)
+            $res.StatusCode = 200
             $res.ContentType = "application/json; charset=utf-8"
             $res.OutputStream.Write($bytes, 0, $bytes.Length)
             $res.Close()

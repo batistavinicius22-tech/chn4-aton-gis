@@ -4647,6 +4647,9 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                             <i class="fa-solid fa-rotate-left"></i> Restaurar
                         </button>
                         ${b.filename ? `<button class="btn btn-outline btn-sm" onclick="window.downloadBackupFile('${b.filename}')" title="Baixar arquivo JSON de backup"><i class="fa-solid fa-download"></i></button>` : ''}
+                        <button class="btn btn-danger-outline btn-sm" onclick="window.deleteBackupPoint(${b.filename ? `'${b.filename}', false, null` : `null, true, ${b.localIndex}`})" title="Excluir este ponto de parada">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
                     </div>
                 </td>
             `;
@@ -4654,17 +4657,122 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         });
     }
 
+    const btnPruneOldBackups = document.getElementById('btnPruneOldBackups');
+    btnPruneOldBackups?.addEventListener('click', async () => {
+        const inputKeep = prompt("Quantos pontos de parada mais RECENTES você deseja MANTER?\n\n(Os pontos anteriores a essa quantidade serão permanentemente excluídos para liberar espaço):", "5");
+        if (inputKeep === null) return;
+
+        const keepCount = Math.max(1, parseInt(inputKeep, 10) || 5);
+        if (!confirm(`Confirma a exclusão de todos os pontos de parada antigos, mantendo apenas os ${keepCount} mais recentes?`)) {
+            return;
+        }
+
+        let deletedServer = 0;
+        let deletedLocal = 0;
+
+        // Limpeza no servidor / disco
+        try {
+            const resp = await fetch('/api/backups/prune', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ keepCount: keepCount })
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                deletedServer = data.deletedCount || 0;
+            }
+        } catch (e) {
+            console.warn('API REST prune indisponível:', e);
+        }
+
+        // Limpeza local no navegador
+        try {
+            const raw = localStorage.getItem('chn4_aton_backups_history');
+            if (raw) {
+                let localBackups = JSON.parse(raw);
+                if (Array.isArray(localBackups) && localBackups.length > keepCount) {
+                    deletedLocal = localBackups.length - keepCount;
+                    localBackups = localBackups.slice(0, keepCount);
+                    localStorage.setItem('chn4_aton_backups_history', JSON.stringify(localBackups));
+                }
+            }
+        } catch (e) {
+            console.warn('Erro ao podar localStorage:', e);
+        }
+
+        const totalDeleted = deletedServer + deletedLocal;
+        if (totalDeleted > 0) {
+            showToast(`Limpeza concluída! ${totalDeleted} ponto(s) antigo(s) excluído(s) e memória liberada.`, 'success');
+        } else {
+            showToast(`Nenhum ponto antigo excedeu o limite de ${keepCount} mais recentes.`, 'info');
+        }
+        loadBackupsList();
+    });
+
+    window.deleteBackupPoint = async (filename, isLocal, localIndex) => {
+        if (!confirm('Deseja realmente excluir este ponto de parada? Esta ação liberará espaço e não pode ser desfeita.')) {
+            return;
+        }
+
+        let deleted = false;
+
+        // Excluir do disco do servidor
+        if (filename && !isLocal) {
+            try {
+                const resp = await fetch('/api/backups/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: filename })
+                });
+                if (resp.ok) {
+                    deleted = true;
+                }
+            } catch (e) {
+                console.warn('Erro ao excluir no servidor:', e);
+            }
+        }
+
+        // Excluir do navegador (localStorage)
+        if (isLocal || (localIndex !== undefined && localIndex !== null)) {
+            try {
+                const raw = localStorage.getItem('chn4_aton_backups_history');
+                if (raw) {
+                    let localBackups = JSON.parse(raw);
+                    if (Array.isArray(localBackups)) {
+                        if (localIndex !== undefined && localIndex !== null && localBackups[localIndex]) {
+                            localBackups.splice(localIndex, 1);
+                        } else if (filename) {
+                            localBackups = localBackups.filter(b => b.filename !== filename);
+                        }
+                        localStorage.setItem('chn4_aton_backups_history', JSON.stringify(localBackups));
+                        deleted = true;
+                    }
+                }
+            } catch (e) {
+                console.warn('Erro ao excluir do localStorage:', e);
+            }
+        }
+
+        if (deleted) {
+            showToast('Ponto de parada excluído com sucesso!', 'success');
+            loadBackupsList();
+        } else {
+            showToast('Não foi possível excluir o ponto de parada.', 'danger');
+        }
+    };
+
     btnCreateManualBackup?.addEventListener('click', async () => {
         const notePrompt = prompt("Digite uma descrição / nota para este Ponto de Parada (opcional):", "Backup manual do operador");
         if (notePrompt === null) return;
 
         const note = notePrompt.trim() || 'Ponto de parada manual';
 
+        // 1. Tenta salvar no disco do servidor
         try {
             const resp = await fetch('/api/backups/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ note: note })
+                body: JSON.stringify({ note: note, signals: signalsData })
             });
             if (resp.ok) {
                 showToast('Ponto de parada criado e salvo no disco com sucesso!', 'success');
@@ -4672,27 +4780,56 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                 return;
             }
         } catch (e) {
-            console.warn('API REST criar backup fallback local.', e);
+            console.warn('API REST criar backup indisponível ou fallback local.', e);
         }
 
+        // 2. Salva localmente no navegador com proteção de cota (auto-prune para nunca travar por cota cheia)
         try {
             let localBackups = [];
             const raw = localStorage.getItem('chn4_aton_backups_history');
-            if (raw) localBackups = JSON.parse(raw);
+            if (raw) {
+                try { localBackups = JSON.parse(raw); } catch (e) { localBackups = []; }
+            }
 
             const now = new Date();
-            localBackups.unshift({
+            const newSnapshot = {
                 filename: null,
                 createdAt: now.toISOString(),
                 formattedDate: now.toLocaleString('pt-BR'),
                 count: signalsData.length,
                 note: note,
                 signals: [...signalsData]
-            });
-            localStorage.setItem('chn4_aton_backups_history', JSON.stringify(localBackups.slice(0, 30)));
-            showToast('Ponto de parada salvo localmente no navegador!', 'success');
-            loadBackupsList();
+            };
+
+            localBackups.unshift(newSnapshot);
+
+            // Tenta salvar; se estourar cota do navegador (QuotaExceededError), reduz backups antigos até caber
+            let saved = false;
+            let maxKeep = Math.min(localBackups.length, 10);
+            while (maxKeep > 0 && !saved) {
+                try {
+                    localStorage.setItem('chn4_aton_backups_history', JSON.stringify(localBackups.slice(0, maxKeep)));
+                    saved = true;
+                } catch (quotaErr) {
+                    maxKeep--;
+                }
+            }
+
+            if (saved) {
+                showToast('Ponto de parada salvo no navegador com sucesso!', 'success');
+                loadBackupsList();
+            } else {
+                // Se a memória estiver no limite extremo por outros dados, salva apenas este ponto novo
+                try {
+                    localStorage.setItem('chn4_aton_backups_history', JSON.stringify([newSnapshot]));
+                    showToast('Ponto de parada salvo! (Histórico antigo liberado para acomodar novo)', 'success');
+                    loadBackupsList();
+                } catch (err2) {
+                    showToast('Memória cheia. Clique em "Excluir Mais Antigos" para liberar espaço.', 'danger');
+                }
+            }
         } catch (e) {
+            console.error('Erro ao criar ponto de parada:', e);
             showToast('Erro ao criar ponto de parada.', 'danger');
         }
     });
