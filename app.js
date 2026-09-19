@@ -4691,6 +4691,15 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             console.warn('API REST /api/backups indisponível.', e);
         }
 
+        // Backups no IndexedDB (alta capacidade local)
+        let idbBackups = [];
+        try {
+            idbBackups = await loadBackupsFromIndexedDB();
+        } catch (e) {
+            console.warn('Erro ao ler IndexedDB:', e);
+        }
+
+        // Backups legados no localStorage
         let localBackups = [];
         try {
             const localRaw = localStorage.getItem('chn4_aton_backups_history');
@@ -4699,13 +4708,22 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
 
         const allBackups = [];
         if (Array.isArray(serverBackups)) {
-            serverBackups.forEach(b => allBackups.push({ ...b, isLocal: false }));
+            serverBackups.forEach(b => allBackups.push({ ...b, isLocal: false, source: 'server' }));
+        }
+        if (Array.isArray(idbBackups)) {
+            idbBackups.forEach(b => allBackups.push({ ...b, isLocal: true, source: 'idb' }));
         }
         if (Array.isArray(localBackups)) {
             localBackups.forEach((b, idx) => {
-                allBackups.push({ ...b, localIndex: idx, isLocal: true, filename: b.filename || null });
+                const exists = allBackups.some(x => x.createdAt && b.createdAt && x.createdAt === b.createdAt);
+                if (!exists) {
+                    allBackups.push({ ...b, localIndex: idx, isLocal: true, source: 'localStorage', filename: b.filename || null });
+                }
             });
         }
+
+        // Ordena todos por data decrescente (mais recente no topo)
+        allBackups.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
         if (allBackups.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="4" class="text-center p-3 text-muted">Nenhum ponto de parada ou backup encontrado. Clique em "Criar Ponto de Parada Agora".</td></tr>';
