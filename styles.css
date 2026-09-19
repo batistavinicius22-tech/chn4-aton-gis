@@ -252,6 +252,26 @@ html, body {
     #btnExpandSidebar {
         display: none !important;
     }
+
+    .sidebar-minimize-btn {
+        flex: 0 0 42px;
+        background: rgba(255, 255, 255, 0.04);
+        border: none;
+        border-left: 1px solid var(--border-color);
+        border-bottom: 3px solid transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+    }
+
+    .sidebar-minimize-btn:hover {
+        color: var(--accent-gold-light);
+        background: rgba(212, 175, 55, 0.15);
+    }
 }
 
 .sidebar-tabs {
@@ -3620,10 +3640,6 @@ html, body {
     word-break: break-word;
 }
 
-
-
-
-
 /* ==========================================================================
    BLOCO EXPERIMENTAL: SPLASH SCREEN DE ABERTURA (CHN-4)
    (Pode ser removido ou desativado a qualquer momento)
@@ -3749,7 +3765,7 @@ html, body {
     height: 100%;
     background: linear-gradient(90deg, #b48312, #002b66);
     border-radius: 4px;
-    animation: splashProgressFill 2s cubic-bezier(0.2, 0, 0.2, 1) forwards;
+    animation: splashProgressFill 4s cubic-bezier(0.2, 0, 0.2, 1) forwards;
 }
 
 @keyframes splashAppear {
