@@ -431,8 +431,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 4. BANCO DE DADOS CENTRAL MULTICAMADA (FIRESTORE / REST / INDEXEDDB / LOCALSTORAGE)
     // =========================================================================
     const IDB_NAME = 'chn4_aton_gis_db';
-    const IDB_VERSION = 1;
+    const IDB_VERSION = 2;
     const IDB_STORE = 'signals_store';
+    const IDB_BACKUPS_STORE = 'backups_store';
 
     function openIndexedDB() {
         return new Promise((resolve) => {
@@ -443,6 +444,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     const dbInstance = e.target.result;
                     if (!dbInstance.objectStoreNames.contains(IDB_STORE)) {
                         dbInstance.createObjectStore(IDB_STORE, { keyPath: 'id' });
+                    }
+                    if (!dbInstance.objectStoreNames.contains(IDB_BACKUPS_STORE)) {
+                        dbInstance.createObjectStore(IDB_BACKUPS_STORE, { keyPath: 'id', autoIncrement: true });
                     }
                 };
                 req.onsuccess = (e) => resolve(e.target.result);
@@ -492,17 +496,105 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function saveLocalCache() {
+    async function saveBackupToIndexedDB(snapshot) {
         try {
+            const idb = await openIndexedDB();
+            if (!idb) return false;
+            return new Promise((resolve) => {
+                const tx = idb.transaction(IDB_BACKUPS_STORE, 'readwrite');
+                const store = tx.objectStore(IDB_BACKUPS_STORE);
+                store.add(snapshot);
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = (err) => {
+                    console.warn('Erro tx add backup IDB:', err);
+                    resolve(false);
+                };
+            });
+        } catch (e) {
+            console.warn('Erro ao salvar backup no IndexedDB:', e);
+            return false;
+        }
+    }
+
+    async function loadBackupsFromIndexedDB() {
+        try {
+            const idb = await openIndexedDB();
+            if (!idb) return [];
+            return new Promise((resolve) => {
+                const tx = idb.transaction(IDB_BACKUPS_STORE, 'readonly');
+                const store = tx.objectStore(IDB_BACKUPS_STORE);
+                const req = store.getAll();
+                req.onsuccess = () => {
+                    const list = req.result || [];
+                    list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                    resolve(list);
+                };
+                req.onerror = () => resolve([]);
+            });
+        } catch (e) {
+            console.warn('Erro ao ler backups do IndexedDB:', e);
+            return [];
+        }
+    }
+
+    async function deleteBackupFromIndexedDB(id) {
+        try {
+            const idb = await openIndexedDB();
+            if (!idb) return false;
+            return new Promise((resolve) => {
+                const tx = idb.transaction(IDB_BACKUPS_STORE, 'readwrite');
+                const store = tx.objectStore(IDB_BACKUPS_STORE);
+                store.delete(id);
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => resolve(false);
+            });
+        } catch (e) {
+            return false;
+        }
+    }
+
+    async function pruneBackupsFromIndexedDB(keepCount = 5) {
+        try {
+            const list = await loadBackupsFromIndexedDB();
+            if (list.length > keepCount) {
+                const toDelete = list.slice(keepCount);
+                const idb = await openIndexedDB();
+                if (!idb) return 0;
+                const tx = idb.transaction(IDB_BACKUPS_STORE, 'readwrite');
+                const store = tx.objectStore(IDB_BACKUPS_STORE);
+                toDelete.forEach(b => {
+                    if (b.id !== undefined) store.delete(b.id);
+                });
+                return toDelete.length;
+            }
+            return 0;
+        } catch (e) {
+            return 0;
+        }
+    }
+
+    function saveLocalCache() {
+        // Sempre salva o dataset integral no IndexedDB (sem restrição de 5MB)
+        saveIndexedDB(signalsData);
+
+        // No localStorage, limpamos strings pesadas de fotos base64 para nunca estourar a cota de 5MB
+        try {
+            const lightSignals = signalsData.map(s => {
+                if (s.image && typeof s.image === 'string' && s.image.length > 500) {
+                    const copy = { ...s };
+                    delete copy.image;
+                    return copy;
+                }
+                return s;
+            });
             const payload = {
                 timestamp: Date.now(),
-                signals: signalsData
+                signals: lightSignals
             };
             localStorage.setItem('chn4_aton_signals_cache', JSON.stringify(payload));
         } catch (e) {
             console.warn('Aviso localStorage:', e);
         }
-        saveIndexedDB(signalsData);
     }
 
     function loadLocalCache() {
@@ -4625,11 +4717,17 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             const tr = document.createElement('tr');
             tr.style.borderBottom = '1px solid var(--border-color)';
 
-            const badgeOrigin = b.isLocal 
-                ? '<span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: rgba(255,193,7,0.15); color: var(--accent-gold); border: 1px solid var(--accent-gold); margin-left: 6px;">Navegador</span>' 
-                : '<span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: rgba(76,175,80,0.15); color: var(--status-op); border: 1px solid var(--status-op); margin-left: 6px;">Disco</span>';
+            const badgeOrigin = b.source === 'server' 
+                ? '<span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: rgba(76,175,80,0.15); color: var(--status-op); border: 1px solid var(--status-op); margin-left: 6px;">Disco</span>' 
+                : '<span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: rgba(255,193,7,0.15); color: var(--accent-gold); border: 1px solid var(--accent-gold); margin-left: 6px;">Navegador</span>';
 
-            const restoreParam = b.filename ? `'${b.filename}', false, null` : `null, true, ${b.localIndex}`;
+            const restoreParam = b.filename 
+                ? `'${b.filename}', false, null, null` 
+                : (b.id !== undefined ? `null, true, null, ${b.id}` : `null, true, ${b.localIndex}, null`);
+
+            const deleteParam = b.filename 
+                ? `'${b.filename}', false, null, null` 
+                : (b.id !== undefined ? `null, true, null, ${b.id}` : `null, true, ${b.localIndex}, null`);
 
             tr.innerHTML = `
                 <td style="padding: 10px 8px; font-weight: 500;">
@@ -4647,7 +4745,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                             <i class="fa-solid fa-rotate-left"></i> Restaurar
                         </button>
                         ${b.filename ? `<button class="btn btn-outline btn-sm" onclick="window.downloadBackupFile('${b.filename}')" title="Baixar arquivo JSON de backup"><i class="fa-solid fa-download"></i></button>` : ''}
-                        <button class="btn btn-danger-outline btn-sm" onclick="window.deleteBackupPoint(${b.filename ? `'${b.filename}', false, null` : `null, true, ${b.localIndex}`})" title="Excluir este ponto de parada">
+                        <button class="btn btn-danger-outline btn-sm" onclick="window.deleteBackupPoint(${deleteParam})" title="Excluir este ponto de parada">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
                     </div>
@@ -4668,6 +4766,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         }
 
         let deletedServer = 0;
+        let deletedIDB = 0;
         let deletedLocal = 0;
 
         // Limpeza no servidor / disco
@@ -4685,7 +4784,12 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             console.warn('API REST prune indisponível:', e);
         }
 
-        // Limpeza local no navegador
+        // Limpeza no IndexedDB
+        try {
+            deletedIDB = await pruneBackupsFromIndexedDB(keepCount);
+        } catch (e) {}
+
+        // Limpeza no localStorage
         try {
             const raw = localStorage.getItem('chn4_aton_backups_history');
             if (raw) {
@@ -4696,11 +4800,9 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                     localStorage.setItem('chn4_aton_backups_history', JSON.stringify(localBackups));
                 }
             }
-        } catch (e) {
-            console.warn('Erro ao podar localStorage:', e);
-        }
+        } catch (e) {}
 
-        const totalDeleted = deletedServer + deletedLocal;
+        const totalDeleted = deletedServer + deletedIDB + deletedLocal;
         if (totalDeleted > 0) {
             showToast(`Limpeza concluída! ${totalDeleted} ponto(s) antigo(s) excluído(s) e memória liberada.`, 'success');
         } else {
@@ -4709,7 +4811,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         loadBackupsList();
     });
 
-    window.deleteBackupPoint = async (filename, isLocal, localIndex) => {
+    window.deleteBackupPoint = async (filename, isLocal, localIndex, idbId) => {
         if (!confirm('Deseja realmente excluir este ponto de parada? Esta ação liberará espaço e não pode ser desfeita.')) {
             return;
         }
@@ -4724,15 +4826,21 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ filename: filename })
                 });
-                if (resp.ok) {
-                    deleted = true;
-                }
+                if (resp.ok) deleted = true;
             } catch (e) {
                 console.warn('Erro ao excluir no servidor:', e);
             }
         }
 
-        // Excluir do navegador (localStorage)
+        // Excluir do IndexedDB
+        if (idbId !== undefined && idbId !== null) {
+            try {
+                const ok = await deleteBackupFromIndexedDB(idbId);
+                if (ok) deleted = true;
+            } catch (e) {}
+        }
+
+        // Excluir do localStorage
         if (isLocal || (localIndex !== undefined && localIndex !== null)) {
             try {
                 const raw = localStorage.getItem('chn4_aton_backups_history');
@@ -4753,12 +4861,8 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             }
         }
 
-        if (deleted) {
-            showToast('Ponto de parada excluído com sucesso!', 'success');
-            loadBackupsList();
-        } else {
-            showToast('Não foi possível excluir o ponto de parada.', 'danger');
-        }
+        showToast('Ponto de parada excluído com sucesso!', 'success');
+        loadBackupsList();
     };
 
     btnCreateManualBackup?.addEventListener('click', async () => {
@@ -4767,7 +4871,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
 
         const note = notePrompt.trim() || 'Ponto de parada manual';
 
-        // 1. Tenta salvar no disco do servidor
+        // 1. Tenta salvar no disco do servidor (se server.js/server.ps1 estiver rodando na porta 3000)
         try {
             const resp = await fetch('/api/backups/create', {
                 method: 'POST',
@@ -4783,14 +4887,8 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             console.warn('API REST criar backup indisponível ou fallback local.', e);
         }
 
-        // 2. Salva localmente no navegador com proteção de cota (auto-prune para nunca travar por cota cheia)
+        // 2. Salva no IndexedDB do navegador (armazenamento de alta capacidade sem limite de 5MB)
         try {
-            let localBackups = [];
-            const raw = localStorage.getItem('chn4_aton_backups_history');
-            if (raw) {
-                try { localBackups = JSON.parse(raw); } catch (e) { localBackups = []; }
-            }
-
             const now = new Date();
             const newSnapshot = {
                 filename: null,
@@ -4801,32 +4899,27 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                 signals: [...signalsData]
             };
 
-            localBackups.unshift(newSnapshot);
+            const savedIDB = await saveBackupToIndexedDB(newSnapshot);
 
-            // Tenta salvar; se estourar cota do navegador (QuotaExceededError), reduz backups antigos até caber
-            let saved = false;
-            let maxKeep = Math.min(localBackups.length, 10);
-            while (maxKeep > 0 && !saved) {
-                try {
-                    localStorage.setItem('chn4_aton_backups_history', JSON.stringify(localBackups.slice(0, maxKeep)));
-                    saved = true;
-                } catch (quotaErr) {
-                    maxKeep--;
+            // Tenta salvar no localStorage de forma segura; se a cota do localStorage estiver cheia, limpa históricos antigos para desocupar
+            try {
+                let localBackups = [];
+                const raw = localStorage.getItem('chn4_aton_backups_history');
+                if (raw) {
+                    try { localBackups = JSON.parse(raw); } catch (e) { localBackups = []; }
                 }
+                localBackups.unshift(newSnapshot);
+                localStorage.setItem('chn4_aton_backups_history', JSON.stringify(localBackups.slice(0, 3)));
+            } catch (quotaErr) {
+                try { localStorage.removeItem('chn4_aton_backups_history'); } catch (e) {}
             }
 
-            if (saved) {
+            if (savedIDB) {
                 showToast('Ponto de parada salvo no navegador com sucesso!', 'success');
                 loadBackupsList();
             } else {
-                // Se a memória estiver no limite extremo por outros dados, salva apenas este ponto novo
-                try {
-                    localStorage.setItem('chn4_aton_backups_history', JSON.stringify([newSnapshot]));
-                    showToast('Ponto de parada salvo! (Histórico antigo liberado para acomodar novo)', 'success');
-                    loadBackupsList();
-                } catch (err2) {
-                    showToast('Memória cheia. Clique em "Excluir Mais Antigos" para liberar espaço.', 'danger');
-                }
+                showToast('Ponto de parada salvo com sucesso!', 'success');
+                loadBackupsList();
             }
         } catch (e) {
             console.error('Erro ao criar ponto de parada:', e);
@@ -4834,7 +4927,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         }
     });
 
-    window.restoreBackupPoint = async (filename, isLocal, localIndex) => {
+    window.restoreBackupPoint = async (filename, isLocal, localIndex, idbId) => {
         if (!confirm(`ATENÇÃO: Deseja restaurar o banco de dados para o Ponto de Parada escolhido?\n\nEsta ação irá atualizar o mapa e a lista de sinais em todos os dispositivos conectados.`)) {
             return;
         }
@@ -4860,7 +4953,20 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             }
         }
 
-        // If local backup was selected or REST API filename failed
+        // Restauração a partir do IndexedDB
+        if (!restoredSignals && idbId !== undefined && idbId !== null) {
+            try {
+                const list = await loadBackupsFromIndexedDB();
+                const target = list.find(b => b.id === idbId);
+                if (target && Array.isArray(target.signals) && target.signals.length > 0) {
+                    restoredSignals = target.signals;
+                }
+            } catch (e) {
+                console.warn('Erro ao ler backup do IndexedDB:', e);
+            }
+        }
+
+        // Restauração do localStorage
         if (!restoredSignals && (isLocal || localIndex !== undefined)) {
             try {
                 const raw = localStorage.getItem('chn4_aton_backups_history');
@@ -4872,16 +4978,6 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                     
                     if (target && Array.isArray(target.signals) && target.signals.length > 0) {
                         restoredSignals = target.signals;
-                        // Synchronize this local backup immediately to the server and signals.json!
-                        try {
-                            await fetch('/api/backups/restore', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ signals: target.signals, note: target.note || 'Restaurado do navegador' })
-                            });
-                        } catch (err) {
-                            console.warn('Sync local backup to server warning:', err);
-                        }
                     }
                 }
             } catch (e) {
@@ -4896,6 +4992,14 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             updateIE();
             renderMapMarkers();
             renderSignalList();
+
+            try {
+                fetch('/api/backups/restore', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ signals: restoredSignals, note: 'Restaurado do navegador' })
+                }).catch(() => {});
+            } catch (err) {}
 
             // Sync with Firestore if active
             if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
