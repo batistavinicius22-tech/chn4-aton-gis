@@ -1864,6 +1864,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (t.includes('BL') || t.includes('BOIA LUMINOSA') || t.includes('BÓIA LUMINOSA')) return 'Bóia Luminosa';
         if (t.includes('BOIA') || t.includes('BÓIA')) return 'Bóia';
         if (t.includes('RACON') || t.includes('RADAR')) return 'Respondedor Radar (Racon)';
+        if (t === 'RF' || t.includes('RADIOFAROL') || t.includes('RADIO')) return 'Radiofarol';
+        if (t.includes('AIS')) return 'AIS AtoN';
         if (t.includes('CARDINAL')) return 'Sinal Cardinal';
         if (t.includes('LUZ') || t.includes('PORTO')) return 'Luz / Lanterna';
         return type || 'Sinal Náutico';
