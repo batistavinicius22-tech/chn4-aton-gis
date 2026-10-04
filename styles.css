@@ -3799,3 +3799,733 @@ html, body {
         font-size: 0.7rem;
     }
 }
+
+/* ==========================================================================
+   TELA DE LOGIN MODERNA (SIGATON - CHN-4 / 4º DISTRITO NAVAL)
+   ========================================================================== */
+
+.login-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1000000;
+    background: radial-gradient(circle at 20% 20%, rgba(13, 27, 49, 0.98) 0%, rgba(4, 9, 20, 0.99) 100%);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.4s ease;
+}
+
+.login-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.login-card-container {
+    display: flex;
+    width: 100%;
+    max-width: 960px;
+    min-height: 560px;
+    background: #ffffff;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(212, 175, 55, 0.25);
+    animation: loginCardPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes loginCardPop {
+    0% {
+        opacity: 0;
+        transform: scale(0.96) translateY(12px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Painel Visual Esquerdo com a Foto Náutica */
+.login-visual-panel {
+    flex: 1.15;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 32px 30px;
+    color: #ffffff;
+    min-height: 480px;
+}
+
+.login-hero-photo {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transition: transform 1.2s ease;
+}
+
+.login-card-container:hover .login-hero-photo {
+    transform: scale(1.03);
+}
+
+.login-visual-gradient {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, rgba(8, 20, 39, 0.4) 0%, rgba(6, 15, 30, 0.75) 50%, rgba(3, 8, 18, 0.96) 100%);
+}
+
+.login-visual-top-badge {
+    position: relative;
+    z-index: 2;
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(4, 12, 26, 0.75);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #d4af37;
+    letter-spacing: 0.6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.login-visual-bottom-info {
+    position: relative;
+    z-index: 2;
+}
+
+.login-subtag {
+    display: block;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #d4af37;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+}
+
+.login-visual-bottom-info h3 {
+    font-family: var(--font-tech, 'Rajdhani', sans-serif);
+    font-size: 1.7rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0 0 8px 0;
+    color: #ffffff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.login-visual-bottom-info p {
+    font-size: 0.84rem;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* Painel Direito: Formulário */
+.login-form-panel {
+    flex: 1;
+    padding: 38px 42px;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-sizing: border-box;
+}
+
+.login-form-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.login-brand-logo {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+}
+
+.login-brand-titles {
+    display: flex;
+    flex-direction: column;
+}
+
+.brand-org {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #0b1a30;
+    letter-spacing: 1.2px;
+}
+
+.brand-unit {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #b48312;
+    letter-spacing: 0.5px;
+}
+
+.login-headline h2 {
+    font-family: var(--font-tech, 'Rajdhani', sans-serif);
+    font-size: 1.85rem;
+    font-weight: 700;
+    color: #0d1e38;
+    margin: 0 0 4px 0;
+    letter-spacing: 0.2px;
+}
+
+.login-headline p {
+    font-size: 0.82rem;
+    color: #64748b;
+    margin: 0 0 18px 0;
+}
+
+/* Aba única Login */
+.login-tabs {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 22px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.login-tab-item {
+    background: none;
+    border: none;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #0d1e38;
+    padding: 0 4px 8px 4px;
+    cursor: default;
+    position: relative;
+}
+
+.login-tab-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: #0d1e38;
+    border-radius: 2px;
+}
+
+/* Campos de Formulário Minimalistas Modernos */
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.login-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.login-field-group label {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.login-input-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.login-input-box:focus-within {
+    border-color: #0d1e38;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(13, 30, 56, 0.12);
+}
+
+.login-field-icon {
+    position: absolute;
+    left: 14px;
+    color: #94a3b8;
+    font-size: 0.95rem;
+    pointer-events: none;
+}
+
+.login-input-box input {
+    width: 100%;
+    height: 44px;
+    padding: 0 40px 0 40px;
+    border: none;
+    background: transparent;
+    font-size: 0.92rem;
+    color: #0f172a;
+    font-family: inherit;
+    outline: none;
+}
+
+.login-input-box input::placeholder {
+    color: #94a3b8;
+    font-size: 0.88rem;
+}
+
+.btn-eye-toggle {
+    position: absolute;
+    right: 8px;
+    background: none;
+    border: none;
+    color: #64748b;
+    padding: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: color 0.18s ease;
+}
+
+.btn-eye-toggle:hover {
+    color: #0d1e38;
+}
+
+/* Botão Principal */
+.btn-login-main {
+    width: 100%;
+    height: 46px;
+    background: linear-gradient(135deg, #102a4e 0%, #08162b 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.98rem;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 4px 14px rgba(13, 30, 56, 0.35);
+    transition: all 0.22s ease;
+    margin-top: 6px;
+}
+
+.btn-login-main:hover {
+    background: linear-gradient(135deg, #173b6d 0%, #0d2140 100%);
+    box-shadow: 0 6px 18px rgba(13, 30, 56, 0.45);
+    transform: translateY(-1px);
+}
+
+.btn-login-main:active {
+    transform: translateY(1px);
+}
+
+.btn-login-main:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.login-options-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: 4px;
+}
+
+.btn-forgot-password {
+    background: none;
+    border: none;
+    color: #475569;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.18s ease;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.btn-forgot-password:hover {
+    color: #0d1e38;
+}
+
+/* Banner de Alerta no Login */
+.login-alert {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.84rem;
+    font-weight: 500;
+    line-height: 1.4;
+    margin-bottom: 14px;
+}
+
+.login-alert.error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+}
+
+.login-alert.success {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #15803d;
+}
+
+.login-security-notice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 18px;
+    border-top: 1px solid #f1f5f9;
+    color: #94a3b8;
+    font-size: 0.72rem;
+    line-height: 1.4;
+}
+
+/* Responsividade do Login */
+@media (max-width: 820px) {
+    .login-card-container {
+        flex-direction: column;
+        max-width: 440px;
+        min-height: auto;
+    }
+    .login-visual-panel {
+        min-height: 180px;
+        padding: 20px;
+    }
+    .login-visual-bottom-info {
+        display: none;
+    }
+    .login-form-panel {
+        padding: 26px 24px;
+    }
+}
+
+/* ==========================================================================
+   CABEÇALHO: PÍLULA DE USUÁRIO E BOTÃO DE ADMINISTRAÇÃO
+   ========================================================================== */
+
+.btn-admin {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.18) 0%, rgba(180, 131, 18, 0.3) 100%);
+    border: 1px solid var(--accent-gold);
+    color: var(--accent-gold);
+    font-weight: 700;
+    font-size: 0.82rem;
+    border-radius: 6px;
+    padding: 6px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-admin:hover {
+    background: var(--accent-gold);
+    color: #050d1a;
+    box-shadow: 0 0 12px rgba(212, 175, 55, 0.45);
+    transform: translateY(-1px);
+}
+
+.user-auth-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(15, 30, 54, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    padding: 4px 10px 4px 6px;
+    margin-left: 4px;
+}
+
+.user-auth-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(212, 175, 55, 0.2);
+    color: var(--accent-gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.82rem;
+}
+
+.user-auth-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+}
+
+.user-auth-email {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #f8fafc;
+    max-width: 170px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-auth-role {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--accent-gold);
+    text-transform: uppercase;
+}
+
+.btn-logout {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.btn-logout:hover {
+    background: #ef4444;
+    color: #ffffff;
+    border-color: #ef4444;
+}
+
+/* ==========================================================================
+   MODAL DE ADMINISTRAÇÃO E GESTÃO DE USUÁRIOS
+   ========================================================================== */
+
+.modal-admin-lg {
+    max-width: 900px;
+    width: 95%;
+}
+
+.modal-auth-sm {
+    max-width: 440px;
+    width: 90%;
+}
+
+.modal-header-admin {
+    background: linear-gradient(135deg, rgba(8, 20, 39, 0.98) 0%, rgba(15, 34, 64, 0.95) 100%);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.modal-admin-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.admin-shield-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(212, 175, 55, 0.15);
+    border: 1px solid var(--accent-gold);
+    color: var(--accent-gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
+.modal-admin-nav {
+    display: flex;
+    gap: 8px;
+    padding: 10px 20px;
+    background: rgba(2, 6, 17, 0.85);
+    border-bottom: 1px solid var(--navy-800);
+}
+
+.admin-tab-btn {
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: #94a3b8;
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.admin-tab-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.admin-tab-btn.active {
+    color: var(--accent-gold);
+    border-color: rgba(212, 175, 55, 0.4);
+    background: rgba(212, 175, 55, 0.1);
+}
+
+.modal-admin-body {
+    padding: 20px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.admin-actions-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.admin-stats-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--navy-700);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    color: #94a3b8;
+}
+
+.admin-stats-badge span {
+    font-weight: 700;
+    color: var(--accent-gold);
+}
+
+.admin-subcard {
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid var(--navy-700);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 18px;
+}
+
+.admin-subcard h4 {
+    margin: 0 0 14px 0;
+    font-size: 0.95rem;
+    color: var(--accent-gold);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-grid-form {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.form-actions-full {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.admin-table-wrapper {
+    background: rgba(10, 15, 29, 0.6);
+    border: 1px solid var(--navy-800);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.84rem;
+    text-align: left;
+}
+
+.admin-table th {
+    background: rgba(15, 23, 42, 0.9);
+    color: #94a3b8;
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--navy-700);
+}
+
+.admin-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: #cbd5e1;
+}
+
+.admin-table tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.badge-role-admin {
+    background: rgba(212, 175, 55, 0.18);
+    border: 1px solid var(--accent-gold);
+    color: var(--accent-gold);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.badge-role-user {
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    color: #60a5fa;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.btn-action-icon {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #cbd5e1;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    cursor: pointer;
+    margin-right: 4px;
+    transition: all 0.18s ease;
+}
+
+.btn-action-icon:hover {
+    background: var(--accent-gold);
+    color: #040914;
+    border-color: var(--accent-gold);
+}
+
+.btn-action-icon.danger:hover {
+    background: #ef4444;
+    color: #ffffff;
+    border-color: #ef4444;
+}
+

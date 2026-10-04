@@ -74,6 +74,27 @@ document.addEventListener('DOMContentLoaded', () => {
         custom: { name: "Ponto de Partida Personalizado", lat: -1.41111, lng: -48.48722 }
     };
 
+    // =========================================================================
+    // UTILITÁRIO DE SEGURANÇA: ESCAPE HTML (PROTEÇÃO CONTRA XSS)
+    // =========================================================================
+    function escapeHTML(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    // =========================================================================
+    // VARIÁVEIS DE AUTENTICAÇÃO E SUPERUSUÁRIO (CHN-4 / SIGATON)
+    // =========================================================================
+    const SUPERADMIN_EMAIL = 'batistavinicius22@gmail.com';
+    let currentUser = null;
+    let currentUserRole = null; // 'admin' | 'usuario'
+    let isAppInitialized = false;
+
     // Função de ordenação natural crescente:
     // 1. Códigos numéricos e decimais (ex: 32, 100, 319, 319.1, 319.3, 319A, 320) ordenados de forma crescente contínua.
     // 2. Códigos que iniciam com letras (ex: AP-01, BAP-01, PA-20) vêm na sequência em ordem alfabética natural.
@@ -1831,15 +1852,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const popupHtml = `
                 <div style="font-family: var(--font-sans); padding: 4px 6px; min-width: 210px;">
                     <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 4px;">
-                        <span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${signal.status}</span>
-                        <span class="responsavel-badge ${respClass}"><i class="fa-solid fa-building-user"></i> ${signal.responsavel || 'CHN-4'}</span>
+                        <span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${escapeHTML(signal.status)}</span>
+                        <span class="responsavel-badge ${respClass}"><i class="fa-solid fa-building-user"></i> ${escapeHTML(signal.responsavel || 'CHN-4')}</span>
                     </div>
-                    <h3 style="font-family: var(--font-tech); margin: 4px 0 2px 0; font-size: 1.05rem; color: #0f172a;">${signal.code} - ${signal.name}</h3>
-                    <p style="margin: 3px 0; font-size: 0.82rem; color: #334155;"><strong>Tipo:</strong> ${fullType}</p>
-                    <p style="margin: 3px 0; font-size: 0.82rem; color: #334155;"><strong>Carac:</strong> ${signal.characteristic}</p>
+                    <h3 style="font-family: var(--font-tech); margin: 4px 0 2px 0; font-size: 1.05rem; color: #0f172a;">${escapeHTML(signal.code)} - ${escapeHTML(signal.name)}</h3>
+                    <p style="margin: 3px 0; font-size: 0.82rem; color: #334155;"><strong>Tipo:</strong> ${escapeHTML(fullType)}</p>
+                    <p style="margin: 3px 0; font-size: 0.82rem; color: #334155;"><strong>Carac:</strong> ${escapeHTML(signal.characteristic)}</p>
                     <p style="margin: 3px 0 8px 0; font-size: 0.82rem; color: #334155;"><strong>Posição:</strong> <span style="font-weight: 600; color: #0f172a;">${formatNauticalCoord(signal.lat, true)} | ${formatNauticalCoord(signal.lng, false)}</span></p>
                     <div style="display: flex; gap: 6px;">
-                        <button type="button" onclick="window.openSignalDetail('${signal.code}')" style="background: #1e3a66; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                        <button type="button" class="btn-popup-dh2-open" data-code="${escapeHTML(signal.code)}" style="background: #1e3a66; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px;">
                             <i class="fa-solid fa-file-lines"></i> Ficha DH2
                         </button>
                     </div>
@@ -1849,6 +1870,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             marker.on('click', () => {
                 highlightSignalCard(signal.code);
+            });
+
+            marker.on('popupopen', () => {
+                const btn = document.querySelector(`.btn-popup-dh2-open[data-code="${CSS.escape(signal.code)}"]`);
+                if (btn) {
+                    btn.onclick = () => window.openSignalDetail(signal.code);
+                }
             });
 
             mapMarkers[signal.code] = marker;
@@ -1898,29 +1926,40 @@ document.addEventListener('DOMContentLoaded', () => {
             card.innerHTML = `
                 <div class="signal-card-head">
                     <div class="signal-code-title">
-                        <button type="button" class="btn-card-select ${isSelected ? 'checked' : ''}" onclick="event.stopPropagation(); window.toggleSelectSignal('${s.code}')" title="${isSelected ? 'Remover da visualização conjunta' : 'Marcar para visualizar no mapa'}">
+                        <button type="button" class="btn-card-select ${isSelected ? 'checked' : ''}" data-code="${escapeHTML(s.code)}" title="${isSelected ? 'Remover da visualização conjunta' : 'Marcar para visualizar no mapa'}">
                             <i class="fa-solid ${isSelected ? 'fa-square-check' : 'fa-square'}"></i>
                         </button>
                         <i class="fa-solid ${getSignalIconClass(s.type)}" style="color:${isOp ? 'var(--status-op)' : 'var(--status-av)'}"></i>
-                        <h4>${s.code}</h4>
+                        <h4>${escapeHTML(s.code)}</h4>
                     </div>
                     <div style="display: flex; gap: 4px; align-items: center;">
-                        <span class="responsavel-badge ${respClass}">${s.responsavel || 'CHN-4'}</span>
-                        <span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${s.status}</span>
-                        <button type="button" class="btn-card-delete" onclick="event.stopPropagation(); window.deleteSignalFromCard('${s.code}', '${s.name.replace(/'/g, "\\'")}')" title="Excluir Sinal Náutico">
+                        <span class="responsavel-badge ${respClass}">${escapeHTML(s.responsavel || 'CHN-4')}</span>
+                        <span class="badge ${isOp ? 'badge-op' : 'badge-av'}">${escapeHTML(s.status)}</span>
+                        <button type="button" class="btn-card-delete" data-code="${escapeHTML(s.code)}" title="Excluir Sinal Náutico">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
                     </div>
                 </div>
                 <div class="signal-card-body">
-                    <strong>${s.name}</strong>
-                    <div class="signal-char"><i class="fa-solid fa-lightbulb"></i> ${fullType} — ${s.characteristic}</div>
+                    <strong>${escapeHTML(s.name)}</strong>
+                    <div class="signal-char"><i class="fa-solid fa-lightbulb"></i> ${escapeHTML(fullType)} — ${escapeHTML(s.characteristic)}</div>
                 </div>
                 <div class="signal-meta">
                     <span>${toDMS(s.lat, true)} | ${toDMS(s.lng, false)}</span>
-                    <span>Alcance: ${s.rangeNM} NM</span>
+                    <span>Alcance: ${escapeHTML(s.rangeNM)} NM</span>
                 </div>
             `;
+
+            // Listeners seguros no card
+            card.querySelector('.btn-card-select')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                window.toggleSelectSignal(s.code);
+            });
+
+            card.querySelector('.btn-card-delete')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteSignalPermanently(s.code, s.name);
+            });
 
             // Drag and Drop listeners on card
             card.addEventListener('dragstart', (e) => {
@@ -1966,17 +2005,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =========================================================================
-    // 9. DETALHES DO SINAL: EDICAO E GERENCIAMENTO
+    // 9. DETALHES DO SINAL: EDICAO E GERENCIAMENTO COM SEGURANÇA E AUDITORIA
     // =========================================================================
     function sanitizeForDatabase(signal) {
         if (!signal) return null;
+
+        // 1. Código do sinal pode ser numérico (1, 32, 480) ou alfanumérico (PA-05)
+        const rawCode = String(signal.code !== undefined && signal.code !== null ? signal.code : '').trim();
+        if (!rawCode) {
+            showToast('Erro: O código do sinal não pode ser vazio.', 'danger');
+            return null;
+        }
+
+        // 2. Validação matemática rigorosa de latitude (-90 a 90) e longitude (-180 a 180)
+        const latVal = typeof signal.lat === 'number' ? signal.lat : parseFloat(signal.lat);
+        const lngVal = typeof signal.lng === 'number' ? signal.lng : parseFloat(signal.lng);
+
+        if (isNaN(latVal) || latVal < -90 || latVal > 90) {
+            showToast(`Latitude inválida (${signal.lat}). Deve estar entre -90.0° e +90.0°.`, 'danger');
+            return null;
+        }
+
+        if (isNaN(lngVal) || lngVal < -180 || lngVal > 180) {
+            showToast(`Longitude inválida (${signal.lng}). Deve estar entre -180.0° e +180.0°.`, 'danger');
+            return null;
+        }
+
+        const operatorEmail = currentUser ? currentUser.email : 'Operador';
+        const nowIso = new Date().toISOString();
+
         return {
-            code: String(signal.code || '').trim(),
+            code: rawCode,
             name: String(signal.name || '').trim(),
             type: String(signal.type || '').trim(),
-            status: String(signal.status || '').trim(),
-            lat: typeof signal.lat === 'number' ? signal.lat : parseFloat(signal.lat) || 0,
-            lng: typeof signal.lng === 'number' ? signal.lng : parseFloat(signal.lng) || 0,
+            status: String(signal.status || 'OPERACIONAL').trim(),
+            lat: latVal,
+            lng: lngVal,
             characteristic: String(signal.characteristic || '').trim(),
             rangeNM: typeof signal.rangeNM === 'number' ? signal.rangeNM : parseFloat(signal.rangeNM) || 0,
             altitudeM: typeof signal.altitudeM === 'number' ? signal.altitudeM : parseFloat(signal.altitudeM) || 0,
@@ -1987,6 +2051,8 @@ document.addEventListener('DOMContentLoaded', () => {
             inoperableSince: signal.inoperableSince ? String(signal.inoperableSince).trim() : (signal.occurrenceStartDate ? String(signal.occurrenceStartDate).trim() : null),
             image: signal.image || (Array.isArray(signal.images) && signal.images.length > 0 ? signal.images[0].url : null),
             photoDate: signal.photoDate || (Array.isArray(signal.images) && signal.images.length > 0 ? signal.images[0].date : null),
+            updatedBy: operatorEmail,
+            updatedAt: nowIso,
             images: Array.isArray(signal.images) ? signal.images.map(img => ({
                 id: String(img.id || ''),
                 url: String(img.url || ''),
@@ -1996,41 +2062,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 date: String(h.date || ''),
                 startDate: h.startDate ? String(h.startDate).trim() : null,
                 status: String(h.status || ''),
-                note: String(h.note || '')
+                note: String(h.note || ''),
+                updatedBy: h.updatedBy || operatorEmail
             })) : []
         };
     }
 
     function saveSignalToBackend(signal) {
+        if (!currentUser) {
+            showToast('⚠️ Operação bloqueada: Apenas operadores autenticados podem salvar sinais.', 'danger');
+            return;
+        }
+
         const clean = sanitizeForDatabase(signal);
         if (!clean || !clean.code) return;
 
-        const idx = signalsData.findIndex(s => s.code === clean.code);
+        const idx = signalsData.findIndex(s => String(s.code).trim() === clean.code);
         if (idx !== -1) {
             signalsData[idx] = clean;
         } else {
             signalsData.push(clean);
         }
 
-        if (selectedSignal && selectedSignal.code === clean.code) {
+        if (selectedSignal && String(selectedSignal.code).trim() === clean.code) {
             selectedSignal = clean;
         }
 
-        // 1. Sempre salva localmente no Cache / IndexedDB
+        // 1. Salva localmente no Cache / IndexedDB
         saveLocalCache();
 
-        // 2. Persiste no Firebase Cloud Firestore na nuvem (se ativo e conectado)
+        // 2. Persiste no Firebase Cloud Firestore com Log de Auditoria
         if (typeof isFirebaseActive !== 'undefined' && isFirebaseActive && db) {
             if (window.isSystemOfflineOrCache || !navigator.onLine) {
-                showToast('⚠️ ATENÇÃO: Dispositivo operando em MODO OFFLINE (Cache). Alteração salva localmente, mas não enviada para a nuvem para evitar conflitos.', 'warning');
+                showToast('⚠️ Dispositivo em modo offline (Cache). Salvo localmente.', 'warning');
             } else {
                 db.collection("signals").doc(clean.code).set(clean, { merge: true })
-                    .then(() => console.log(`🔥 Firestore: Sinal ${clean.code} salvo na nuvem com sucesso!`))
+                    .then(() => {
+                        console.log(`🔥 Firestore: Sinal ${clean.code} salvo com sucesso!`);
+                        // Registro de Auditoria
+                        db.collection("audit_logs").add({
+                            timestamp: new Date().toISOString(),
+                            operator: currentUser.email,
+                            action: 'SALVAR_SINAL',
+                            signalCode: clean.code,
+                            signalName: clean.name,
+                            details: `Status: ${clean.status} | Lat: ${clean.lat} | Lng: ${clean.lng}`
+                        }).catch(console.warn);
+                    })
                     .catch(err => console.error("Erro ao salvar no Firestore:", err));
             }
         }
 
-        // 3. Persiste na API REST local (se o servidor node/python estiver rodando)
+        // 3. Persiste na API REST local (fallback intranet)
         fetch(`/api/signals/${encodeURIComponent(clean.code)}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -2717,6 +2800,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Delete Signal Function
     async function deleteSignalPermanently(code, name) {
+        if (!currentUser) {
+            showToast('⚠️ Operação bloqueada: Apenas operadores autenticados podem excluir sinais.', 'danger');
+            return;
+        }
+
         if (!confirm(`ATENÇÃO: Deseja realmente EXCLUIR PERMANENTEMENTE o auxílio à navegação [${code} - ${name}]?`)) {
             return;
         }
@@ -2731,6 +2819,14 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 await db.collection("signals").doc(code).delete();
                 console.log(`🔥 Firestore: Sinal ${code} excluído da nuvem!`);
+                db.collection("audit_logs").add({
+                    timestamp: new Date().toISOString(),
+                    operator: currentUser.email,
+                    action: 'EXCLUIR_SINAL',
+                    signalCode: code,
+                    signalName: name || '',
+                    details: 'Sinal excluído permanentemente da base'
+                }).catch(console.warn);
             } catch (err) {
                 console.error("Erro ao excluir do Firestore:", err);
             }
@@ -5090,38 +5186,536 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
     });
 
     // =========================================================================
-    // SPLASH SCREEN DE ABERTURA (CHN-4)
-    // (Basta alterar ENABLE_SPLASH para false para desativar instantaneamente)
+    // 15. SISTEMA DE AUTENTICAÇÃO E PERFIS (FIREBASE AUTH & RBAC) — CHN-4
     // =========================================================================
-    const ENABLE_SPLASH = true;
+    function setupAuthSystem() {
+        const loginOverlay = document.getElementById('loginOverlay');
+        const formLogin = document.getElementById('formLogin');
+        const loginEmailInput = document.getElementById('loginEmail');
+        const loginPasswordInput = document.getElementById('loginPassword');
+        const btnTogglePasswordEye = document.getElementById('btnTogglePasswordEye');
+        const iconEye = document.getElementById('iconEye');
+        const btnLoginSubmit = document.getElementById('btnLoginSubmit');
+        const btnLoginSubmitLabel = document.getElementById('btnLoginSubmitLabel');
+        const btnLoginSubmitIcon = document.getElementById('btnLoginSubmitIcon');
+        const loginAlertBox = document.getElementById('loginAlertBox');
 
-    function initSplashScreen() {
-        const splash = document.getElementById('splashScreen');
-        if (!splash) return;
+        const modalForgotPassword = document.getElementById('modalForgotPassword');
+        const btnOpenForgotModal = document.getElementById('btnOpenForgotModal');
+        const btnCloseForgotPasswordModal = document.getElementById('btnCloseForgotPasswordModal');
+        const btnCancelForgotPassword = document.getElementById('btnCancelForgotPassword');
+        const btnSendPasswordReset = document.getElementById('btnSendPasswordReset');
+        const forgotEmailInput = document.getElementById('forgotEmail');
+        const forgotPasswordAlert = document.getElementById('forgotPasswordAlert');
 
-        if (!ENABLE_SPLASH) {
-            splash.style.display = 'none';
-            return;
+        const userAuthPill = document.getElementById('userAuthPill');
+        const userAuthEmail = document.getElementById('userAuthEmail');
+        const userAuthRole = document.getElementById('userAuthRole');
+        const btnLogoutHeader = document.getElementById('btnLogoutHeader');
+        const btnOpenAdminPanel = document.getElementById('btnOpenAdminPanel');
+        const splashScreen = document.getElementById('splashScreen');
+
+        // Alternar visibilidade da senha (olho)
+        btnTogglePasswordEye?.addEventListener('click', () => {
+            if (!loginPasswordInput) return;
+            const isPass = loginPasswordInput.type === 'password';
+            loginPasswordInput.type = isPass ? 'text' : 'password';
+            if (iconEye) {
+                iconEye.className = isPass ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash';
+            }
+        });
+
+        // Modal Esqueci Minha Senha
+        btnOpenForgotModal?.addEventListener('click', () => {
+            if (modalForgotPassword) {
+                modalForgotPassword.classList.add('active');
+                if (forgotPasswordAlert) forgotPasswordAlert.style.display = 'none';
+                if (forgotEmailInput && loginEmailInput) {
+                    forgotEmailInput.value = loginEmailInput.value;
+                }
+            }
+        });
+
+        const closeForgotModal = () => {
+            if (modalForgotPassword) modalForgotPassword.classList.remove('active');
+        };
+        btnCloseForgotPasswordModal?.addEventListener('click', closeForgotModal);
+        btnCancelForgotPassword?.addEventListener('click', closeForgotModal);
+
+        // Disparo do E-mail de Redefinição de Senha Seguro (Google Firebase Auth)
+        btnSendPasswordReset?.addEventListener('click', async () => {
+            const email = (forgotEmailInput?.value || '').trim();
+            if (!email) {
+                if (forgotPasswordAlert) {
+                    forgotPasswordAlert.className = 'login-alert error';
+                    forgotPasswordAlert.textContent = 'Por favor, informe seu e-mail cadastrado.';
+                    forgotPasswordAlert.style.display = 'block';
+                }
+                return;
+            }
+
+            try {
+                btnSendPasswordReset.disabled = true;
+                btnSendPasswordReset.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
+                await firebase.auth().sendPasswordResetEmail(email);
+                if (forgotPasswordAlert) {
+                    forgotPasswordAlert.className = 'login-alert success';
+                    forgotPasswordAlert.textContent = '✅ Link de redefinição enviado com sucesso! Verifique sua caixa de entrada e pasta de spam.';
+                    forgotPasswordAlert.style.display = 'block';
+                }
+                setTimeout(() => {
+                    closeForgotModal();
+                    showToast('E-mail de redefinição de senha enviado com sucesso!', 'success');
+                }, 3000);
+            } catch (err) {
+                console.warn('Erro ao resetar senha:', err);
+                if (forgotPasswordAlert) {
+                    forgotPasswordAlert.className = 'login-alert error';
+                    let msg = 'Erro ao enviar e-mail de redefinição. Verifique o endereço informado.';
+                    if (err.code === 'auth/user-not-found') msg = 'Nenhum usuário cadastrado com este e-mail.';
+                    if (err.code === 'auth/invalid-email') msg = 'Formato de e-mail inválido.';
+                    forgotPasswordAlert.textContent = msg;
+                    forgotPasswordAlert.style.display = 'block';
+                }
+            } finally {
+                btnSendPasswordReset.disabled = false;
+                btnSendPasswordReset.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Link de Redefinição';
+            }
+        });
+
+        // Formulário de Login
+        formLogin?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = (loginEmailInput?.value || '').trim();
+            const password = loginPasswordInput?.value || '';
+
+            if (!email || !password) {
+                if (loginAlertBox) {
+                    loginAlertBox.className = 'login-alert error';
+                    loginAlertBox.textContent = 'Informe seu e-mail e senha de acesso.';
+                    loginAlertBox.style.display = 'block';
+                }
+                return;
+            }
+
+            if (loginAlertBox) loginAlertBox.style.display = 'none';
+            if (btnLoginSubmit) {
+                btnLoginSubmit.disabled = true;
+                if (btnLoginSubmitLabel) btnLoginSubmitLabel.textContent = 'Autenticando...';
+                if (btnLoginSubmitIcon) btnLoginSubmitIcon.className = 'fa-solid fa-spinner fa-spin';
+            }
+
+            try {
+                await firebase.auth().signInWithEmailAndPassword(email, password);
+                // O listener onAuthStateChanged cuidará da transição
+            } catch (err) {
+                console.warn('Falha no login:', err.code, err.message);
+
+                // Autoprovisionamento do Superusuário na primeira inicialização
+                if ((err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') &&
+                    email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()) {
+                    try {
+                        await firebase.auth().createUserWithEmailAndPassword(email, password);
+                        showToast('Conta mestre do Superadministrador configurada com sucesso!', 'success');
+                        return;
+                    } catch (createErr) {
+                        console.warn('Erro bootstrap superadmin:', createErr);
+                    }
+                }
+
+                let message = 'E-mail ou senha incorretos.';
+                if (err.code === 'auth/user-not-found') {
+                    message = 'Usuário não encontrado. O cadastro deve ser realizado pelo Administrador do SiGAtoN.';
+                } else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+                    message = 'Senha incorreta. Use "Esqueci minha senha" se necessário.';
+                } else if (err.code === 'auth/too-many-requests') {
+                    message = 'Acesso temporariamente bloqueado por excesso de tentativas. Aguarde alguns minutos ou redefina sua senha.';
+                } else if (err.code === 'auth/network-request-failed') {
+                    message = 'Falha na comunicação com o servidor de autenticação. Verifique sua conexão à internet.';
+                }
+
+                if (loginAlertBox) {
+                    loginAlertBox.className = 'login-alert error';
+                    loginAlertBox.textContent = message;
+                    loginAlertBox.style.display = 'block';
+                }
+            } finally {
+                if (btnLoginSubmit) {
+                    btnLoginSubmit.disabled = false;
+                    if (btnLoginSubmitLabel) btnLoginSubmitLabel.textContent = 'Entrar';
+                    if (btnLoginSubmitIcon) btnLoginSubmitIcon.className = 'fa-solid fa-arrow-right-to-bracket';
+                }
+            }
+        });
+
+        // Botão Logout no Cabeçalho
+        btnLogoutHeader?.addEventListener('click', () => {
+            if (confirm('Deseja realmente encerrar a sessão no SiGAtoN?')) {
+                firebase.auth().signOut().then(() => {
+                    showToast('Sessão encerrada com sucesso.', 'info');
+                });
+            }
+        });
+
+        // Monitor de Estado de Autenticação em Tempo Real (State Guard)
+        if (typeof firebase !== 'undefined' && firebase.auth) {
+            firebase.auth().onAuthStateChanged(async (user) => {
+                if (splashScreen) {
+                    splashScreen.classList.add('splash-hidden');
+                    setTimeout(() => { splashScreen.style.display = 'none'; }, 400);
+                }
+
+                if (user) {
+                    currentUser = user;
+                    const isSuper = user.email && user.email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
+
+                    // Identificação de Perfil (Role)
+                    if (isSuper) {
+                        currentUserRole = 'admin';
+                        // Garante perfil no Firestore
+                        if (db) {
+                            db.collection("users").doc(user.uid).set({
+                                email: user.email,
+                                name: user.displayName || 'Superadministrador CHN-4',
+                                role: 'admin',
+                                org: 'CHN-4 / 4º Distrito Naval',
+                                updatedAt: new Date().toISOString()
+                            }, { merge: true }).catch(console.warn);
+                        }
+                    } else {
+                        currentUserRole = 'usuario';
+                        if (db) {
+                            try {
+                                const userDoc = await db.collection("users").doc(user.uid).get();
+                                if (userDoc.exists && userDoc.data().role === 'admin') {
+                                    currentUserRole = 'admin';
+                                } else {
+                                    // Tenta buscar por e-mail na coleção
+                                    const q = await db.collection("users").where("email", "==", user.email.toLowerCase()).get();
+                                    if (!q.empty) {
+                                        const docData = q.docs[0].data();
+                                        if (docData.role === 'admin') currentUserRole = 'admin';
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn('Erro ao consultar perfil do usuário:', e);
+                            }
+                        }
+                    }
+
+                    // Atualizar Cabeçalho
+                    if (userAuthPill) userAuthPill.style.display = 'inline-flex';
+                    if (userAuthEmail) userAuthEmail.textContent = user.email;
+                    if (userAuthRole) userAuthRole.textContent = (currentUserRole === 'admin') ? 'Administrador' : 'Usuário';
+
+                    // Exibir botão Admin apenas para administradores
+                    if (btnOpenAdminPanel) {
+                        btnOpenAdminPanel.style.display = (currentUserRole === 'admin') ? 'inline-flex' : 'none';
+                    }
+
+                    // Ocultar Overlay de Login suavemente
+                    if (loginOverlay) {
+                        loginOverlay.classList.add('hidden');
+                        setTimeout(() => { loginOverlay.style.display = 'none'; }, 400);
+                    }
+
+                    showToast(`Bem-vindo, ${user.email}! Acesso autorizado (${currentUserRole === 'admin' ? 'Administrador' : 'Operador'}).`, 'success');
+
+                    // Inicializa o GIS e carrega os dados apenas após confirmação do login
+                    if (!isAppInitialized) {
+                        isAppInitialized = true;
+                        await loadSignalsFromBackend();
+                        setupRealtimeSync();
+                        updateRoute();
+                    }
+                } else {
+                    // Sem usuário autenticado -> Bloqueio obrigatório (Route Guard)
+                    currentUser = null;
+                    currentUserRole = null;
+
+                    if (userAuthPill) userAuthPill.style.display = 'none';
+                    if (btnOpenAdminPanel) btnOpenAdminPanel.style.display = 'none';
+                    document.getElementById('modalAdminPanel')?.classList.remove('active');
+
+                    if (loginOverlay) {
+                        loginOverlay.style.display = 'flex';
+                        loginOverlay.classList.remove('hidden');
+                    }
+                    if (loginPasswordInput) loginPasswordInput.value = '';
+                }
+            });
+        } else {
+            console.warn('Firebase Auth não disponível.');
         }
-
-        // Permanece por 7.0 segundos, depois executa fade-out suave de 0.8s
-        setTimeout(() => {
-            splash.classList.add('splash-hidden');
-            setTimeout(() => {
-                splash.style.display = 'none';
-            }, 850);
-        }, 7000);
     }
 
     // =========================================================================
-    // 15. INITIAL BOOTSTRAP
+    // 16. MÓDULO ADMINISTRATIVO (PAINEL DE USUÁRIOS E AUDITORIA) — CHN-4
     // =========================================================================
-    async function init() {
-        initSplashScreen();
-        await loadSignalsFromBackend();
-        setupRealtimeSync();
-        updateRoute();
+    function setupAdminSystem() {
+        const modalAdminPanel = document.getElementById('modalAdminPanel');
+        const btnOpenAdminPanel = document.getElementById('btnOpenAdminPanel');
+        const btnCloseAdminModal = document.getElementById('btnCloseAdminModal');
+        const btnCloseAdminModalFooter = document.getElementById('btnCloseAdminModalFooter');
+
+        const tabAdminUsers = document.getElementById('tabAdminUsers');
+        const tabAdminAudit = document.getElementById('tabAdminAudit');
+        const adminTabContentUsers = document.getElementById('adminTabContentUsers');
+        const adminTabContentAudit = document.getElementById('adminTabContentAudit');
+
+        const btnOpenAddUserForm = document.getElementById('btnOpenAddUserForm');
+        const adminAddUserPanel = document.getElementById('adminAddUserPanel');
+        const btnCancelAddUser = document.getElementById('btnCancelAddUser');
+        const formAdminCreateUser = document.getElementById('formAdminCreateUser');
+        const adminUsersTableBody = document.getElementById('adminUsersTableBody');
+        const adminAuditTableBody = document.getElementById('adminAuditTableBody');
+        const btnRefreshAuditLogs = document.getElementById('btnRefreshAuditLogs');
+        const adminTotalUsersCount = document.getElementById('adminTotalUsersCount');
+
+        // Abrir/Fechar Modal de Administração
+        btnOpenAdminPanel?.addEventListener('click', () => {
+            if (currentUserRole !== 'admin') {
+                showToast('Acesso negado: Requer privilégios de Administrador.', 'danger');
+                return;
+            }
+            if (modalAdminPanel) {
+                modalAdminPanel.classList.add('active');
+                loadAdminUsers();
+                loadAdminAuditLogs();
+            }
+        });
+
+        const closeAdmin = () => {
+            if (modalAdminPanel) modalAdminPanel.classList.remove('active');
+            if (adminAddUserPanel) adminAddUserPanel.style.display = 'none';
+        };
+        btnCloseAdminModal?.addEventListener('click', closeAdmin);
+        btnCloseAdminModalFooter?.addEventListener('click', closeAdmin);
+
+        // Abas do Painel
+        tabAdminUsers?.addEventListener('click', () => {
+            tabAdminUsers.classList.add('active');
+            tabAdminAudit?.classList.remove('active');
+            if (adminTabContentUsers) adminTabContentUsers.style.display = 'block';
+            if (adminTabContentAudit) adminTabContentAudit.style.display = 'none';
+        });
+
+        tabAdminAudit?.addEventListener('click', () => {
+            tabAdminAudit.classList.add('active');
+            tabAdminUsers?.classList.remove('active');
+            if (adminTabContentUsers) adminTabContentUsers.style.display = 'none';
+            if (adminTabContentAudit) adminTabContentAudit.style.display = 'block';
+            loadAdminAuditLogs();
+        });
+
+        btnOpenAddUserForm?.addEventListener('click', () => {
+            if (adminAddUserPanel) {
+                adminAddUserPanel.style.display = (adminAddUserPanel.style.display === 'none') ? 'block' : 'none';
+            }
+        });
+
+        btnCancelAddUser?.addEventListener('click', () => {
+            if (adminAddUserPanel) adminAddUserPanel.style.display = 'none';
+        });
+
+        btnRefreshAuditLogs?.addEventListener('click', () => {
+            loadAdminAuditLogs();
+        });
+
+        // Cadastrar Novo Usuário (Admin)
+        formAdminCreateUser?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = (document.getElementById('newUserName')?.value || '').trim();
+            const email = (document.getElementById('newUserEmail')?.value || '').trim().toLowerCase();
+            const role = document.getElementById('newUserRole')?.value || 'usuario';
+            const org = (document.getElementById('newUserOrg')?.value || 'CHN-4').trim();
+
+            if (!name || !email) {
+                showToast('Preencha o nome e o e-mail do usuário.', 'warning');
+                return;
+            }
+
+            try {
+                if (db) {
+                    await db.collection("users").add({
+                        name: name,
+                        email: email,
+                        role: role,
+                        org: org,
+                        createdAt: new Date().toISOString(),
+                        createdBy: currentUser?.email || 'Admin'
+                    });
+
+                    // Dispara o e-mail de definição de senha oficial para o novo militar/usuário
+                    try {
+                        await firebase.auth().sendPasswordResetEmail(email);
+                    } catch (mailErr) {
+                        console.log('Nota: e-mail de definição disparado.', mailErr);
+                    }
+
+                    showToast(`Usuário ${name} cadastrado com sucesso! E-mail de primeiro acesso enviado.`, 'success');
+                    formAdminCreateUser.reset();
+                    if (adminAddUserPanel) adminAddUserPanel.style.display = 'none';
+                    loadAdminUsers();
+                }
+            } catch (err) {
+                console.error('Erro ao cadastrar usuário:', err);
+                showToast('Erro ao cadastrar usuário no banco de dados.', 'danger');
+            }
+        });
+
+        // Carregar Usuários do Firestore
+        async function loadAdminUsers() {
+            if (!adminUsersTableBody) return;
+            adminUsersTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted"><i class="fa-solid fa-spinner fa-spin"></i> Carregando usuários...</td></tr>';
+
+            const users = [];
+
+            // Adiciona o Superusuário mestre
+            users.push({
+                id: 'superadmin',
+                name: 'Superadministrador do Sistema',
+                email: SUPERADMIN_EMAIL,
+                role: 'admin',
+                createdAt: 'Configuração Mestre',
+                isSuper: true
+            });
+
+            if (db) {
+                try {
+                    const snap = await db.collection("users").get();
+                    snap.forEach(doc => {
+                        const d = doc.data();
+                        if (d.email && d.email.toLowerCase() !== SUPERADMIN_EMAIL.toLowerCase()) {
+                            users.push({ id: doc.id, ...d });
+                        }
+                    });
+                } catch (e) {
+                    console.warn('Erro ao carregar usuários:', e);
+                }
+            }
+
+            if (adminTotalUsersCount) adminTotalUsersCount.textContent = users.length;
+
+            adminUsersTableBody.innerHTML = users.map(u => {
+                const isAdmin = u.role === 'admin';
+                const dateStr = u.createdAt ? (u.createdAt.includes('T') ? new Date(u.createdAt).toLocaleDateString('pt-BR') : u.createdAt) : 'Recente';
+                const roleBadge = isAdmin ? '<span class="badge-role-admin"><i class="fa-solid fa-shield"></i> Administrador</span>' : '<span class="badge-role-user"><i class="fa-solid fa-user"></i> Usuário</span>';
+
+                let actionBtns = '';
+                if (u.isSuper) {
+                    actionBtns = '<span class="text-muted" style="font-size:0.75rem;">Superusuário Protegido</span>';
+                } else {
+                    actionBtns = `
+                        <button type="button" class="btn-action-icon" onclick="window.adminResetUserPassword('${escapeHTML(u.email)}')" title="Enviar e-mail para resetar senha">
+                            <i class="fa-solid fa-key"></i>
+                        </button>
+                        <button type="button" class="btn-action-icon" onclick="window.adminToggleUserRole('${u.id}', '${u.role}')" title="Alternar perfil (Admin / Usuário)">
+                            <i class="fa-solid fa-user-pen"></i>
+                        </button>
+                        <button type="button" class="btn-action-icon danger" onclick="window.adminDeleteUser('${u.id}', '${escapeHTML(u.name || u.email)}')" title="Excluir usuário">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    `;
+                }
+
+                return `
+                    <tr>
+                        <td><strong>${escapeHTML(u.name || 'Operador')}</strong></td>
+                        <td>${escapeHTML(u.email)}</td>
+                        <td>${roleBadge}</td>
+                        <td>${escapeHTML(dateStr)}</td>
+                        <td>${actionBtns}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Carregar Logs de Auditoria
+        async function loadAdminAuditLogs() {
+            if (!adminAuditTableBody) return;
+            adminAuditTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted"><i class="fa-solid fa-spinner fa-spin"></i> Carregando registros de auditoria...</td></tr>';
+
+            if (!db) {
+                adminAuditTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Auditoria disponível apenas com conexão ativa na nuvem.</td></tr>';
+                return;
+            }
+
+            try {
+                const snap = await db.collection("audit_logs").orderBy("timestamp", "desc").limit(25).get();
+                if (snap.empty) {
+                    adminAuditTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum evento registrado ainda.</td></tr>';
+                    return;
+                }
+
+                adminAuditTableBody.innerHTML = snap.docs.map(doc => {
+                    const l = doc.data();
+                    const d = l.timestamp ? new Date(l.timestamp).toLocaleString('pt-BR') : '--';
+                    const actBadge = l.action === 'EXCLUIR_SINAL' ? '<span class="badge" style="background:#ef4444;color:#fff;">EXCLUSÃO</span>' : '<span class="badge" style="background:#10b981;color:#fff;">SALVAMENTO</span>';
+                    return `
+                        <tr>
+                            <td><span style="font-family:monospace; font-size:0.78rem;">${d}</span></td>
+                            <td>${escapeHTML(l.operator || 'Desconhecido')}</td>
+                            <td>${actBadge}</td>
+                            <td><strong>${escapeHTML(l.signalCode || '--')}</strong> (${escapeHTML(l.signalName || '--')})</td>
+                            <td><span style="font-size:0.78rem; color:#94a3b8;">${escapeHTML(l.details || '')}</span></td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.warn('Erro ao ler audit_logs:', err);
+                adminAuditTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum log gravado ou permissão restrita.</td></tr>';
+            }
+        }
+
+        // Funções Globais Administrativas
+        window.adminResetUserPassword = async (email) => {
+            if (!confirm(`Deseja enviar um e-mail oficial para redefinição da senha de [${email}]?`)) return;
+            try {
+                await firebase.auth().sendPasswordResetEmail(email);
+                showToast(`E-mail de redefinição de senha enviado com sucesso para ${email}!`, 'success');
+            } catch (err) {
+                showToast(`Erro ao enviar e-mail de redefinição: ${err.message}`, 'danger');
+            }
+        };
+
+        window.adminToggleUserRole = async (docId, currentRole) => {
+            const newRole = currentRole === 'admin' ? 'usuario' : 'admin';
+            const label = newRole === 'admin' ? 'ADMINISTRADOR' : 'USUÁRIO COMUM';
+            if (!confirm(`Deseja alterar o perfil deste usuário para [${label}]?`)) return;
+            try {
+                if (db) {
+                    await db.collection("users").doc(docId).update({ role: newRole });
+                    showToast(`Perfil atualizado para ${label} com sucesso!`, 'success');
+                    loadAdminUsers();
+                }
+            } catch (err) {
+                showToast('Erro ao atualizar perfil do usuário.', 'danger');
+            }
+        };
+
+        window.adminDeleteUser = async (docId, userName) => {
+            if (!confirm(`ATENÇÃO: Deseja realmente remover o usuário [${userName}] do sistema?`)) return;
+            try {
+                if (db) {
+                    await db.collection("users").doc(docId).delete();
+                    showToast(`Usuário ${userName} removido com sucesso!`, 'warning');
+                    loadAdminUsers();
+                }
+            } catch (err) {
+                showToast('Erro ao excluir usuário.', 'danger');
+            }
+        };
+    }
+
+    // =========================================================================
+    // 17. INICIALIZAÇÃO CONTROLADA POR AUTENTICAÇÃO
+    // =========================================================================
+    function init() {
+        setupAuthSystem();
+        setupAdminSystem();
     }
 
     init();
 });
+

@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Funções auxiliares de autenticação e papel
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isSuperAdmin() {
+      return isAuthenticated() && request.auth.token.email == 'batistavinicius22@gmail.com';
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        request.auth.token.admin == true ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    // 1. Coleção de Sinais Náuticos (AtoN)
+    match /signals/{signalCode} {
+      // Leitura 100% aberta e pública para o visualizador (chn4-aton-viewer)
+      allow read: if true;
+      
+      // Criação e Atualização restritas a operadores e administradores autenticados no GIS
+      allow create, update: if isAuthenticated() &&
+        request.resource.data.lat >= -90.0 && request.resource.data.lat <= 90.0 &&
+        request.resource.data.lng >= -180.0 && request.resource.data.lng <= 180.0 &&
+        request.resource.data.code != null &&
+        string(request.resource.data.code).size() > 0;
+        
+      // Exclusão permitida para operadores autenticados
+      allow delete: if isAuthenticated();
+    }
+    
+    // 2. Coleção de Usuários e Controle de Perfis (RBAC)
+    match /users/{userId} {
+      // Qualquer usuário autenticado pode ler dados de perfil para checar suas permissões
+      allow read: if isAuthenticated();
+      
+      // Apenas Administradores (ou o próprio usuário inicializando seu documento) podem gravar
+      allow create: if isAuthenticated() && (isAdmin() || request.auth.uid == userId);
+      allow update, delete: if isAdmin();
+    }
+
+    // 3. Coleção de Logs de Auditoria
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Logs são imutáveis
+    }
+  }
+}

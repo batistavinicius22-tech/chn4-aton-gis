@@ -30,6 +30,93 @@
 <body class="theme-navy">
 
     <!-- ========================================================================= -->
+    <!-- TELA DE LOGIN MODERNA (SIGATON - CHN-4 / 4º DISTRITO NAVAL)               -->
+    <!-- ========================================================================= -->
+    <div id="loginOverlay" class="login-overlay active" style="display: flex;">
+        <div class="login-card-container">
+            <!-- Coluna Visual Esquerda: Imagem Náutica CHN-4 -->
+            <div class="login-visual-panel">
+                <img src="assets/login-hero.jpg" alt="Operação de Balizamento CHN-4" class="login-hero-photo">
+                <div class="login-visual-gradient"></div>
+                <div class="login-visual-top-badge">
+                    <i class="fa-solid fa-anchor"></i>
+                    <span>CHN-4 • 4º DISTRITO NAVAL</span>
+                </div>
+                <div class="login-visual-bottom-info">
+                    <span class="login-subtag">CENTRO DE HIDROGRAFIA DO NORTE</span>
+                    <h3>Sinalização Náutica</h3>
+                    <p>Segurança do Tráfego Aquaviário e Salvaguarda da Vida Humana nos Rios da Amazônia Oriental</p>
+                </div>
+            </div>
+
+            <!-- Coluna Direita: Formulário de Autenticação -->
+            <div class="login-form-panel">
+                <div class="login-form-brand">
+                    <img src="logo-chn4.png" alt="Brasão CHN-4" class="login-brand-logo">
+                    <div class="login-brand-titles">
+                        <span class="brand-org">MARINHA DO BRASIL</span>
+                        <span class="brand-unit">CHN-4</span>
+                    </div>
+                </div>
+
+                <div class="login-headline">
+                    <h2>Bem-vindo ao SiGAtoN!</h2>
+                    <p>Sistema de Gestão de Auxílios à Navegação</p>
+                </div>
+
+                <!-- Aba única Login -->
+                <div class="login-tabs">
+                    <button type="button" class="login-tab-item active">Login</button>
+                </div>
+
+                <!-- Banner de Alerta / Erro -->
+                <div id="loginAlertBox" class="login-alert" style="display: none;"></div>
+
+                <!-- Formulário de Entrada -->
+                <form id="formLogin" class="login-form" autocomplete="on">
+                    <div class="login-field-group">
+                        <label for="loginEmail">E-mail</label>
+                        <div class="login-input-box">
+                            <i class="fa-solid fa-envelope login-field-icon"></i>
+                            <input type="email" id="loginEmail" placeholder="Digite seu e-mail" required autocomplete="username">
+                        </div>
+                    </div>
+
+                    <div class="login-field-group">
+                        <label for="loginPassword">Senha</label>
+                        <div class="login-input-box">
+                            <i class="fa-solid fa-lock login-field-icon"></i>
+                            <input type="password" id="loginPassword" placeholder="Digite sua senha" required autocomplete="current-password">
+                            <button type="button" id="btnTogglePasswordEye" class="btn-eye-toggle" title="Mostrar/Ocultar Senha" tabindex="-1">
+                                <i class="fa-solid fa-eye-slash" id="iconEye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="login-actions">
+                        <button type="submit" id="btnLoginSubmit" class="btn-login-main">
+                            <span id="btnLoginSubmitLabel">Entrar</span>
+                            <i class="fa-solid fa-arrow-right-to-bracket" id="btnLoginSubmitIcon"></i>
+                        </button>
+                    </div>
+
+                    <div class="login-options-row">
+                        <button type="button" id="btnOpenForgotModal" class="btn-forgot-password">
+                            Esqueci minha senha
+                        </button>
+                    </div>
+                </form>
+
+                <div class="login-security-notice">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Acesso restrito e monitorado para operadores autorizados da Marinha do Brasil.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ========================================================================= -->
     <!-- SPLASH SCREEN DE ABERTURA (TESTE VISUALIZADOR CHN-4) -->
     <!-- ========================================================================= -->
     <div id="splashScreen" class="splash-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999;">
@@ -90,6 +177,23 @@
             <button class="btn btn-outline" id="btnToggleTheme" title="Alternar Tema">
                 <i class="fa-solid fa-moon"></i>
             </button>
+
+            <!-- Botão de Administração (visível apenas para Administradores) -->
+            <button class="btn btn-admin" id="btnOpenAdminPanel" style="display: none;" title="Painel de Administração de Usuários (Superusuário)">
+                <i class="fa-solid fa-shield-halved"></i> Administração
+            </button>
+
+            <!-- Pílula de Usuário Autenticado e Logout -->
+            <div class="user-auth-pill" id="userAuthPill" style="display: none;">
+                <div class="user-auth-avatar"><i class="fa-solid fa-user-shield"></i></div>
+                <div class="user-auth-info">
+                    <span class="user-auth-email" id="userAuthEmail">--</span>
+                    <span class="user-auth-role" id="userAuthRole">--</span>
+                </div>
+                <button class="btn-logout" id="btnLogoutHeader" title="Sair do SiGAtoN">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
         </div>
     </header>
 
@@ -1189,6 +1293,150 @@
         </div>
     </div>
 
+    <!-- Modal Esqueci Minha Senha -->
+    <div id="modalForgotPassword" class="modal-overlay">
+        <div class="modal-content modal-auth-sm">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-key"></i> Recuperação de Senha</h3>
+                <button class="modal-close" id="btnCloseForgotPasswordModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 15px;">
+                    Informe o seu e-mail cadastrado. Enviaremos um link oficial e seguro do Firebase para você redefinir sua senha com segurança.
+                </p>
+                <div class="login-field-group">
+                    <label for="forgotEmail">E-mail Cadastrado</label>
+                    <div class="login-input-box">
+                        <i class="fa-solid fa-envelope login-field-icon"></i>
+                        <input type="email" id="forgotEmail" placeholder="seu-email@marinha.mil.br" required>
+                    </div>
+                </div>
+                <div id="forgotPasswordAlert" class="login-alert" style="display: none; margin-top: 12px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" id="btnCancelForgotPassword">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnSendPasswordReset">
+                    <i class="fa-solid fa-paper-plane"></i> Enviar Link de Redefinição
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Painel de Administração de Usuários (Superusuário / Admin) -->
+    <div id="modalAdminPanel" class="modal-overlay">
+        <div class="modal-content modal-admin-lg">
+            <div class="modal-header modal-header-admin">
+                <div class="modal-admin-title-wrap">
+                    <div class="admin-shield-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                    <div>
+                        <h3>Painel de Administração SiGAtoN</h3>
+                        <div class="modal-subtitle">Controle de Usuários, Perfis e Auditoria de Acessos — CHN-4</div>
+                    </div>
+                </div>
+                <button class="modal-close" id="btnCloseAdminModal">&times;</button>
+            </div>
+
+            <div class="modal-admin-nav">
+                <button class="admin-tab-btn active" id="tabAdminUsers"><i class="fa-solid fa-users-gear"></i> Gestão de Usuários</button>
+                <button class="admin-tab-btn" id="tabAdminAudit"><i class="fa-solid fa-clipboard-check"></i> Auditoria de Ações</button>
+            </div>
+
+            <div class="modal-body modal-admin-body">
+                <!-- Aba 1: Usuários -->
+                <div id="adminTabContentUsers" class="admin-tab-content active">
+                    <div class="admin-actions-bar">
+                        <div class="admin-stats-badge">
+                            <i class="fa-solid fa-users"></i> <span id="adminTotalUsersCount">0</span> usuário(s) registrado(s)
+                        </div>
+                        <button class="btn btn-primary btn-sm" id="btnOpenAddUserForm">
+                            <i class="fa-solid fa-user-plus"></i> Novo Usuário
+                        </button>
+                    </div>
+
+                    <!-- Formulário Retrátil de Novo Usuário -->
+                    <div id="adminAddUserPanel" class="admin-subcard" style="display: none;">
+                        <h4><i class="fa-solid fa-user-plus"></i> Cadastrar Operador / Administrador</h4>
+                        <form id="formAdminCreateUser" class="admin-grid-form">
+                            <div class="form-group">
+                                <label>Nome Completo / Posto / Graduação</label>
+                                <input type="text" id="newUserName" placeholder="Ex: 1T (T) Silva" required>
+                            </div>
+                            <div class="form-group">
+                                <label>E-mail Institucional</label>
+                                <input type="email" id="newUserEmail" placeholder="usuario@marinha.mil.br" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Perfil de Acesso</label>
+                                <select id="newUserRole">
+                                    <option value="usuario">Usuário (Operador GIS - Edição de Sinais)</option>
+                                    <option value="admin">Administrador (Controle Total + Painel Admin)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Organização / Setor</label>
+                                <input type="text" id="newUserOrg" placeholder="CHN-4 / Seção de Sinalização" value="CHN-4">
+                            </div>
+                            <div class="form-actions-full">
+                                <button type="button" class="btn btn-outline btn-sm" id="btnCancelAddUser">Cancelar</button>
+                                <button type="submit" class="btn btn-primary btn-sm" id="btnSaveNewUser">
+                                    <i class="fa-solid fa-check"></i> Cadastrar e Enviar Acesso
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Tabela de Usuários -->
+                    <div class="table-responsive admin-table-wrapper">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Nome / Identificação</th>
+                                    <th>E-mail</th>
+                                    <th>Perfil</th>
+                                    <th>Cadastrado em</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminUsersTableBody">
+                                <tr><td colspan="5" class="text-center text-muted">Carregando usuários...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Aba 2: Auditoria -->
+                <div id="adminTabContentAudit" class="admin-tab-content" style="display: none;">
+                    <div class="admin-subcard">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h4><i class="fa-solid fa-list-check"></i> Histórico Recente de Mutações no Banco</h4>
+                            <button class="btn btn-outline btn-sm" id="btnRefreshAuditLogs"><i class="fa-solid fa-arrows-rotate"></i> Atualizar</button>
+                        </div>
+                        <div class="table-responsive admin-table-wrapper">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Data / Hora</th>
+                                        <th>Operador</th>
+                                        <th>Ação</th>
+                                        <th>Sinal Náutico</th>
+                                        <th>Detalhes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminAuditTableBody">
+                                    <tr><td colspan="5" class="text-center text-muted">Nenhum log recente gravado.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" id="btnCloseAdminModalFooter">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Notification Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
@@ -1196,8 +1444,9 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
-    <!-- Firebase SDK Cloud Database (Nuvem em Tempo Real no GitHub Pages) -->
+    <!-- Firebase SDK Cloud Database & Authentication (Nuvem em Tempo Real no GitHub Pages) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
 
