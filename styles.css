@@ -3955,14 +3955,20 @@ html, body {
 .login-form-brand {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: 16px;
+    margin-bottom: 16px;
 }
 
 .login-brand-logo {
-    width: 38px;
-    height: 38px;
+    width: 68px;
+    height: 68px;
     object-fit: contain;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.22));
+    transition: transform 0.2s ease;
+}
+
+.login-brand-logo:hover {
+    transform: scale(1.05);
 }
 
 .login-brand-titles {
@@ -3971,17 +3977,17 @@ html, body {
 }
 
 .brand-org {
-    font-size: 0.72rem;
+    font-size: 0.88rem;
     font-weight: 700;
     color: #0b1a30;
-    letter-spacing: 1.2px;
+    letter-spacing: 1.4px;
 }
 
 .brand-unit {
-    font-size: 0.68rem;
-    font-weight: 600;
-    color: #b48312;
-    letter-spacing: 0.5px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #c59b27;
+    letter-spacing: 1px;
 }
 
 .login-headline h2 {
@@ -4221,47 +4227,38 @@ html, body {
 }
 
 /* ==========================================================================
-   CABEÇALHO: PÍLULA DE USUÁRIO E BOTÃO DE ADMINISTRAÇÃO
+   CABEÇALHO: MENU DO USUÁRIO & PERFIL DROPDOWN (ELEGANTE & ENQUADRADO)
    ========================================================================== */
 
-.btn-admin {
-    background: linear-gradient(135deg, rgba(212, 175, 55, 0.18) 0%, rgba(180, 131, 18, 0.3) 100%);
-    border: 1px solid var(--accent-gold);
-    color: var(--accent-gold);
-    font-weight: 700;
-    font-size: 0.82rem;
-    border-radius: 6px;
-    padding: 6px 12px;
+.user-profile-menu-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.user-profile-header-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+    background: rgba(15, 30, 54, 0.85);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 20px;
+    padding: 4px 12px 4px 6px;
+    color: #f8fafc;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.btn-admin:hover {
-    background: var(--accent-gold);
-    color: #050d1a;
-    box-shadow: 0 0 12px rgba(212, 175, 55, 0.45);
-    transform: translateY(-1px);
+.user-profile-header-btn:hover {
+    background: rgba(22, 45, 80, 0.95);
+    border-color: var(--accent-gold);
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.25);
 }
 
-.user-auth-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    background: rgba(15, 30, 54, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 20px;
-    padding: 4px 10px 4px 6px;
-    margin-left: 4px;
-}
-
-.user-auth-avatar {
+.user-profile-avatar {
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    background: rgba(212, 175, 55, 0.2);
+    background: rgba(212, 175, 55, 0.25);
     color: var(--accent-gold);
     display: flex;
     align-items: center;
@@ -4269,48 +4266,155 @@ html, body {
     font-size: 0.82rem;
 }
 
-.user-auth-info {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.15;
-}
-
-.user-auth-email {
-    font-size: 0.76rem;
+.user-profile-name {
+    font-size: 0.82rem;
     font-weight: 600;
     color: #f8fafc;
-    max-width: 170px;
+    letter-spacing: 0.3px;
+    max-width: 140px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.user-auth-role {
+.user-profile-chevron {
+    font-size: 0.65rem;
+    color: var(--accent-gold);
+    transition: transform 0.2s ease;
+}
+
+.user-profile-menu-wrapper:hover .user-profile-chevron,
+.user-profile-menu-wrapper.active .user-profile-chevron {
+    transform: rotate(180deg);
+}
+
+/* Dropdown Menu */
+.user-profile-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 230px;
+    background: #091322;
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    padding: 8px 0;
+    display: none;
+    z-index: 2100;
+    animation: fadeIn 0.15s ease-out;
+}
+
+.user-profile-menu-wrapper:hover .user-profile-dropdown,
+.user-profile-menu-wrapper.active .user-profile-dropdown {
+    display: block;
+}
+
+.user-profile-dropdown-card {
+    padding: 10px 16px 8px 16px;
+}
+
+.dropdown-user-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dropdown-user-email {
+    font-size: 0.74rem;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    margin-top: 2px;
+}
+
+.dropdown-user-role-badge {
+    display: inline-block;
+    margin-top: 6px;
     font-size: 0.65rem;
     font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(212, 175, 55, 0.2);
+    border: 1px solid var(--accent-gold);
     color: var(--accent-gold);
-    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.btn-logout {
-    background: rgba(239, 68, 68, 0.15);
-    border: 1px solid rgba(239, 68, 68, 0.4);
-    color: #fca5a5;
-    border-radius: 50%;
-    width: 26px;
-    height: 26px;
+.user-profile-dropdown-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 6px 0;
+}
+
+.user-profile-dropdown-item {
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 9px 16px;
+    color: #cbd5e1;
+    font-size: 0.82rem;
+    font-weight: 500;
+    text-align: left;
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 10px;
     cursor: pointer;
-    font-size: 0.75rem;
-    transition: all 0.2s ease;
+    transition: background 0.15s ease, color 0.15s ease;
 }
 
-.btn-logout:hover {
-    background: #ef4444;
+.user-profile-dropdown-item:hover {
+    background: rgba(212, 175, 55, 0.12);
     color: #ffffff;
-    border-color: #ef4444;
+}
+
+.user-profile-dropdown-item i {
+    width: 16px;
+    color: var(--accent-gold);
+    font-size: 0.88rem;
+    text-align: center;
+}
+
+.user-profile-dropdown-item.danger {
+    color: #fca5a5;
+}
+
+.user-profile-dropdown-item.danger i {
+    color: #ef4444;
+}
+
+.user-profile-dropdown-item.danger:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+}
+
+/* ==========================================================================
+   MODAIS: OVERLAY E DISPLAY FIXO
+   ========================================================================== */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(4, 9, 20, 0.85);
+    backdrop-filter: blur(6px);
+    z-index: 2000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.modal-overlay.active {
+    display: flex !important;
+    animation: fadeIn 0.2s ease;
 }
 
 /* ==========================================================================

@@ -5208,12 +5208,31 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         const forgotEmailInput = document.getElementById('forgotEmail');
         const forgotPasswordAlert = document.getElementById('forgotPasswordAlert');
 
-        const userAuthPill = document.getElementById('userAuthPill');
-        const userAuthEmail = document.getElementById('userAuthEmail');
-        const userAuthRole = document.getElementById('userAuthRole');
+        // Elementos do Perfil e Menu do Usuário no Cabeçalho
+        const userProfileMenuWrapper = document.getElementById('userProfileMenuWrapper');
+        const btnUserProfileHeader = document.getElementById('btnUserProfileHeader');
+        const headerUserDisplayName = document.getElementById('headerUserDisplayName');
+        const dropdownUserName = document.getElementById('dropdownUserName');
+        const dropdownUserEmail = document.getElementById('dropdownUserEmail');
+        const dropdownUserRoleBadge = document.getElementById('dropdownUserRoleBadge');
+        const btnOpenAccountModal = document.getElementById('btnOpenAccountModal');
+        const btnOpenAdminFromMenu = document.getElementById('btnOpenAdminFromMenu');
         const btnLogoutHeader = document.getElementById('btnLogoutHeader');
+
+        // Modal Minha Conta
+        const modalAccountProfile = document.getElementById('modalAccountProfile');
+        const btnCloseAccountModal = document.getElementById('btnCloseAccountModal');
+        const btnCancelAccountModal = document.getElementById('btnCancelAccountModal');
+        const formAccountProfile = document.getElementById('formAccountProfile');
+        const accountProfileEmail = document.getElementById('accountProfileEmail');
+        const accountProfileRole = document.getElementById('accountProfileRole');
+        const accountProfileName = document.getElementById('accountProfileName');
+
         const btnOpenAdminPanel = document.getElementById('btnOpenAdminPanel');
         const splashScreen = document.getElementById('splashScreen');
+
+        let currentUserDisplayName = '';
+        let hasShownInitialSplash = false;
 
         // Alternar visibilidade da senha (olho)
         btnTogglePasswordEye?.addEventListener('click', () => {
@@ -5222,6 +5241,67 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             loginPasswordInput.type = isPass ? 'text' : 'password';
             if (iconEye) {
                 iconEye.className = isPass ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash';
+            }
+        });
+
+        // Toggle do Menu Dropdown do Usuário no clique
+        btnUserProfileHeader?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userProfileMenuWrapper?.classList.toggle('active');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!userProfileMenuWrapper?.contains(e.target)) {
+                userProfileMenuWrapper?.classList.remove('active');
+            }
+        });
+
+        // Modal Minha Conta (Edição de Nome)
+        btnOpenAccountModal?.addEventListener('click', () => {
+            userProfileMenuWrapper?.classList.remove('active');
+            if (modalAccountProfile) {
+                modalAccountProfile.classList.add('active');
+                if (accountProfileEmail) accountProfileEmail.value = currentUser?.email || '';
+                if (accountProfileRole) accountProfileRole.value = (currentUserRole === 'admin') ? 'Administrador' : 'Operador';
+                if (accountProfileName) accountProfileName.value = currentUserDisplayName || currentUser?.displayName || '';
+            }
+        });
+
+        const closeAccountModal = () => {
+            modalAccountProfile?.classList.remove('active');
+        };
+        btnCloseAccountModal?.addEventListener('click', closeAccountModal);
+        btnCancelAccountModal?.addEventListener('click', closeAccountModal);
+        modalAccountProfile?.addEventListener('click', (e) => {
+            if (e.target === modalAccountProfile) closeAccountModal();
+        });
+
+        formAccountProfile?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newName = (accountProfileName?.value || '').trim();
+            if (!newName) {
+                showToast('Informe seu nome ou posto/graduação.', 'warning');
+                return;
+            }
+
+            try {
+                if (currentUser) {
+                    await currentUser.updateProfile({ displayName: newName });
+                    if (db) {
+                        await db.collection("users").doc(currentUser.uid).set({
+                            name: newName,
+                            updatedAt: new Date().toISOString()
+                        }, { merge: true });
+                    }
+                    currentUserDisplayName = newName;
+                    if (headerUserDisplayName) headerUserDisplayName.textContent = newName;
+                    if (dropdownUserName) dropdownUserName.textContent = newName;
+                    closeAccountModal();
+                    showToast('Nome atualizado com sucesso!', 'success');
+                }
+            } catch (err) {
+                console.error('Erro ao salvar nome de exibição:', err);
+                showToast('Erro ao atualizar nome.', 'danger');
             }
         });
 
@@ -5241,6 +5321,9 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         };
         btnCloseForgotPasswordModal?.addEventListener('click', closeForgotModal);
         btnCancelForgotPassword?.addEventListener('click', closeForgotModal);
+        modalForgotPassword?.addEventListener('click', (e) => {
+            if (e.target === modalForgotPassword) closeForgotModal();
+        });
 
         // Disparo do E-mail de Redefinição de Senha Seguro (Google Firebase Auth)
         btnSendPasswordReset?.addEventListener('click', async () => {
@@ -5374,14 +5457,26 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             }
         });
 
+        // Função de Exibição da Tela de Brasão com 4 segundos após login
+        function triggerPostLoginSplash(callback) {
+            if (splashScreen) {
+                splashScreen.style.display = 'flex';
+                splashScreen.classList.remove('splash-hidden');
+                setTimeout(() => {
+                    splashScreen.classList.add('splash-hidden');
+                    setTimeout(() => {
+                        splashScreen.style.display = 'none';
+                        if (typeof callback === 'function') callback();
+                    }, 500);
+                }, 4000); // Exatos 4 segundos de splash screen com o brasão
+            } else if (typeof callback === 'function') {
+                callback();
+            }
+        }
+
         // Monitor de Estado de Autenticação em Tempo Real (State Guard)
         if (typeof firebase !== 'undefined' && firebase.auth) {
             firebase.auth().onAuthStateChanged(async (user) => {
-                if (splashScreen) {
-                    splashScreen.classList.add('splash-hidden');
-                    setTimeout(() => { splashScreen.style.display = 'none'; }, 400);
-                }
-
                 if (user) {
                     currentUser = user;
                     const isSuper = user.email && user.email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
@@ -5420,23 +5515,49 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                         }
                     }
 
-                    // Atualizar Cabeçalho
-                    if (userAuthPill) userAuthPill.style.display = 'inline-flex';
-                    if (userAuthEmail) userAuthEmail.textContent = user.email;
-                    if (userAuthRole) userAuthRole.textContent = (currentUserRole === 'admin') ? 'Administrador' : 'Usuário';
+                    // Determina o Nome do Usuário para exibição
+                    let resolvedName = user.displayName;
+                    if (!resolvedName && db) {
+                        try {
+                            const uDoc = await db.collection("users").doc(user.uid).get();
+                            if (uDoc.exists && uDoc.data().name) {
+                                resolvedName = uDoc.data().name;
+                            }
+                        } catch (e) {}
+                    }
+                    if (!resolvedName) {
+                        resolvedName = isSuper ? 'Vinícius Batista' : (user.email ? user.email.split('@')[0] : 'Operador');
+                    }
+                    currentUserDisplayName = resolvedName;
 
-                    // Exibir botão Admin apenas para administradores
+                    // Atualizar Cabeçalho e Menu Dropdown
+                    if (userProfileMenuWrapper) userProfileMenuWrapper.style.display = 'inline-block';
+                    if (headerUserDisplayName) headerUserDisplayName.textContent = resolvedName;
+                    if (dropdownUserName) dropdownUserName.textContent = resolvedName;
+                    if (dropdownUserEmail) dropdownUserEmail.textContent = user.email;
+                    if (dropdownUserRoleBadge) dropdownUserRoleBadge.textContent = (currentUserRole === 'admin') ? 'ADMINISTRADOR' : 'OPERADOR';
+
+                    // Opção de Administração no menu
+                    if (btnOpenAdminFromMenu) {
+                        btnOpenAdminFromMenu.style.display = (currentUserRole === 'admin') ? 'flex' : 'none';
+                    }
                     if (btnOpenAdminPanel) {
                         btnOpenAdminPanel.style.display = (currentUserRole === 'admin') ? 'inline-flex' : 'none';
                     }
 
-                    // Ocultar Overlay de Login suavemente
+                    // Ocultar Overlay de Login imediatamente
                     if (loginOverlay) {
                         loginOverlay.classList.add('hidden');
-                        setTimeout(() => { loginOverlay.style.display = 'none'; }, 400);
+                        loginOverlay.style.display = 'none';
                     }
 
-                    showToast(`Bem-vindo, ${user.email}! Acesso autorizado (${currentUserRole === 'admin' ? 'Administrador' : 'Operador'}).`, 'success');
+                    // Exibir Splash Screen com brasão por 4 segundos
+                    if (!hasShownInitialSplash) {
+                        hasShownInitialSplash = true;
+                        triggerPostLoginSplash(() => {
+                            showToast(`Bem-vindo, ${resolvedName}! (${currentUserRole === 'admin' ? 'Administrador' : 'Operador'}).`, 'success');
+                        });
+                    }
 
                     // Inicializa o GIS e carrega os dados apenas após confirmação do login
                     if (!isAppInitialized) {
@@ -5449,10 +5570,18 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
                     // Sem usuário autenticado -> Bloqueio obrigatório (Route Guard)
                     currentUser = null;
                     currentUserRole = null;
+                    currentUserDisplayName = '';
+                    hasShownInitialSplash = false;
 
-                    if (userAuthPill) userAuthPill.style.display = 'none';
+                    if (userProfileMenuWrapper) userProfileMenuWrapper.style.display = 'none';
                     if (btnOpenAdminPanel) btnOpenAdminPanel.style.display = 'none';
                     document.getElementById('modalAdminPanel')?.classList.remove('active');
+                    document.getElementById('modalAccountProfile')?.classList.remove('active');
+
+                    if (splashScreen) {
+                        splashScreen.style.display = 'none';
+                        splashScreen.classList.add('splash-hidden');
+                    }
 
                     if (loginOverlay) {
                         loginOverlay.style.display = 'flex';
@@ -5472,6 +5601,7 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
     function setupAdminSystem() {
         const modalAdminPanel = document.getElementById('modalAdminPanel');
         const btnOpenAdminPanel = document.getElementById('btnOpenAdminPanel');
+        const btnOpenAdminFromMenu = document.getElementById('btnOpenAdminFromMenu');
         const btnCloseAdminModal = document.getElementById('btnCloseAdminModal');
         const btnCloseAdminModalFooter = document.getElementById('btnCloseAdminModalFooter');
 
@@ -5489,18 +5619,22 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         const btnRefreshAuditLogs = document.getElementById('btnRefreshAuditLogs');
         const adminTotalUsersCount = document.getElementById('adminTotalUsersCount');
 
-        // Abrir/Fechar Modal de Administração
-        btnOpenAdminPanel?.addEventListener('click', () => {
+        // Abrir Modal de Administração
+        const openAdmin = () => {
             if (currentUserRole !== 'admin') {
                 showToast('Acesso negado: Requer privilégios de Administrador.', 'danger');
                 return;
             }
+            document.getElementById('userProfileMenuWrapper')?.classList.remove('active');
             if (modalAdminPanel) {
                 modalAdminPanel.classList.add('active');
                 loadAdminUsers();
                 loadAdminAuditLogs();
             }
-        });
+        };
+
+        btnOpenAdminPanel?.addEventListener('click', openAdmin);
+        btnOpenAdminFromMenu?.addEventListener('click', openAdmin);
 
         const closeAdmin = () => {
             if (modalAdminPanel) modalAdminPanel.classList.remove('active');
@@ -5508,6 +5642,9 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
         };
         btnCloseAdminModal?.addEventListener('click', closeAdmin);
         btnCloseAdminModalFooter?.addEventListener('click', closeAdmin);
+        modalAdminPanel?.addEventListener('click', (e) => {
+            if (e.target === modalAdminPanel) closeAdmin();
+        });
 
         // Abas do Painel
         tabAdminUsers?.addEventListener('click', () => {
