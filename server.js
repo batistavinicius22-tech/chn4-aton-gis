@@ -6,6 +6,23 @@ const url = require('url');
 const PORT = process.env.PORT || 3000;
 const DB_FILE = path.join(__dirname, 'signals.json');
 
+// Resolve um caminho de usuário dentro de uma pasta base, bloqueando path traversal (../, prefixos irmãos, null bytes)
+function safeResolve(baseDir, userPath) {
+    const base = path.resolve(baseDir);
+    const resolved = path.resolve(base, '.' + path.sep + String(userPath).replace(/\0/g, ''));
+    if (resolved !== base && !resolved.startsWith(base + path.sep)) return null;
+    return resolved;
+}
+
+// Arquivos que nunca devem ser servidos pelo servidor estático
+const BLOCKED_STATIC = /(^|[\\/])(\.|server\.(js|py|ps1)$|package(-lock)?\.json$|backups[\\/]|backup_pre_auth[\\/]|node_modules[\\/])/i;
+
+// CORS restrito a origens locais (servidor de uso interno)
+function getCorsOrigin(req) {
+    const origin = req.headers.origin || '';
+    return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ? origin : `http://localhost:${PORT}`;
+}
+
 // Store connected SSE clients for real-time broadcast
 let sseClients = [];
 
@@ -21,14 +38,14 @@ function cleanOldBackups(maxKeep = 50) {
             .filter(f => f.startsWith('backup_') && f.endsWith('.json'))
             .map(f => ({
                 filename: f,
-                time: fs.statSync(path.join(BACKUPS_DIR, f)).mtimeMs
+                time: fs.statSync(safeResolve(BACKUPS_DIR, f)).mtimeMs
             }))
             .sort((a, b) => b.time - a.time);
 
         if (files.length > maxKeep) {
             const toDelete = files.slice(maxKeep);
             toDelete.forEach(f => {
-                try { fs.unlinkSync(path.join(BACKUPS_DIR, f.filename)); } catch (e) {}
+                try { fs.unlinkSync(safeResolve(BACKUPS_DIR, f.filename)); } catch (e) {}
             });
         }
     } catch (e) {
@@ -40,7 +57,7 @@ function cleanOldBackups(maxKeep = 50) {
 function deleteBackup(filename) {
     try {
         const safeName = path.basename(filename);
-        const filePath = path.join(BACKUPS_DIR, safeName);
+        const filePath = safeResolve(BACKUPS_DIR, safeName);
         if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
             return true;
@@ -59,7 +76,7 @@ function pruneOldBackups(keepCount = 5) {
             .filter(f => f.startsWith('backup_') && f.endsWith('.json'))
             .map(f => ({
                 filename: f,
-                time: fs.statSync(path.join(BACKUPS_DIR, f)).mtimeMs
+                time: fs.statSync(safeResolve(BACKUPS_DIR, f)).mtimeMs
             }))
             .sort((a, b) => b.time - a.time);
 
@@ -68,7 +85,7 @@ function pruneOldBackups(keepCount = 5) {
             const toDelete = files.slice(keepCount);
             toDelete.forEach(f => {
                 try {
-                    fs.unlinkSync(path.join(BACKUPS_DIR, f.filename));
+                    fs.unlinkSync(safeResolve(BACKUPS_DIR, f.filename));
                     deletedCount++;
                 } catch (e) {}
             });
@@ -89,7 +106,7 @@ function createBackupSnapshot(note = 'Ponto de parada automático', signalsData 
         const now = new Date();
         const timestampStr = now.toISOString().replace(/[:.]/g, '-');
         const filename = `backup_${timestampStr}.json`;
-        const filePath = path.join(BACKUPS_DIR, filename);
+        const filePath = safeResolve(BACKUPS_DIR, filename);
 
         const meta = {
             filename: filename,
@@ -116,7 +133,7 @@ function listBackups() {
         const files = fs.readdirSync(BACKUPS_DIR)
             .filter(f => f.startsWith('backup_') && f.endsWith('.json'))
             .map(f => {
-                const p = path.join(BACKUPS_DIR, f);
+                const p = safeResolve(BACKUPS_DIR, f);
                 const stat = fs.statSync(p);
                 try {
                     const content = JSON.parse(fs.readFileSync(p, 'utf8'));
@@ -205,8 +222,10 @@ const server = http.createServer((req, res) => {
     const pathname = parsedUrl.pathname;
     const method = req.method;
 
-    // Enable CORS
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // Enable CORS (somente localhost)
+    const corsOrigin = getCorsOrigin(req);
+    res.setHeader('Access-Control-Allow-Origin', corsOrigin);
+    res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -463,7 +482,7 @@ const server = http.createServer((req, res) => {
 
                 if (parsed.filename) {
                     const filename = parsed.filename;
-                    const targetPath = path.join(BACKUPS_DIR, path.basename(filename));
+                    const targetPath = safeResolve(BACKUPS_DIR, path.basename(filename));
                     if (!fs.existsSync(targetPath)) {
                         res.writeHead(404, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ error: 'Arquivo de backup não encontrado no disco.' }));
@@ -512,8 +531,8 @@ const server = http.createServer((req, res) => {
             res.end('Parametro file e obrigatorio.');
             return;
         }
-        const targetPath = path.join(BACKUPS_DIR, path.basename(fileParam));
-        if (!fs.existsSync(targetPath)) {
+        const targetPath = safeResolve(BACKUPS_DIR, path.basename(String(fileParam)));
+        if (!targetPath || !fs.existsSync(targetPath)) {
             res.writeHead(404);
             res.end('Backup nao encontrado.');
             return;
@@ -543,8 +562,8 @@ const server = http.createServer((req, res) => {
         }
 
         const crypto = require('crypto');
-        const tileHash = crypto.createHash('md5').update(queryString).digest('hex');
-        const tilePath = path.join(WMS_CACHE_DIR, `${tileHash}.png`);
+        const tileHash = crypto.createHash('sha256').update(queryString).digest('hex');
+        const tilePath = safeResolve(WMS_CACHE_DIR, `${tileHash}.png`);
 
         // Serve from local disk cache if valid (cached for 14 days)
         if (fs.existsSync(tilePath)) {
@@ -553,7 +572,7 @@ const server = http.createServer((req, res) => {
                 res.writeHead(200, {
                     'Content-Type': 'image/png',
                     'Cache-Control': 'public, max-age=1209600',
-                    'Access-Control-Allow-Origin': '*'
+                    'Access-Control-Allow-Origin': corsOrigin
                 });
                 fs.createReadStream(tilePath).pipe(res);
                 return;
@@ -586,16 +605,16 @@ const server = http.createServer((req, res) => {
                         res.writeHead(200, {
                             'Content-Type': 'image/png',
                             'Cache-Control': 'public, max-age=1209600',
-                            'Access-Control-Allow-Origin': '*'
+                            'Access-Control-Allow-Origin': corsOrigin
                         });
                         res.end(buffer);
                     });
                 } else {
                     if (fs.existsSync(tilePath)) {
-                        res.writeHead(200, { 'Content-Type': 'image/png', 'Access-Control-Allow-Origin': '*' });
+                        res.writeHead(200, { 'Content-Type': 'image/png', 'Access-Control-Allow-Origin': corsOrigin });
                         fs.createReadStream(tilePath).pipe(res);
                     } else {
-                        res.writeHead(proxyRes.statusCode, { 'Access-Control-Allow-Origin': '*' });
+                        res.writeHead(proxyRes.statusCode, { 'Access-Control-Allow-Origin': corsOrigin });
                         res.end();
                     }
                 }
@@ -605,10 +624,10 @@ const server = http.createServer((req, res) => {
                 if (attempt <= 3) {
                     setTimeout(() => fetchTile(attempt + 1), attempt * 1000);
                 } else if (fs.existsSync(tilePath)) {
-                    res.writeHead(200, { 'Content-Type': 'image/png', 'Access-Control-Allow-Origin': '*' });
+                    res.writeHead(200, { 'Content-Type': 'image/png', 'Access-Control-Allow-Origin': corsOrigin });
                     fs.createReadStream(tilePath).pipe(res);
                 } else {
-                    res.writeHead(502, { 'Access-Control-Allow-Origin': '*' });
+                    res.writeHead(502, { 'Access-Control-Allow-Origin': corsOrigin });
                     res.end();
                 }
             });
@@ -621,10 +640,18 @@ const server = http.createServer((req, res) => {
     // -------------------------------------------------------------------------
     // STATIC FILE SERVER
     // -------------------------------------------------------------------------
-    let filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);
-    
-    // Security check: stay in directory
-    if (!filePath.startsWith(__dirname)) {
+    let decodedPath;
+    try {
+        decodedPath = decodeURIComponent(pathname === '/' ? '/index.html' : pathname);
+    } catch (e) {
+        res.writeHead(400);
+        res.end('Bad Request');
+        return;
+    }
+    const filePath = safeResolve(__dirname, decodedPath);
+
+    // Security check: permanece no diretório e não expõe arquivos sensíveis
+    if (!filePath || BLOCKED_STATIC.test(path.relative(__dirname, filePath))) {
         res.writeHead(403);
         res.end('Forbidden');
         return;

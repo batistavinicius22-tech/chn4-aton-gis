@@ -5,6 +5,7 @@ import os
 import datetime
 import hashlib
 import time
+import re
 import urllib.request
 import urllib.error
 from urllib.parse import unquote, parse_qs, urlparse
@@ -134,8 +135,15 @@ def write_signals(data, create_backup=True, note="Ponto de parada automático"):
         return False
 
 class CHN4RequestHandler(http.server.SimpleHTTPRequestHandler):
+    def _cors_origin(self):
+        # CORS restrito a origens locais (servidor de uso interno)
+        origin = self.headers.get('Origin', '') if getattr(self, 'headers', None) else ''
+        if re.match(r'^https?://(localhost|127\.0\.0\.1)(:\d+)?$', origin):
+            return origin
+        return 'http://localhost'
+
     def end_headers(self):
-        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Origin', self._cors_origin())
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         super().end_headers()
@@ -197,7 +205,7 @@ class CHN4RequestHandler(http.server.SimpleHTTPRequestHandler):
             wms_cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wms_cache')
             os.makedirs(wms_cache_dir, exist_ok=True)
 
-            tile_hash = hashlib.md5(query_str.encode('utf-8')).hexdigest()
+            tile_hash = hashlib.sha256(query_str.encode('utf-8')).hexdigest()
             tile_path = os.path.join(wms_cache_dir, f"{tile_hash}.png")
 
             # Check cache (14 days)
@@ -209,7 +217,7 @@ class CHN4RequestHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_response(200)
                     self.send_header('Content-Type', 'image/png')
                     self.send_header('Cache-Control', 'public, max-age=1209600')
-                    self.send_header('Access-Control-Allow-Origin', '*')
+                    self.send_header('Access-Control-Allow-Origin', self._cors_origin())
                     self.send_header('Content-Length', str(len(data)))
                     self.end_headers()
                     self.wfile.write(data)
@@ -219,6 +227,10 @@ class CHN4RequestHandler(http.server.SimpleHTTPRequestHandler):
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
             }
+
+            if urlparse(target_url).scheme != 'https':
+                self.send_error(400, 'Esquema de URL invalido')
+                return
 
             for attempt in range(1, 5):
                 try:
@@ -234,7 +246,7 @@ class CHN4RequestHandler(http.server.SimpleHTTPRequestHandler):
                             self.send_response(200)
                             self.send_header('Content-Type', 'image/png')
                             self.send_header('Cache-Control', 'public, max-age=1209600')
-                            self.send_header('Access-Control-Allow-Origin', '*')
+                            self.send_header('Access-Control-Allow-Origin', self._cors_origin())
                             self.send_header('Content-Length', str(len(data)))
                             self.end_headers()
                             self.wfile.write(data)
@@ -255,7 +267,7 @@ class CHN4RequestHandler(http.server.SimpleHTTPRequestHandler):
                     data = f.read()
                 self.send_response(200)
                 self.send_header('Content-Type', 'image/png')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Access-Control-Allow-Origin', self._cors_origin())
                 self.send_header('Content-Length', str(len(data)))
                 self.end_headers()
                 self.wfile.write(data)

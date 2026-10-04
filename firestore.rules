@@ -41,9 +41,19 @@ service cloud.firestore {
       // Qualquer usuário autenticado pode ler dados de perfil para checar suas permissões
       allow read: if isAuthenticated();
       
-      // Apenas Administradores (ou o próprio usuário inicializando seu documento) podem gravar
-      allow create: if isAuthenticated() && (isAdmin() || request.auth.uid == userId);
-      allow update, delete: if isAdmin();
+      // Administradores criam qualquer perfil; o próprio usuário só pode criar seu documento como 'usuario' (sem auto-promoção)
+      allow create: if isAuthenticated() && (
+        isAdmin() ||
+        (request.auth.uid == userId && request.resource.data.get('role', 'usuario') == 'usuario')
+      );
+
+      // Administradores alteram tudo; o próprio usuário só altera nome e data de atualização (nunca role/email)
+      allow update: if isAdmin() || (
+        isAuthenticated() && request.auth.uid == userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'updatedAt'])
+      );
+
+      allow delete: if isAdmin();
     }
 
     // 3. Coleção de Logs de Auditoria
