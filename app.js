@@ -5676,45 +5676,151 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             loadAdminAuditLogs();
         });
 
-        // Cadastrar Novo Usuário (Admin)
+        // Gerador de senha aleatória no formulário de usuário
+        const btnGeneratePassword = document.getElementById('btnGeneratePassword');
+        const newUserPasswordInput = document.getElementById('newUserPassword');
+        btnGeneratePassword?.addEventListener('click', () => {
+            const randomDigits = Math.floor(1000 + Math.random() * 9000);
+            if (newUserPasswordInput) {
+                newUserPasswordInput.value = `Naval#${randomDigits}`;
+                newUserPasswordInput.focus();
+            }
+        });
+
+        // Cadastrar Novo Usuário no Firebase Authentication e no Firestore (Admin)
         formAdminCreateUser?.addEventListener('submit', async (e) => {
             e.preventDefault();
             const name = (document.getElementById('newUserName')?.value || '').trim();
             const email = (document.getElementById('newUserEmail')?.value || '').trim().toLowerCase();
             const role = document.getElementById('newUserRole')?.value || 'usuario';
             const org = (document.getElementById('newUserOrg')?.value || 'CHN-4').trim();
+            const password = (document.getElementById('newUserPassword')?.value || '').trim();
+            const sendEmail = document.getElementById('newUserSendEmail')?.checked ?? true;
 
             if (!name || !email) {
                 showToast('Preencha o nome e o e-mail do usuário.', 'warning');
                 return;
             }
 
+            if (!password || password.length < 6) {
+                showToast('A senha provisória deve conter no mínimo 6 caracteres.', 'warning');
+                return;
+            }
+
+            const btnSave = document.getElementById('btnSaveNewUser');
+            if (btnSave) {
+                btnSave.disabled = true;
+                btnSave.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Cadastrando no Firebase...';
+            }
+
+            let secondaryApp = null;
+            let newUid = null;
+            let alreadyExistedInAuth = false;
+
             try {
+                // Instância secundária para criar conta no Firebase Authentication sem desconectar a sessão do administrador
+                const secondaryAppName = "SecondaryAuthApp_" + Date.now();
+                secondaryApp = firebase.initializeApp(firebaseConfig, secondaryAppName);
+
+                try {
+                    const userCredential = await secondaryApp.auth().createUserWithEmailAndPassword(email, password);
+                    newUid = userCredential.user.uid;
+                    await userCredential.user.updateProfile({ displayName: name });
+                } catch (authCreateErr) {
+                    if (authCreateErr.code === 'auth/email-already-in-use') {
+                        alreadyExistedInAuth = true;
+                    } else {
+                        throw authCreateErr;
+                    }
+                }
+
+                // Gravar registro na coleção 'users' do Firestore
                 if (db) {
-                    await db.collection("users").add({
+                    const userDocRef = newUid ? db.collection("users").doc(newUid) : db.collection("users").doc();
+                    await userDocRef.set({
                         name: name,
                         email: email,
                         role: role,
                         org: org,
                         createdAt: new Date().toISOString(),
                         createdBy: currentUser?.email || 'Admin'
-                    });
+                    }, { merge: true });
+                }
 
-                    // Dispara o e-mail de definição de senha oficial para o novo militar/usuário
+                // Disparar o e-mail oficial do Firebase Authentication para redefinição / criação da senha
+                let emailSentSuccess = false;
+                let emailErrorMsg = '';
+                if (sendEmail) {
                     try {
                         await firebase.auth().sendPasswordResetEmail(email);
+                        emailSentSuccess = true;
                     } catch (mailErr) {
-                        console.log('Nota: e-mail de definição disparado.', mailErr);
+                        console.warn('Erro ao disparar sendPasswordResetEmail:', mailErr);
+                        emailErrorMsg = mailErr.message || 'Falha no serviço de e-mail';
+                    }
+                }
+
+                // Exibir Resumo com Credenciais para o Administrador
+                const summaryCard = document.getElementById('adminCreatedUserSummary');
+                if (summaryCard) {
+                    summaryCard.style.display = 'block';
+                    const elName = document.getElementById('summaryUserName');
+                    const elEmail = document.getElementById('summaryUserEmail');
+                    const elPass = document.getElementById('summaryUserPassword');
+                    const elStatus = document.getElementById('summaryEmailStatus');
+
+                    if (elName) elName.textContent = name;
+                    if (elEmail) elEmail.textContent = email;
+                    if (elPass) elPass.textContent = password;
+                    if (elStatus) {
+                        if (sendEmail && emailSentSuccess) {
+                            elStatus.innerHTML = `<i class="fa-solid fa-envelope-circle-check" style="color: #34d399;"></i> <strong>E-mail enviado!</strong> Link de primeiro acesso disparado para ${email}.<br><span style="color: #cbd5e1;">Oriente o militar a verificar também a pasta de <strong>Spam / Lixo Eletrônico</strong>.</span>`;
+                        } else if (sendEmail && !emailSentSuccess) {
+                            elStatus.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color: #f59e0b;"></i> <strong>Aviso de E-mail:</strong> Não foi possível disparar o e-mail automático do Firebase (${emailErrorMsg}). Forneça a senha provisória acima diretamente ao militar.`;
+                        } else {
+                            elStatus.innerHTML = `<i class="fa-solid fa-info-circle"></i> E-mail não solicitado. Repasse a senha provisória acima diretamente ao militar.`;
+                        }
                     }
 
-                    showToast(`Usuário ${name} cadastrado com sucesso! E-mail de primeiro acesso enviado.`, 'success');
-                    formAdminCreateUser.reset();
-                    if (adminAddUserPanel) adminAddUserPanel.style.display = 'none';
-                    loadAdminUsers();
+                    const btnCopy = document.getElementById('btnCopyUserCredentials');
+                    if (btnCopy) {
+                        btnCopy.onclick = () => {
+                            const textToCopy = `*Acesso ao SiGAtoN CHN-4*\nUsuário: ${email}\nSenha Provisória: ${password}\nEndereço: ${window.location.origin + window.location.pathname}`;
+                            navigator.clipboard.writeText(textToCopy).then(() => {
+                                showToast('Dados de acesso copiados para a área de transferência!', 'success');
+                            }).catch(() => {
+                                showToast('Não foi possível copiar automaticamente.', 'warning');
+                            });
+                        };
+                    }
+
+                    const btnDismiss = document.getElementById('btnDismissUserSummary');
+                    if (btnDismiss) {
+                        btnDismiss.onclick = () => { summaryCard.style.display = 'none'; };
+                    }
                 }
+
+                showToast(alreadyExistedInAuth 
+                    ? `Usuário já existia no Authentication. Dados salvos no Firestore!` 
+                    : `Usuário ${name} cadastrado com sucesso no Firebase!`, 'success');
+
+                formAdminCreateUser.reset();
+                loadAdminUsers();
             } catch (err) {
                 console.error('Erro ao cadastrar usuário:', err);
-                showToast('Erro ao cadastrar usuário no banco de dados.', 'danger');
+                let msg = err.message || 'Erro desconhecido.';
+                if (err.code === 'auth/weak-password') msg = 'A senha deve conter no mínimo 6 caracteres.';
+                if (err.code === 'auth/invalid-email') msg = 'Formato de e-mail inválido.';
+                showToast(`Erro ao cadastrar usuário: ${msg}`, 'danger');
+            } finally {
+                if (secondaryApp) {
+                    secondaryApp.auth().signOut().catch(() => {});
+                    secondaryApp.delete().catch(() => {});
+                }
+                if (btnSave) {
+                    btnSave.disabled = false;
+                    btnSave.innerHTML = '<i class="fa-solid fa-check"></i> Cadastrar e Ativar Acesso';
+                }
             }
         });
 

@@ -1421,13 +1421,45 @@
                                 <label>Organização / Setor</label>
                                 <input type="text" id="newUserOrg" placeholder="CHN-4 / Seção de Sinalização" value="CHN-4">
                             </div>
+                            <div class="form-group">
+                                <label>Senha Provisória (Mínimo 6 caracteres)</label>
+                                <div style="display: flex; gap: 8px;">
+                                    <input type="text" id="newUserPassword" placeholder="Ex: Militar@2026" required minlength="6" style="flex: 1;">
+                                    <button type="button" class="btn btn-outline btn-sm" id="btnGeneratePassword" title="Gerar senha aleatória">
+                                        <i class="fa-solid fa-dice"></i> Gerar
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-group" style="display: flex; align-items: center; gap: 8px; padding-top: 24px;">
+                                <input type="checkbox" id="newUserSendEmail" checked style="width: auto; margin: 0; cursor: pointer;">
+                                <label for="newUserSendEmail" style="margin: 0; cursor: pointer; font-size: 0.82rem; color: #cbd5e1;">
+                                    Enviar link para o e-mail cadastrar senha
+                                </label>
+                            </div>
                             <div class="form-actions-full">
                                 <button type="button" class="btn btn-outline btn-sm" id="btnCancelAddUser">Cancelar</button>
                                 <button type="submit" class="btn btn-primary btn-sm" id="btnSaveNewUser">
-                                    <i class="fa-solid fa-check"></i> Cadastrar e Enviar Acesso
+                                    <i class="fa-solid fa-check"></i> Cadastrar e Ativar Acesso
                                 </button>
                             </div>
                         </form>
+
+                        <!-- Resumo do Usuário Criado com Credenciais -->
+                        <div id="adminCreatedUserSummary" style="display: none; margin-top: 14px; padding: 14px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <strong style="color: #34d399; font-size: 0.9rem;"><i class="fa-solid fa-circle-check"></i> Usuário Criado no Firebase Authentication!</strong>
+                                <button type="button" class="btn btn-outline btn-sm" id="btnDismissUserSummary" style="padding: 2px 8px; font-size: 0.75rem;">Fechar</button>
+                            </div>
+                            <div style="margin-top: 8px; font-size: 0.82rem; color: #e2e8f0; line-height: 1.5;">
+                                <p style="margin: 2px 0;"><strong>Nome:</strong> <span id="summaryUserName"></span></p>
+                                <p style="margin: 2px 0;"><strong>E-mail:</strong> <span id="summaryUserEmail"></span></p>
+                                <p style="margin: 2px 0;"><strong>Senha Provisória:</strong> <code id="summaryUserPassword" style="background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 4px; color: #fbbf24; font-family: monospace; font-size: 0.9rem;"></code></p>
+                                <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 0.76rem;" id="summaryEmailStatus"><i class="fa-solid fa-envelope"></i> E-mail de redefinição enviado. Caso não encontre na Caixa de Entrada, oriente o militar a verificar a pasta de <strong>Spam / Lixo Eletrônico</strong>.</p>
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-sm" id="btnCopyUserCredentials" style="margin-top: 10px; font-size: 0.78rem;">
+                                <i class="fa-solid fa-copy"></i> Copiar Dados de Acesso
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Tabela de Usuários -->
