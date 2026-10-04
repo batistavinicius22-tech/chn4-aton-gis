@@ -5311,27 +5311,44 @@ QUATRO - NAVEGANTES DEVEM NAVEGAR COM CAUTELA NA ÁREA.`;
             } catch (err) {
                 console.warn('Falha no login:', err.code, err.message);
 
-                // Autoprovisionamento do Superusuário na primeira inicialização
-                if ((err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') &&
-                    email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()) {
-                    try {
-                        await firebase.auth().createUserWithEmailAndPassword(email, password);
-                        showToast('Conta mestre do Superadministrador configurada com sucesso!', 'success');
-                        return;
-                    } catch (createErr) {
-                        console.warn('Erro bootstrap superadmin:', createErr);
-                    }
-                }
-
                 let message = 'E-mail ou senha incorretos.';
-                if (err.code === 'auth/user-not-found') {
-                    message = 'Usuário não encontrado. O cadastro deve ser realizado pelo Administrador do SiGAtoN.';
-                } else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-                    message = 'Senha incorreta. Use "Esqueci minha senha" se necessário.';
-                } else if (err.code === 'auth/too-many-requests') {
-                    message = 'Acesso temporariamente bloqueado por excesso de tentativas. Aguarde alguns minutos ou redefina sua senha.';
-                } else if (err.code === 'auth/network-request-failed') {
-                    message = 'Falha na comunicação com o servidor de autenticação. Verifique sua conexão à internet.';
+
+                // Se o provedor E-mail/senha estiver desativado no Firebase Console
+                if (err.code === 'auth/operation-not-allowed') {
+                    message = '⚠️ O método de login por "E-mail/senha" está DESATIVADO no Firebase! Acesse o console do Firebase > Authentication > Sign-in method e ative "E-mail/senha".';
+                } 
+                // Autoprovisionamento do Superusuário na primeira inicialização
+                else if (email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()) {
+                    if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+                        try {
+                            await firebase.auth().createUserWithEmailAndPassword(email, password);
+                            showToast('Conta mestre do Superadministrador configurada com sucesso!', 'success');
+                            return;
+                        } catch (createErr) {
+                            console.warn('Erro bootstrap superadmin:', createErr);
+                            if (createErr.code === 'auth/operation-not-allowed') {
+                                message = '⚠️ O método de login "E-mail/senha" precisa ser ATIVADO no Firebase Console (Authentication > Sign-in method) para permitir o login.';
+                            } else if (createErr.code === 'auth/email-already-in-use') {
+                                message = 'A conta mestre já existe no Firebase, mas a senha digitada está incorreta. Use "Esqueci minha senha" para redefinir.';
+                            } else {
+                                message = `Erro ao inicializar Superadministrador: ${createErr.message || createErr.code}`;
+                            }
+                        }
+                    } else if (err.code === 'auth/wrong-password') {
+                        message = 'Senha incorreta para o Superadministrador. Caso tenha esquecido, use "Esqueci minha senha" ou altere no console do Firebase.';
+                    } else {
+                        message = err.message || 'Falha ao autenticar Superadministrador.';
+                    }
+                } else {
+                    if (err.code === 'auth/user-not-found') {
+                        message = 'Usuário não encontrado. O cadastro deve ser realizado pelo Administrador do SiGAtoN.';
+                    } else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+                        message = 'E-mail ou senha incorretos. Use "Esqueci minha senha" se necessário.';
+                    } else if (err.code === 'auth/too-many-requests') {
+                        message = 'Acesso temporariamente bloqueado por excesso de tentativas. Aguarde alguns minutos ou redefina sua senha.';
+                    } else if (err.code === 'auth/network-request-failed') {
+                        message = 'Falha na comunicação com o servidor de autenticação. Verifique sua conexão à internet.';
+                    }
                 }
 
                 if (loginAlertBox) {
